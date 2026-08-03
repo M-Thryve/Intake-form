@@ -1,0 +1,293 @@
+Make a targeted refinement to the existing M-THRYVE AI Software Project Intake.
+
+IMPORTANT:
+
+- Do not redesign the UI.
+- Do not change the existing visual system.
+- Do not change unrelated screens, content, spacing, typography, cards, or navigation.
+- Preserve the current tier flow, template selection, page editor, receipt, and submission flow.
+- Apply only the corrections below.
+
+1. MAKE COLOR SELECTION UPDATE THE LIVE PREVIEW
+
+Currently, changing the selected color does not update the template preview.
+
+Fix this interaction.
+
+When the client selects a color style or preset:
+
+- Immediately update the active page preview.
+- Apply the selected color to every template page.
+- Preserve the selected color when navigating between pages.
+- Preserve the selected color when switching between desktop and mobile.
+- Preserve the selected color when moving backward or forward through the intake.
+- Show the selected state clearly on the active color option.
+- Update the small preview thumbnails where applicable.
+- Update buttons, accents, links, highlighted sections, and other theme-dependent elements in the preview.
+
+The color selection must affect the actual template preview—not only the selected-color indicator.
+
+Use smooth, subtle transitions consistent with the existing UI.
+
+Do not reload or reset the page content when a color changes.
+
+2. ALL COLOR OPTIONS ARE FREE
+
+Every available color style or preset must be included at no additional cost.
+
+Remove:
+
+- Additional color fees
+- Color-upgrade fees
+- Premium color labels
+- Paid color indicators
+- Price adjustments caused by changing colors
+- Any suggestion that one color costs more than another
+
+Add a small message near the color options:
+
+“All color styles are included at no additional cost.”
+
+Changing colors must not modify:
+
+- Template price
+- Receipt total
+- Delivery time
+- Add-on total
+
+Color selection is purely a visual preference.
+
+3. REMOVE “INCLUDED” TEXT FROM COLOR OPTIONS
+
+Inside the “Choose Color Style” section, remove repeated text such as:
+
+- Included
+- Included in price
+- Free
+- No additional cost
+
+from the individual color cards or swatches.
+
+Keep the color options visually clean.
+
+Each color option should show only:
+
+- Color/style name
+- Color swatches
+- Small visual preview
+- Selected-state indicator
+
+Show the no-cost message once at the section level:
+
+“All color styles are included at no additional cost.”
+
+Do not repeat it inside every card.
+
+4. STANDARDIZE THE MOBILE PREVIEW
+
+The mobile preview must use a realistic, standardized cellphone viewport.
+
+Use:
+
+- Preview viewport: 390 × 844px
+- Portrait orientation
+- Standard modern smartphone proportions
+- Rounded device frame
+- Safe top and bottom spacing
+- Visible but subtle phone-frame treatment
+
+The preview should:
+
+- Scale to fit the design workspace without distorting the page.
+- Preserve the actual 390 × 844 aspect ratio.
+- Allow internal vertical scrolling when page content exceeds the viewport.
+- Never stretch into a tablet-like shape.
+- Never display at desktop proportions.
+- Maintain readable content inside the phone preview.
+
+Add a small label:
+
+“Mobile preview · 390 × 844”
+
+When “Both” is selected:
+
+- Allow switching between Desktop and Mobile preview tabs.
+- Desktop preview keeps its desktop viewport.
+- Mobile preview always uses the standardized 390 × 844 viewport.
+- Do not show a stretched hybrid preview.
+
+5. MAKE PAGE NAVIGATION LOOP CONTINUOUSLY
+
+The template preview currently stops at the last page, such as page 4 of 4.
+
+Change the Previous and Next controls into a continuous loop.
+
+Required behavior:
+
+- From page 1 of 4, clicking Previous opens page 4 of 4.
+- From page 4 of 4, clicking Next opens page 1 of 4.
+- Navigation must never stop or disable at the first or last page.
+- Preserve page-specific content and uploaded assets.
+- Preserve selected color.
+- Preserve selected device version.
+- Preserve selected template.
+- Update the page title and counter correctly after wrapping.
+
+Example:
+
+Home · 1 of 4
+→ Next
+About · 2 of 4
+→ Next
+Services · 3 of 4
+→ Next
+Contact · 4 of 4
+→ Next
+Home · 1 of 4
+
+Reverse direction:
+
+Home · 1 of 4
+→ Previous
+Contact · 4 of 4
+
+Keep both arrow buttons enabled at all times when the template contains more than one page.
+
+For a one-page template:
+
+- Hide the page-navigation arrows, or
+- Show them disabled with an appropriate accessibility explanation
+
+Do not create a fake loop for a one-page template.
+
+6. REMOVE “COMPARE ALL TIERS” COMPLETELY
+
+Remove “Compare All Tiers” from the intake experience.
+
+Remove:
+
+- Compare All Tiers button
+- Compare Tiers link
+- Tier-comparison modal
+- Tier-comparison drawer
+- Tier-comparison table
+- Tier-comparison cards
+- Any hidden or secondary comparison action inside the intake
+
+Do not replace it with another comparison control.
+
+Tier comparison will exist on the public landing page, outside this private intake.
+
+The private intake should show only the three tier-selection cards needed to choose:
+
+- Template / Drag-and-Drop
+- Custom Made
+- Enterprise / Built from Scratch
+
+Each card may retain its own:
+
+- Short description
+- Price range
+- Delivery-level summary
+- Customization summary
+
+But there must be no separate comparison experience inside the intake.
+
+7. PRESERVE RECEIPT PRICING
+
+Because all colors are free:
+
+- Color selection must not create a receipt line item.
+- Do not add a color adjustment.
+- Do not add a color fee.
+- Do not change the subtotal.
+- Do not change the total.
+- Do not change the delivery estimate.
+
+The receipt may still show:
+
+Selected Color Style: [Color Name]
+
+But its cost must be:
+
+₱0 additional cost
+
+Prefer showing it as informational rather than as a priced line item.
+
+8. PROTOTYPE INTERACTIONS TO VERIFY
+
+Update the clickable prototype so these interactions work:
+
+FLOW A — COLOR PREVIEW
+
+Choose template
+→ Select Desktop
+→ Select a different color
+→ Desktop preview updates immediately
+→ Navigate to another page
+→ Selected color remains applied
+→ Switch to Mobile
+→ Same color remains applied in the 390 × 844 preview
+
+FLOW B — PAGE LOOP
+
+Page 1 of 4
+→ Previous
+→ Page 4 of 4
+→ Next
+→ Page 1 of 4
+
+Page 3 of 4
+→ Next
+→ Page 4 of 4
+→ Next
+→ Page 1 of 4
+
+FLOW C — DEVICE PREVIEW
+
+Select Mobile
+→ Show standardized 390 × 844 phone preview
+→ Switch to Desktop
+→ Show desktop preview
+→ Switch to Both
+→ Allow Desktop/Mobile tab switching
+
+FLOW D — PRICING
+
+Select one color
+→ Record project total
+→ Select another color
+→ Confirm project total remains unchanged
+→ Confirm delivery estimate remains unchanged
+
+9. ACCESSIBILITY
+
+Ensure:
+
+- Color options have text names, not color-only identification.
+- Selected color is announced to screen readers.
+- Color changes announce that the preview was updated.
+- Previous and Next have meaningful accessible labels:
+  - “Previous template page”
+  - “Next template page”
+- Looping navigation does not trap keyboard focus.
+- Mobile preview label announces “390 by 844 pixels.”
+- Device tabs are keyboard accessible.
+- Removed comparison controls leave no empty focus targets.
+- No hidden Compare All Tiers button remains keyboard-focusable.
+
+FINAL REQUIREMENT
+
+Do not change the overall context of the existing intake UI.
+
+Only:
+
+- Connect color selection to the live preview
+- Make all color options free
+- Remove repeated “Included” text from color cards
+- Standardize mobile preview to 390 × 844
+- Make page arrows loop continuously
+- Remove Compare All Tiers completely
+- Ensure color changes never affect price or delivery time
+
+Everything else must remain visually and structurally unchanged.
