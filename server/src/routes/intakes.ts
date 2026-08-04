@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase.js";
 import { validateIntakePayload, type ValidatedPayload } from "../lib/validation.js";
 import { generateBuildReferenceNumber } from "../lib/reference.js";
 import { hashPayload } from "../lib/hash.js";
+import { orchestrateAnalysis } from "../lib/mcp-orchestration.js";
 
 export const intakeRouter = Router();
 
@@ -64,7 +65,15 @@ intakeRouter.post("/", async (req: Request, res: Response) => {
   try {
     const buildRef = await generateBuildReferenceNumber();
     const result = await persistIntake(data, buildRef, idempotencyKey, pHash);
+    const intakeId = result.intakeId;
+
     res.status(201).json(result);
+
+    if (intakeId) {
+      orchestrateAnalysis(intakeId).catch((err) => {
+        console.error(`Background analysis failed for intake ${intakeId}:`, err);
+      });
+    }
   } catch (err) {
     console.error("Intake submission failed:", err);
     res.status(500).json({ success: false, error: "An internal error occurred. Please try again." });

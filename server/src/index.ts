@@ -4,6 +4,7 @@ import { validateConfig, preflightCheck } from "./lib/config.js";
 import { requireAuth } from "./middleware/auth.js";
 import { intakeRouter } from "./routes/intakes.js";
 import { assetRouter } from "./routes/assets.js";
+import { analysisRouter } from "./routes/analysis.js";
 
 const preflight = preflightCheck();
 if (!preflight.ok) {
@@ -38,6 +39,7 @@ app.get("/api/health", (_req, res) => {
 
 app.use("/api/intakes", requireAuth, intakeRouter);
 app.use("/api/assets", requireAuth, assetRouter);
+app.use("/api/analysis", requireAuth, analysisRouter);
 
 app.use((_req, res) => {
   res.status(404).json({ success: false, error: "Not found" });
