@@ -1,45 +1,8 @@
-import { useState, type CSSProperties, type ReactNode } from 'react'
-
-// ── Types ──────────────────────────────────────────────────────────────────────
-
-type Tier = 'template' | 'custom' | 'enterprise' | ''
-type StepId =
-  | 'intro' | 'client-details' | 'company-assets' | 'build-approach'
-  | 'template-select' | 'enterprise-vision' | 'pages-features'
-  | 'design' | 'review' | 'payment' | 'final-confirm' | 'build-card'
-
-interface FormData {
-  // Client
-  fullName: string; company: string; email: string; phone: string
-  projectName: string; industry: string; projectType: string; businessDesc: string
-  // Company assets
-  assetQualification: string
-  assetStatuses: Record<string, string>
-  selectedAssetServices: string[]
-  // Build approach
-  tier: Tier
-  // Template
-  templateCategory: string; templateId: string; projectVersion: string; colorPreset: string
-  customSizes: boolean; allSizes: boolean
-  // Enterprise vision
-  projectVision: string; targetUsers: string; userRoles: string
-  businessWorkflows: string; integrations: string; existingSystems: string
-  dataSecurityReqs: string; scalabilityReqs: string; designInspiration: string
-  competitors: string; successCriteria: string
-  // Features
-  features: string[]; featurePriorities: Record<string, string>
-  customFeatures: string[]
-  // Design
-  designStyles: string[]; inspirationLink: string
-  // Payment
-  paymentPlan: string; voucherCode: string; voucherStatus: string
-  maintenanceAfterFree: string
-  maintenanceEndAcknowledged: boolean
-  preferredBillingDate: string
-  // Final confirm checkboxes
-  confirmAccurate: boolean; confirmReceipt: boolean; confirmPayment: boolean
-  confirmMaintenance: boolean; confirmBuildCard: boolean; confirmSubmission: boolean
-}
+import { useState, useEffect, type CSSProperties, type ReactNode } from 'react'
+import type { FormData, Tier, StepId } from './types/intake'
+import { getFlow } from './data/flow'
+import { validateStep } from './data/validation'
+import { submitIntake, toSubmissionPayload, generateIdempotencyKey } from './api/intake'
 
 const EMPTY_FORM: FormData = {
   fullName: '', company: '', email: '', phone: '', projectName: '',
@@ -59,16 +22,6 @@ const EMPTY_FORM: FormData = {
   confirmMaintenance: false, confirmBuildCard: false, confirmSubmission: false,
 }
 
-// ── Flow ───────────────────────────────────────────────────────────────────────
-
-function getFlow(tier: Tier): StepId[] {
-  const base: StepId[] = ['intro', 'client-details', 'company-assets', 'build-approach']
-  if (!tier) return base
-  if (tier === 'template' || tier === 'custom') {
-    return [...base, 'template-select', 'pages-features', 'design', 'review', 'payment', 'final-confirm', 'build-card']
-  }
-  return [...base, 'enterprise-vision', 'pages-features', 'design', 'review', 'payment', 'final-confirm', 'build-card']
-}
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -526,6 +479,8 @@ export default function App() {
   const [submitted, setSubmitted] = useState(false)
   const [buildRef, setBuildRef] = useState('')
   const [clientVoucher, setClientVoucher] = useState('')
+  const [submissionError, setSubmissionError] = useState('')
+  const [idempotencyKey, setIdempotencyKey] = useState('')
   const [showTierWarning, setShowTierWarning] = useState(false)
   const [pendingTier, setPendingTier] = useState<Tier>('')
   const [templateCatFilter, setTemplateCatFilter] = useState('All')
@@ -538,6 +493,11 @@ export default function App() {
   const [conciergeOpen, setConciergeOpen] = useState(false)
   const [conciergeQ, setConciergeQ] = useState<string | null>(null)
   const [voucherChecking, setVoucherChecking] = useState(false)
+
+  // Initialize idempotency key on mount
+  useEffect(() => {
+    setIdempotencyKey(generateIdempotencyKey())
+  }, [])
 
   const flow = getFlow(form.tier)
   const currentStep: StepId = (flow[stepIndex] ?? 'intro') as StepId
@@ -604,20 +564,35 @@ export default function App() {
   const allConfirmed = form.confirmAccurate && form.confirmReceipt && form.confirmPayment
     && form.confirmMaintenance && form.confirmBuildCard && form.confirmSubmission
 
-  const handleNext = () => {
-    if (currentStep === 'build-approach' && !form.tier) return
-    if (currentStep === 'company-assets' && !form.assetQualification) return
-    if (currentStep === 'payment' && !form.paymentPlan) return
+  const handleNext = async () => {
+    // Validate current step
+    const errors = validateStep(currentStep, form)
+    if (errors.length > 0) return
+
     if (currentStep === 'final-confirm') {
       if (!allConfirmed) return
+
+      // Submit intake
       setSubmitting(true)
-      setTimeout(() => {
-        setBuildRef(makeRef())
-        setClientVoucher(makeClientVoucher())
+      setSubmissionError('')
+
+      try {
+        const payload = toSubmissionPayload(form, pageContents)
+        const response = await submitIntake(payload, idempotencyKey)
+
+        if (response.success && response.buildReferenceNumber) {
+          setBuildRef(response.buildReferenceNumber)
+          setClientVoucher(`REF-${Math.random().toString(36).substring(2, 8).toUpperCase()}`)
+          setSubmitted(true)
+          setStepIndex(flow.indexOf('build-card'))
+        } else {
+          setSubmissionError(response.error || 'Submission failed. Please try again.')
+        }
+      } catch (error) {
+        setSubmissionError(error instanceof Error ? error.message : 'An unexpected error occurred')
+      } finally {
         setSubmitting(false)
-        setSubmitted(true)
-        setStepIndex(flow.indexOf('build-card'))
-      }, 2400)
+      }
       return
     }
     setStepIndex(i => Math.min(i + 1, flow.length - 1))
@@ -1602,7 +1577,18 @@ export default function App() {
             {submitting && (
               <div style={{ padding: '18px', background: '#0D1620', border: '1px solid rgba(57,214,199,0.2)', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '14px', marginTop: '12px' }}>
                 <div style={{ width: '20px', height: '20px', border: '2px solid #1A2535', borderTop: '2px solid #39D6C7', borderRadius: '50%', flexShrink: 0 }} />
-                <span style={{ fontSize: '13px', color: '#39D6C7' }}>Creating your secure Build Reference and preliminary Build Card…</span>
+                <span style={{ fontSize: '13px', color: '#39D6C7' }}>Submitting your intake…</span>
+              </div>
+            )}
+
+            {submissionError && (
+              <div style={{ padding: '18px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '10px', marginTop: '12px' }}>
+                <div style={{ fontSize: '13px', color: '#EF4444', lineHeight: 1.5 }}>
+                  <strong>Submission Error:</strong> {submissionError}
+                </div>
+                <div style={{ fontSize: '12px', color: '#9B6A6A', marginTop: '8px' }}>
+                  Please check your connection and try again. If the problem persists, contact M-THRYVE support.
+                </div>
               </div>
             )}
           </div>
