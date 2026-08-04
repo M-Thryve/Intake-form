@@ -223,6 +223,19 @@ assetRouter.patch("/:assetId/status", async (req: Request, res: Response) => {
 
   const { status: newStatus, reason } = parseResult.data;
 
+  // Only internal services (scanner) or owner/admin can mark assets as ready
+  const isTrustedCaller =
+    req.isInternalService === true ||
+    (req.user?.role === "owner" || req.user?.role === "admin");
+
+  if (newStatus === "ready" && !isTrustedCaller) {
+    res.status(403).json({
+      success: false,
+      error: "Only a trusted scanner or owner/admin can mark assets as ready",
+    });
+    return;
+  }
+
   const { data: asset, error: fetchErr } = await supabase
     .from("uploaded_assets")
     .select("id, asset_status")
@@ -235,7 +248,7 @@ assetRouter.patch("/:assetId/status", async (req: Request, res: Response) => {
   }
 
   const currentStatus = asset.asset_status as AssetStatus;
-  if (!isValidTransition(currentStatus, newStatus)) {
+  if (!isValidTransition(currentStatus, newStatus, isTrustedCaller)) {
     res.status(409).json({
       success: false,
       error: `Invalid state transition: '${currentStatus}' → '${newStatus}'`,
@@ -266,12 +279,13 @@ assetRouter.patch("/:assetId/status", async (req: Request, res: Response) => {
     return;
   }
 
+  const actorType = req.isInternalService ? "scanner" : "user";
   await supabase.from("asset_state_log").insert({
     asset_id: assetId,
     previous_status: currentStatus,
     new_status: newStatus,
     reason: reason || `Status changed to ${newStatus}`,
-    actor_type: "system",
+    actor_type: actorType,
   });
 
   res.json({

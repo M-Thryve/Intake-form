@@ -10,7 +10,14 @@ const configSchema = z.object({
     .min(20, "SUPABASE_SERVICE_ROLE_KEY is required and must be a valid key"),
   SUPABASE_ANON_KEY: z
     .string()
-    .min(20, "SUPABASE_ANON_KEY is required and must be a valid key")
+    .min(20, "SUPABASE_ANON_KEY is required for JWT verification"),
+  SUPABASE_JWT_SECRET: z
+    .string()
+    .min(20, "SUPABASE_JWT_SECRET is required for token verification")
+    .optional(),
+  API_INTERNAL_KEY: z
+    .string()
+    .min(32, "API_INTERNAL_KEY must be at least 32 characters")
     .optional(),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   NODE_ENV: z
@@ -21,6 +28,9 @@ const configSchema = z.object({
     .min(1)
     .default("intake-assets"),
   MAX_UPLOAD_SIZE_MB: z.coerce.number().int().min(1).max(100).default(25),
+  ALLOWED_ORIGINS: z
+    .string()
+    .default("*"),
 });
 
 export type ServerConfig = z.infer<typeof configSchema>;
@@ -45,15 +55,18 @@ export function validateConfig(): ServerConfig {
         ...missing,
         "",
         "Required variables:",
-        "  SUPABASE_URL           — Your Supabase project URL",
+        "  SUPABASE_URL             — Your Supabase project URL",
         "  SUPABASE_SERVICE_ROLE_KEY — Service role key (Settings > API in Supabase dashboard)",
+        "  SUPABASE_ANON_KEY        — Anon/public key (Settings > API in Supabase dashboard)",
         "",
         "Optional variables:",
-        "  SUPABASE_ANON_KEY      — Anon/public key for client-scoped operations",
+        "  SUPABASE_JWT_SECRET    — JWT secret for token verification (Settings > API > JWT Settings)",
+        "  API_INTERNAL_KEY       — Shared key for internal service calls (scanner, etc.)",
         "  PORT                   — Server port (default: 3000)",
         "  NODE_ENV               — Environment: development | test | staging | production",
         "  SUPABASE_STORAGE_BUCKET — Storage bucket name (default: intake-assets)",
         "  MAX_UPLOAD_SIZE_MB     — Max upload size in MB (default: 25)",
+        "  ALLOWED_ORIGINS        — Comma-separated allowed CORS origins (default: * for dev)",
         "",
         "Set these in your environment or .env file (never commit real values).",
         "See .env.example for the template.",
@@ -86,10 +99,18 @@ export function preflightCheck(): { ok: boolean; errors: string[] } {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     errors.push("SUPABASE_SERVICE_ROLE_KEY is not set");
   }
+  if (!process.env.SUPABASE_ANON_KEY) {
+    errors.push("SUPABASE_ANON_KEY is not set");
+  }
 
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
   if (key && key === "your-service-role-key-here") {
     errors.push("SUPABASE_SERVICE_ROLE_KEY still has the placeholder value from .env.example");
+  }
+
+  const anonKey = process.env.SUPABASE_ANON_KEY || "";
+  if (anonKey && anonKey === "your-anon-key-here") {
+    errors.push("SUPABASE_ANON_KEY still has the placeholder value from .env.example");
   }
 
   return { ok: errors.length === 0, errors };

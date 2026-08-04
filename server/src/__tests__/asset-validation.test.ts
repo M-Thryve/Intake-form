@@ -10,6 +10,7 @@ import { validateConfig } from "../lib/config.js";
 beforeAll(() => {
   process.env.SUPABASE_URL = "https://test.supabase.co";
   process.env.SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test-key-value";
+  process.env.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test-anon-key-value";
   process.env.MAX_UPLOAD_SIZE_MB = "25";
   validateConfig();
 });
@@ -118,15 +119,13 @@ describe("validateAssetUpload", () => {
   });
 });
 
-describe("isValidTransition", () => {
+describe("isValidTransition (public callers)", () => {
   const validTransitions: [AssetStatus, AssetStatus][] = [
     ["pending", "uploaded"],
     ["pending", "failed"],
     ["uploaded", "scanning"],
-    ["uploaded", "ready"],
     ["uploaded", "rejected"],
     ["uploaded", "failed"],
-    ["scanning", "ready"],
     ["scanning", "rejected"],
     ["scanning", "failed"],
   ];
@@ -143,19 +142,21 @@ describe("isValidTransition", () => {
     ["pending", "scanning"],
     ["scanning", "uploaded"],
     ["scanning", "pending"],
+    ["uploaded", "ready"],
+    ["scanning", "ready"],
   ];
 
   it.each(validTransitions)(
     "allows %s → %s",
     (from, to) => {
-      expect(isValidTransition(from, to)).toBe(true);
+      expect(isValidTransition(from, to, false)).toBe(true);
     }
   );
 
   it.each(invalidTransitions)(
     "rejects %s → %s",
     (from, to) => {
-      expect(isValidTransition(from, to)).toBe(false);
+      expect(isValidTransition(from, to, false)).toBe(false);
     }
   );
 
@@ -163,5 +164,18 @@ describe("isValidTransition", () => {
     expect(isValidTransition("ready", "ready")).toBe(false);
     expect(isValidTransition("rejected", "rejected")).toBe(false);
     expect(isValidTransition("failed", "failed")).toBe(false);
+  });
+});
+
+describe("isValidTransition (trusted callers)", () => {
+  it("allows trusted callers to transition to ready", () => {
+    expect(isValidTransition("uploaded", "ready", true)).toBe(true);
+    expect(isValidTransition("scanning", "ready", true)).toBe(true);
+  });
+
+  it("still blocks invalid transitions for trusted callers", () => {
+    expect(isValidTransition("ready", "pending", true)).toBe(false);
+    expect(isValidTransition("pending", "ready", true)).toBe(false);
+    expect(isValidTransition("failed", "ready", true)).toBe(false);
   });
 });

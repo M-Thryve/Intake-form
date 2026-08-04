@@ -116,6 +116,15 @@ export type AssetStatus = "pending" | "uploaded" | "scanning" | "ready" | "rejec
 
 export const VALID_TRANSITIONS: Record<AssetStatus, AssetStatus[]> = {
   pending: ["uploaded", "failed"],
+  uploaded: ["scanning", "rejected", "failed"],
+  scanning: ["rejected", "failed"],
+  ready: [],
+  rejected: [],
+  failed: [],
+};
+
+export const TRUSTED_TRANSITIONS: Record<AssetStatus, AssetStatus[]> = {
+  pending: ["uploaded", "failed"],
   uploaded: ["scanning", "ready", "rejected", "failed"],
   scanning: ["ready", "rejected", "failed"],
   ready: [],
@@ -123,6 +132,7 @@ export const VALID_TRANSITIONS: Record<AssetStatus, AssetStatus[]> = {
   failed: [],
 };
 
-export function isValidTransition(from: AssetStatus, to: AssetStatus): boolean {
-  return VALID_TRANSITIONS[from]?.includes(to) ?? false;
+export function isValidTransition(from: AssetStatus, to: AssetStatus, trusted: boolean = false): boolean {
+  const map = trusted ? TRUSTED_TRANSITIONS : VALID_TRANSITIONS;
+  return map[from]?.includes(to) ?? false;
 }

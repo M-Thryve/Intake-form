@@ -7,6 +7,7 @@ describe("preflightCheck", () => {
   beforeEach(() => {
     process.env.SUPABASE_URL = "https://test.supabase.co";
     process.env.SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test-key-value-here";
+    process.env.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test-anon-key-value";
   });
 
   afterEach(() => {
@@ -40,11 +41,19 @@ describe("preflightCheck", () => {
     expect(result.errors.some((e) => e.includes("placeholder"))).toBe(true);
   });
 
-  it("fails when both required vars are missing", () => {
-    delete process.env.SUPABASE_URL;
-    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  it("fails when SUPABASE_ANON_KEY is missing", () => {
+    delete process.env.SUPABASE_ANON_KEY;
     const result = preflightCheck();
     expect(result.ok).toBe(false);
-    expect(result.errors.length).toBe(2);
+    expect(result.errors).toContain("SUPABASE_ANON_KEY is not set");
+  });
+
+  it("fails when all required vars are missing", () => {
+    delete process.env.SUPABASE_URL;
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    delete process.env.SUPABASE_ANON_KEY;
+    const result = preflightCheck();
+    expect(result.ok).toBe(false);
+    expect(result.errors.length).toBe(3);
   });
 });
