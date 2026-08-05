@@ -6,6 +6,8 @@ import { intakeRouter } from "./routes/intakes.js";
 import { assetRouter } from "./routes/assets.js";
 import { analysisRouter } from "./routes/analysis.js";
 import { consoleRouter } from "./routes/console.js";
+import { agreementRouter } from "./routes/agreement.js";
+import { financeRouter } from "./routes/finance.js";
 
 const preflight = preflightCheck();
 if (!preflight.ok) {
@@ -42,6 +44,8 @@ app.use("/api/intakes", requireAuth, intakeRouter);
 app.use("/api/assets", requireAuth, assetRouter);
 app.use("/api/analysis", requireAuth, analysisRouter);
 app.use("/api/console", requireAuth, consoleRouter);
+app.use("/api/agreement", requireAuth, agreementRouter);
+app.use("/api/finance", requireAuth, financeRouter);
 
 app.use((_req, res) => {
   res.status(404).json({ success: false, error: "Not found" });
