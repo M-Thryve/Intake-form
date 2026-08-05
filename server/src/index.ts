@@ -8,6 +8,8 @@ import { analysisRouter } from "./routes/analysis.js";
 import { consoleRouter } from "./routes/console.js";
 import { agreementRouter } from "./routes/agreement.js";
 import { financeRouter } from "./routes/finance.js";
+import { buildDeliveryRouter } from "./routes/build-delivery.js";
+import { buildOrchestrationRouter } from "./routes/build-orchestration.js";
 
 const preflight = preflightCheck();
 if (!preflight.ok) {
@@ -46,6 +48,8 @@ app.use("/api/analysis", requireAuth, analysisRouter);
 app.use("/api/console", requireAuth, consoleRouter);
 app.use("/api/agreement", requireAuth, agreementRouter);
 app.use("/api/finance", requireAuth, financeRouter);
+app.use("/api/build-delivery", requireAuth, buildDeliveryRouter);
+app.use("/api/build-orchestration", requireAuth, buildOrchestrationRouter);
 
 app.use((_req, res) => {
   res.status(404).json({ success: false, error: "Not found" });
