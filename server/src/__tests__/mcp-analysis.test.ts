@@ -243,10 +243,10 @@ describe("Scope Analysis MCP", () => {
     expect(result.risks.some((r) => r.description.toLowerCase().includes("page count"))).toBe(true);
   });
 
-  it("notes missing design styles as an ambiguity", () => {
+  it("does not flag missing design styles as an ambiguity (REV-05 — design step removed)", () => {
     const context = makeTemplateContext({ design: { styleCount: 0 } });
     const result = runScopeAnalysis(context, null);
-    expect(result.ambiguities.some((a) => a.topic.toLowerCase().includes("design"))).toBe(true);
+    expect(result.ambiguities.some((a) => a.topic.toLowerCase().includes("design"))).toBe(false);
   });
 });
 

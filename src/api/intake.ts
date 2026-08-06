@@ -3,9 +3,11 @@ import type {
   IntakeSubmissionPayload,
   IntakeSubmissionResponse,
   IntakeOutcome,
+  IntakeStatus,
   LegacyIntakePayload,
   BuildPath,
   AssetReadiness,
+  DiscardReason,
 } from '../types/intake'
 import { normalizeToBuildPath } from '../data/flow'
 import { collectMissingRequirements } from '../data/validation'
@@ -153,7 +155,50 @@ export function isLegacyPayload(value: unknown): value is LegacyIntakePayload {
   return 'tier' in record && !('buildPath' in record)
 }
 
-export async function submitIntake(
+export function generateIdempotencyKey(): string {
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
+}
+
+// ── Phase 4: Explicit Lifecycle Operations ─────────────────────────────────
+
+const INTAKE_API = `${API_BASE_URL}${API_ENDPOINT}`
+
+/**
+ * Save the intake as a draft. Always allowed — bypasses blocking validation.
+ * Missing requirements are captured as structured records.
+ */
+export async function saveDraft(
+  payload: IntakeSubmissionPayload,
+  idempotencyKey: string,
+): Promise<IntakeSubmissionResponse> {
+  return lifecycleOp('save_draft', payload, idempotencyKey)
+}
+
+/**
+ * Submit the intake for owner review. Requires the complete discovery contract
+ * and generates a server-side build reference number.
+ */
+export async function submitIntakeForReview(
+  payload: IntakeSubmissionPayload,
+  idempotencyKey: string,
+): Promise<IntakeSubmissionResponse> {
+  return lifecycleOp('submit', payload, idempotencyKey)
+}
+
+/**
+ * Discard the intake. Archives the record with a reason and audit event.
+ * Excluded from the owner-review queue.
+ */
+export async function discardIntake(
+  payload: IntakeSubmissionPayload,
+  discardReason: DiscardReason,
+  idempotencyKey: string,
+): Promise<IntakeSubmissionResponse> {
+  return lifecycleOp('discard', { ...payload, outcome: 'discarded', discardReason }, idempotencyKey)
+}
+
+async function lifecycleOp(
+  command: 'save_draft' | 'submit' | 'discard',
   payload: IntakeSubmissionPayload,
   idempotencyKey: string,
 ): Promise<IntakeSubmissionResponse> {
@@ -163,29 +208,30 @@ export async function submitIntake(
       headers: {
         'Content-Type': 'application/json',
         'Idempotency-Key': idempotencyKey,
+        'X-Intake-Command': command,
       },
-      body: JSON.stringify({ intake: payload, idempotencyKey }),
+      body: JSON.stringify({ intake: payload, idempotencyKey, command }),
     })
 
     const data: IntakeSubmissionResponse = await response.json()
 
     if (!response.ok) {
-      return {
-        success: false,
-        error: data.error || 'Submission failed. Please try again.',
-      }
+      return { success: false, error: data.error || `${command} failed` }
     }
 
     return data
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Network error. Please try again.'
     return {
       success: false,
-      error: `Submission error: ${errorMessage}`,
+      error: `${command} error: ${error instanceof Error ? error.message : 'Network error'}`,
     }
   }
 }
 
-export function generateIdempotencyKey(): string {
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
+/** @deprecated v1.x generic submit — use saveDraft/submitIntakeForReview/discardIntake instead. */
+export async function submitIntake(
+  payload: IntakeSubmissionPayload,
+  idempotencyKey: string,
+): Promise<IntakeSubmissionResponse> {
+  return lifecycleOp('submit', payload, idempotencyKey)
 }

@@ -47,9 +47,7 @@ export function validateStep(stepId: StepId, formData: FormData): ValidationErro
     case 'pages-features':
       errors.push(...validatePagesFeatures(formData))
       break
-    case 'design':
-      errors.push(...validateDesign(formData))
-      break
+// 'design' step removed per REV-05; validateDesign() retained for legacy reads
     // 'payment' and 'final-confirm' intentionally omitted — removed in v2.0
   }
 
@@ -171,9 +169,7 @@ export function collectMissingRequirements(formData: FormData): MissingRequireme
   if (allFeatures.length === 0) {
     missing.push(mk('scope.features', 'At least one feature', 'scope', 'pages-features', 'required'))
   }
-  if (formData.designStyles.length === 0) {
-    missing.push(mk('design.styles', 'At least one design style', 'design', 'design', 'recommended'))
-  }
+  // design.styles check removed per REV-05 — design step is no longer collected
 
   // ── Structured resources ──────────────────────────────────────────────
   // Only evaluate resources once a build path is chosen — the required
@@ -200,13 +196,18 @@ export function collectMissingRequirements(formData: FormData): MissingRequireme
 
     // ── Company-deck sections ──────────────────────────────────────────
     // Deck sections only apply if the operator confirmed a deck exists
-    // (yes / partial). If the deck itself is an add-on or absent, the
-    // parent 'company_deck' resource gap already captures it.
+    // (yes / partial). REV-04 Phase 4 Delta:
+    //   'yes'     — only 'available' and 'not_applicable' count as confirmed.
+    //               missing, provide_later, m_thryve_add_on, and unset → gap.
+    //               Rationale: m_thryve_add_on on a section contradicts the claim
+    //               that the operator has verified a full deck.
+    //   'partial' — operator sets each section's status; unset → status:'missing'.
     if (formData.deckExists === 'yes' || formData.deckExists === 'partial') {
       const sections = getCompanyDeckSections(ctx)
       for (const s of sections) {
         const status = formData.deckSectionStatuses[s.key] as AssetReadiness | undefined
         const note = formData.deckSectionNotes[s.key]
+        const isYesGating = formData.deckExists === 'yes'
         const gap = resourceStatusToGap(
           `deck.${s.key}`,
           `Deck section: ${s.label}`,
@@ -218,6 +219,26 @@ export function collectMissingRequirements(formData: FormData): MissingRequireme
           ctx,
         )
         if (gap) missing.push(gap)
+        // REV-04 Delta: When 'yes' is selected, only 'available' and 'not_applicable'
+        // count as confirmed. All other statuses (missing, provide_later, m_thryve_add_on,
+        // unset) produce an explicit gap record.
+        if (isYesGating && (!status || status !== 'available' && status !== 'not_applicable')) {
+          if (!gap) {
+            missing.push({
+              key: `deck.${s.key}.yes_gate`,
+              label: `Deck section: ${s.label} (must be confirmed for full deck)`,
+              category: 'company_deck',
+              section: 'company-assets',
+              severity: 'required',
+              status: status === 'provide_later' ? 'provide_later'
+                : status === 'm_thryve_add_on' ? 'pending'
+                : 'missing',
+              nextAction: status === 'm_thryve_add_on'
+                ? 'Section marked as add-on contradicts full-deck claim — select "partial" instead'
+                : 'Full deck available — every section requires a confirmed status',
+            })
+          }
+        }
       }
     } else if (!formData.deckExists) {
       missing.push({
