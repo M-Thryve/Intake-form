@@ -14,6 +14,7 @@ import {
   isNotApplicableAllowed,
   type RequirementContext,
 } from './assets'
+import { ctxFor, isNonEmpty, isValidEmail } from './field-validators'
 
 /**
  * v2.0 validation. Two modes:
@@ -52,15 +53,6 @@ export function validateStep(stepId: StepId, formData: FormData): ValidationErro
   }
 
   return errors
-}
-
-function ctxFor(form: FormData): RequirementContext {
-  return {
-    buildPath: form.tier === 'enterprise' ? 'enterprise' : form.tier ? 'custom' : '',
-    projectType: form.projectType,
-    templateId: form.templateId,
-    features: [...form.features, ...form.customFeatures],
-  }
 }
 
 /**
@@ -282,9 +274,9 @@ export function canSubmit(formData: FormData): { ok: boolean; missing: MissingRe
 
 function validateClientDetails(form: FormData): ValidationError[] {
   const errors: ValidationError[] = []
-  if (!form.fullName.trim()) errors.push({ field: 'fullName', message: 'Full name is required' })
-  if (!form.email.trim() || !form.email.includes('@')) errors.push({ field: 'email', message: 'Valid email is required' })
-  if (!form.projectName.trim()) errors.push({ field: 'projectName', message: 'Project name is required' })
+  if (!isNonEmpty(form.fullName)) errors.push({ field: 'fullName', message: 'Full name is required' })
+  if (!isValidEmail(form.email)) errors.push({ field: 'email', message: 'Valid email is required' })
+  if (!isNonEmpty(form.projectName)) errors.push({ field: 'projectName', message: 'Project name is required' })
   if (!form.industry) errors.push({ field: 'industry', message: 'Industry is required' })
   if (!form.projectType) errors.push({ field: 'projectType', message: 'Project type is required' })
   return errors

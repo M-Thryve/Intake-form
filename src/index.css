@@ -17,3 +17,13 @@ body {
 *::-webkit-scrollbar {
   display: none;
 }
+
+/* REV-01: inline validation warning fade-in (150ms ease-in) */
+@keyframes mthryve-inline-warning-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.mthryve-inline-warning {
+  animation: mthryve-inline-warning-in 150ms ease-in;
+}
