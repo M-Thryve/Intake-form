@@ -17,3 +17,7 @@ server/dist/
 server/node_modules/
 server/.env
 INTAKE FORM KNOWLEDGE/
+# Playwright
+test-results/
+playwright-report/
+blob-report/
