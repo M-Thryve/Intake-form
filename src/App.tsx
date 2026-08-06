@@ -1,13 +1,37 @@
 import { useState, useEffect, type CSSProperties, type ReactNode } from 'react'
-import type { FormData, Tier, StepId } from './types/intake'
+import type {
+  FormData,
+  Tier,
+  StepId,
+  IntakeOutcome,
+  DiscardReasonCode,
+  MissingRequirement,
+} from './types/intake'
 import { getFlow } from './data/flow'
-import { validateStep } from './data/validation'
+import { validateStep, collectMissingRequirements, canSubmit } from './data/validation'
 import { submitIntake, toSubmissionPayload, generateIdempotencyKey } from './api/intake'
+import {
+  getRequiredResources,
+  getOptionalResources,
+  getCompanyDeckSections,
+  isNotApplicableAllowed,
+  READINESS_LABEL,
+  ADD_ON_SPIEL,
+  type RequirementContext,
+  type ResourceRequirement,
+} from './data/assets'
+import type { AssetReadiness } from './types/intake'
 
 const EMPTY_FORM: FormData = {
   fullName: '', company: '', email: '', phone: '', projectName: '',
   industry: '', projectType: '', businessDesc: '',
   assetQualification: '', assetStatuses: {}, selectedAssetServices: [],
+  deckExists: '',
+  deckSectionStatuses: {},
+  deckSectionNotes: {},
+  resourceStatuses: {},
+  resourceNotes: {},
+  resourceAddOnCosts: {},
   tier: '',
   templateCategory: '', templateId: '', projectVersion: '', colorPreset: '',
   customSizes: false, allSizes: false,
@@ -464,9 +488,517 @@ function RobotIcon({ size = 32 }: { size?: number }) {
 }
 
 const TIER_LABELS: Record<string, string> = {
-  template: 'Drag & Drop',
-  custom: 'Custom Made',
-  enterprise: 'Enterprise',
+  template: 'Drag & Drop (legacy)',
+  custom: 'Custom Build',
+  enterprise: 'Enterprise Level',
+}
+
+// ── v2.0 Company Assets step ───────────────────────────────────────────────
+
+const READINESS_ORDER: AssetReadiness[] = [
+  'available',
+  'missing',
+  'provide_later',
+  'not_applicable',
+  'm_thryve_add_on',
+]
+
+const READINESS_COLOR: Record<AssetReadiness, string> = {
+  available: '#39D6C7',
+  missing: '#EF4444',
+  provide_later: '#F59E0B',
+  not_applicable: '#4B6278',
+  m_thryve_add_on: '#B79CF9',
+}
+
+function ReadinessPills({
+  reqKey,
+  ctx,
+  value,
+  onChange,
+}: {
+  reqKey: string
+  ctx: RequirementContext
+  value: AssetReadiness | undefined
+  onChange: (next: AssetReadiness) => void
+}) {
+  return (
+    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+      {READINESS_ORDER.map(s => {
+        const disabled = s === 'not_applicable' && !isNotApplicableAllowed(reqKey, ctx)
+        const selected = value === s
+        return (
+          <button
+            key={s}
+            onClick={() => !disabled && onChange(s)}
+            disabled={disabled}
+            title={disabled ? '"Not applicable" is not valid for this resource' : undefined}
+            style={{
+              padding: '3px 9px',
+              borderRadius: '100px',
+              border: `1px solid ${selected ? READINESS_COLOR[s] : '#2A3441'}`,
+              background: selected ? `${READINESS_COLOR[s]}18` : disabled ? '#0B0F14' : 'transparent',
+              color: selected ? READINESS_COLOR[s] : disabled ? '#2A3441' : '#4B6278',
+              fontSize: '10px',
+              cursor: disabled ? 'not-allowed' : 'pointer',
+              fontFamily: "'Inter', system-ui, sans-serif",
+              whiteSpace: 'nowrap',
+              opacity: disabled ? 0.4 : 1,
+            }}
+          >
+            {READINESS_LABEL[s]}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function ResourceRow({
+  req,
+  ctx,
+  status,
+  note,
+  addOnCost,
+  onStatus,
+  onNote,
+  onAddOnCost,
+}: {
+  req: ResourceRequirement
+  ctx: RequirementContext
+  status: AssetReadiness | undefined
+  note: string
+  addOnCost: number | undefined
+  onStatus: (v: AssetReadiness) => void
+  onNote: (v: string) => void
+  onAddOnCost: (v: number | undefined) => void
+}) {
+  const borderColor = status ? READINESS_COLOR[status] + '55' : '#2A3441'
+  const showNote =
+    status === 'missing' ||
+    status === 'provide_later' ||
+    status === 'm_thryve_add_on' ||
+    status === 'not_applicable'
+  return (
+    <div style={{ padding: '12px 14px', background: '#111827', border: `1px solid ${borderColor}`, borderRadius: '8px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 500, color: '#D4E4F0' }}>{req.label}</span>
+            {req.severity === 'required' && (
+              <span style={{ fontSize: '9px', color: '#EF4444', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.08em' }}>REQUIRED</span>
+            )}
+          </div>
+          {req.description && (
+            <div style={{ fontSize: '11px', color: '#3D5468', marginTop: '2px', lineHeight: 1.5 }}>{req.description}</div>
+          )}
+        </div>
+        <ReadinessPills reqKey={req.key} ctx={ctx} value={status} onChange={onStatus} />
+      </div>
+
+      {status === 'm_thryve_add_on' && (
+        <div style={{ marginTop: '10px', padding: '10px 12px', background: 'rgba(183,156,249,0.08)', border: '1px solid rgba(183,156,249,0.25)', borderRadius: '6px' }}>
+          <div style={{ fontSize: '11px', fontStyle: 'italic', color: '#B79CF9', lineHeight: 1.55, marginBottom: '8px' }}>“{ADD_ON_SPIEL}”</div>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <span style={{ fontSize: '11px', color: '#4B6278', fontFamily: "'JetBrains Mono', monospace", whiteSpace: 'nowrap' }}>Preliminary cost ₱</span>
+            <input
+              type="number"
+              value={addOnCost ?? req.preliminaryAddOnCost ?? ''}
+              onChange={e => onAddOnCost(e.target.value === '' ? undefined : Number(e.target.value))}
+              placeholder="TBD"
+              style={{ ...inputStyle, padding: '6px 8px', fontSize: '12px', maxWidth: '140px', background: '#0D1620' }}
+            />
+            <span style={{ fontSize: '10px', color: '#3D5468' }}>Preliminary · subject to owner review</span>
+          </div>
+        </div>
+      )}
+
+      {showNote && (
+        <div style={{ marginTop: '10px' }}>
+          <input
+            value={note}
+            onChange={e => onNote(e.target.value)}
+            placeholder={
+              status === 'provide_later'
+                ? 'Follow-up owner / expected date…'
+                : status === 'not_applicable'
+                  ? 'Why is this not applicable?'
+                  : status === 'm_thryve_add_on'
+                    ? 'Scope of the add-on request…'
+                    : 'Operator note (why missing, next action)…'
+            }
+            style={{ ...inputStyle, padding: '8px 10px', fontSize: '12px', background: '#0D1620' }}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CompanyAssetsStep({
+  form,
+  setForm,
+}: {
+  form: FormData
+  setForm: (updater: (prev: FormData) => FormData) => void
+}) {
+  const ctx: RequirementContext = {
+    buildPath: form.tier === 'enterprise' ? 'enterprise' : form.tier ? 'custom' : '',
+    projectType: form.projectType,
+    templateId: form.templateId,
+    features: [...form.features, ...form.customFeatures],
+  }
+
+  const required = getRequiredResources(ctx)
+  const optional = getOptionalResources(ctx)
+  const deckSections = getCompanyDeckSections(ctx)
+
+  const setResourceStatus = (key: string, next: AssetReadiness) =>
+    setForm(prev => ({ ...prev, resourceStatuses: { ...prev.resourceStatuses, [key]: next } }))
+  const setResourceNote = (key: string, next: string) =>
+    setForm(prev => ({ ...prev, resourceNotes: { ...prev.resourceNotes, [key]: next } }))
+  const setAddOnCost = (key: string, next: number | undefined) =>
+    setForm(prev => {
+      const nextMap = { ...prev.resourceAddOnCosts }
+      if (next === undefined) delete nextMap[key]
+      else nextMap[key] = next
+      return { ...prev, resourceAddOnCosts: nextMap }
+    })
+  const setDeckStatus = (key: string, next: AssetReadiness) =>
+    setForm(prev => ({
+      ...prev,
+      deckSectionStatuses: { ...prev.deckSectionStatuses, [key]: next },
+    }))
+  const setDeckNote = (key: string, next: string) =>
+    setForm(prev => ({
+      ...prev,
+      deckSectionNotes: { ...prev.deckSectionNotes, [key]: next },
+    }))
+  const setDeckExists = (v: string) =>
+    setForm(prev => ({ ...prev, deckExists: v }))
+
+  return (
+    <div>
+      <StepHeader
+        tag="Step 4 — Company Assets & Resources"
+        title="What's ready, what's missing?"
+        desc={`Requirements below are derived from the ${ctx.buildPath === 'enterprise' ? 'Enterprise Level' : 'Custom Build'} path${ctx.projectType ? ` and a ${ctx.projectType} project` : ''}. Missing items don't block a draft — they're recorded as follow-ups or M-THRYVE add-ons.`}
+      />
+      <OperatorSpiel text={SPIELS.missingResource} tone="warning" />
+
+      {/* ── Company deck existence ──────────────────────────────────── */}
+      <div style={{ marginBottom: '20px' }}>
+        <div style={{ ...monoLabel, color: '#39D6C7', marginBottom: '10px' }}>Company Deck</div>
+        <div style={{ fontSize: '13px', color: '#C4D8EA', marginBottom: '10px', lineHeight: 1.55 }}>
+          Does the client have a company deck we can reference?
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' }}>
+          {[
+            { id: 'yes', label: 'Yes — full deck available', desc: 'We\'ll review section coverage below.' },
+            { id: 'partial', label: 'Partial — some sections available', desc: 'Mark each section\'s status below.' },
+            { id: 'no', label: 'No — no deck yet', desc: 'Deck sections are recorded as missing; consider add-on.' },
+            { id: 'add_on', label: 'M-THRYVE add-on requested', desc: 'M-THRYVE prepares the deck as an add-on, subject to owner confirmation.' },
+          ].map(opt => {
+            const sel = form.deckExists === opt.id
+            return (
+              <button
+                key={opt.id}
+                onClick={() => setDeckExists(opt.id)}
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: '8px',
+                  border: `1px solid ${sel ? '#39D6C7' : '#2A3441'}`,
+                  background: sel ? 'rgba(57,214,199,0.06)' : '#111827',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'all 0.15s',
+                }}
+              >
+                <div style={{ fontSize: '13px', fontWeight: 600, color: sel ? '#F0F6FF' : '#C4D8EA', marginBottom: '3px' }}>{opt.label}</div>
+                <div style={{ fontSize: '12px', color: '#4B6278', lineHeight: 1.5 }}>{opt.desc}</div>
+              </button>
+            )
+          })}
+        </div>
+
+        {form.deckExists === 'add_on' && (
+          <div style={{ padding: '10px 12px', background: 'rgba(183,156,249,0.08)', border: '1px solid rgba(183,156,249,0.25)', borderRadius: '8px', fontSize: '12px', fontStyle: 'italic', color: '#B79CF9', lineHeight: 1.55 }}>
+            “{ADD_ON_SPIEL}”
+          </div>
+        )}
+
+        {(form.deckExists === 'yes' || form.deckExists === 'partial') && (
+          <div style={{ marginTop: '14px' }}>
+            <div style={{ ...monoLabel, marginBottom: '8px' }}>
+              Deck Sections · required vs optional
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {deckSections.map(sec => (
+                <ResourceRow
+                  key={sec.key}
+                  req={{ key: sec.key, label: sec.label, category: 'company_deck', severity: sec.severity, description: sec.description }}
+                  ctx={ctx}
+                  status={form.deckSectionStatuses[sec.key]}
+                  note={form.deckSectionNotes[sec.key] ?? ''}
+                  addOnCost={undefined}
+                  onStatus={next => setDeckStatus(sec.key, next)}
+                  onNote={next => setDeckNote(sec.key, next)}
+                  onAddOnCost={() => {}}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Required resources ──────────────────────────────────────── */}
+      <div style={{ marginBottom: '20px' }}>
+        <div style={{ ...monoLabel, color: '#EF4444', marginBottom: '10px' }}>Required Resources · {required.length}</div>
+        <div style={{ fontSize: '12px', color: '#4B6278', marginBottom: '10px', lineHeight: 1.55 }}>
+          These resources are needed to complete the build accurately for this path and project type.
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {required.map(r => (
+            <ResourceRow
+              key={r.key}
+              req={r}
+              ctx={ctx}
+              status={form.resourceStatuses[r.key]}
+              note={form.resourceNotes[r.key] ?? ''}
+              addOnCost={form.resourceAddOnCosts[r.key]}
+              onStatus={next => setResourceStatus(r.key, next)}
+              onNote={next => setResourceNote(r.key, next)}
+              onAddOnCost={next => setAddOnCost(r.key, next)}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* ── Optional resources ──────────────────────────────────────── */}
+      <div style={{ marginBottom: '20px' }}>
+        <div style={{ ...monoLabel, color: '#F59E0B', marginBottom: '10px' }}>Optional / Improvement Resources · {optional.length}</div>
+        <div style={{ fontSize: '12px', color: '#4B6278', marginBottom: '10px', lineHeight: 1.55 }}>
+          Nice-to-have items. Missing entries here do not block submission but improve the resulting build.
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {optional.map(r => (
+            <ResourceRow
+              key={r.key}
+              req={r}
+              ctx={ctx}
+              status={form.resourceStatuses[r.key]}
+              note={form.resourceNotes[r.key] ?? ''}
+              addOnCost={form.resourceAddOnCosts[r.key]}
+              onStatus={next => setResourceStatus(r.key, next)}
+              onNote={next => setResourceNote(r.key, next)}
+              onAddOnCost={next => setAddOnCost(r.key, next)}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div style={{ padding: '10px 14px', background: '#0D1620', border: '1px solid #1E2E3D', borderRadius: '8px', fontSize: '11px', color: '#3D5468', lineHeight: 1.6 }}>
+        Secure file upload, malware scanning, and credential handling are out of scope for the intake and are prepared in a separate secure follow-up workflow. Do not paste credentials or API keys into operator notes.
+      </div>
+    </div>
+  )
+}
+
+// ── v2.0 Review — resource bucket summary ──────────────────────────────────
+
+function ResourceReviewBlock({ form, onEdit }: { form: FormData; onEdit: () => void }) {
+  const ctx: RequirementContext = {
+    buildPath: form.tier === 'enterprise' ? 'enterprise' : form.tier ? 'custom' : '',
+    projectType: form.projectType,
+    templateId: form.templateId,
+    features: [...form.features, ...form.customFeatures],
+  }
+  const required = getRequiredResources(ctx)
+  const optional = getOptionalResources(ctx)
+  const allResources = [...required, ...optional]
+
+  type Bucket = { key: string; label: string; status: AssetReadiness | undefined; severity: string; category: string }
+  const buckets: Record<string, Bucket[]> = {
+    available: [],
+    missing: [],
+    provide_later: [],
+    m_thryve_add_on: [],
+    not_applicable: [],
+    unset: [],
+  }
+  for (const r of allResources) {
+    const s = form.resourceStatuses[r.key]
+    const b: Bucket = { key: r.key, label: r.label, status: s, severity: r.severity, category: r.category }
+    buckets[s ?? 'unset'].push(b)
+  }
+
+  const deckSections = getCompanyDeckSections(ctx)
+  const deckSummary: Record<string, string[]> = {
+    available: [],
+    missing: [],
+    provide_later: [],
+    m_thryve_add_on: [],
+    not_applicable: [],
+    unset: [],
+  }
+  if (form.deckExists === 'yes' || form.deckExists === 'partial') {
+    for (const s of deckSections) {
+      const st = form.deckSectionStatuses[s.key] ?? 'unset'
+      deckSummary[st].push(s.label)
+    }
+  }
+
+  const bucketMeta = [
+    { key: 'available', label: 'Available', color: '#39D6C7' },
+    { key: 'missing', label: 'Missing', color: '#EF4444' },
+    { key: 'provide_later', label: 'Provide later (follow-up)', color: '#F59E0B' },
+    { key: 'm_thryve_add_on', label: 'M-THRYVE add-on requested', color: '#B79CF9' },
+    { key: 'not_applicable', label: 'Not applicable', color: '#4B6278' },
+    { key: 'unset', label: 'Not yet reviewed', color: '#4B6278' },
+  ] as const
+
+  const deckLabel: Record<string, string> = {
+    yes: 'Full deck available',
+    partial: 'Partial deck available',
+    no: 'No deck — recorded as missing',
+    add_on: 'M-THRYVE add-on requested',
+    '': 'Not confirmed',
+  }
+
+  return (
+    <div style={{ padding: '20px', background: '#111827', border: '1px solid #2A3441', borderRadius: '12px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <div style={{ ...monoLabel, margin: 0 }}>Assets & Resources</div>
+        <button onClick={onEdit} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#39D6C7', fontSize: '12px', fontFamily: "'Inter', system-ui, sans-serif", padding: 0 }}>Edit</button>
+      </div>
+
+      <div style={{ marginBottom: '14px', padding: '10px 12px', background: '#0D1620', border: '1px solid #1E2E3D', borderRadius: '8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <span style={{ fontSize: '11px', fontFamily: "'JetBrains Mono', monospace", color: '#4B6278', letterSpacing: '0.06em' }}>COMPANY DECK</span>
+          <span style={{ fontSize: '13px', color: '#D4E4F0' }}>{deckLabel[form.deckExists] || 'Not confirmed'}</span>
+        </div>
+        {(form.deckExists === 'yes' || form.deckExists === 'partial') && (
+          <div style={{ marginTop: '8px', fontSize: '11px', color: '#3D5468', lineHeight: 1.55 }}>
+            {deckSummary.available.length > 0 && <div><strong style={{ color: '#39D6C7' }}>Available:</strong> {deckSummary.available.join(', ')}</div>}
+            {deckSummary.missing.length > 0 && <div><strong style={{ color: '#EF4444' }}>Missing:</strong> {deckSummary.missing.join(', ')}</div>}
+            {deckSummary.provide_later.length > 0 && <div><strong style={{ color: '#F59E0B' }}>Provide later:</strong> {deckSummary.provide_later.join(', ')}</div>}
+            {deckSummary.m_thryve_add_on.length > 0 && <div><strong style={{ color: '#B79CF9' }}>Add-on:</strong> {deckSummary.m_thryve_add_on.join(', ')}</div>}
+            {deckSummary.not_applicable.length > 0 && <div><strong style={{ color: '#4B6278' }}>N/A:</strong> {deckSummary.not_applicable.join(', ')}</div>}
+            {deckSummary.unset.length > 0 && <div><strong style={{ color: '#4B6278' }}>Not yet reviewed:</strong> {deckSummary.unset.join(', ')}</div>}
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {bucketMeta.map(({ key, label, color }) => {
+          const items = buckets[key]
+          if (!items || items.length === 0) return null
+          return (
+            <div key={key} style={{ padding: '10px 12px', background: '#0D1620', border: `1px solid ${color}40`, borderRadius: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '6px' }}>
+                <span style={{ fontSize: '11px', fontFamily: "'JetBrains Mono', monospace", color, letterSpacing: '0.06em' }}>{label.toUpperCase()}</span>
+                <span style={{ fontSize: '11px', color: '#4B6278' }}>{items.length}</span>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                {items.map(item => (
+                  <span
+                    key={item.key}
+                    style={{
+                      padding: '2px 8px',
+                      borderRadius: '100px',
+                      background: item.severity === 'required' ? `${color}12` : 'transparent',
+                      border: `1px solid ${color}30`,
+                      fontSize: '11px',
+                      color: '#C4D8EA',
+                    }}
+                  >
+                    {item.label}
+                    {item.severity === 'required' && (
+                      <span style={{ marginLeft: '4px', fontSize: '9px', color: '#EF4444', fontFamily: "'JetBrains Mono', monospace" }}>REQ</span>
+                    )}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ── Operator-facing discovery-call spiels ──────────────────────────────────
+
+const SPIELS = {
+  clientDetails:
+    "I'll start by confirming the project and contact details so the notes and follow-ups are connected to the right company and opportunity.",
+  customBuild:
+    "Custom Build starts from an existing template, which lets us move faster. We can add features that are already supported for this template. Anything outside the listed options will need to be reviewed separately.",
+  enterprise:
+    "Enterprise Level is for a from-scratch product or a solution that needs a wider range of features. We'll document the product experience, design direction, and technical requirements before final scope is confirmed.",
+  missingResource:
+    "This resource is needed to complete the build accurately. We can continue documenting the project today and save this as a draft. M-THRYVE can also prepare it as an add-on, subject to owner confirmation.",
+  followUp:
+    "If you do not have that information today, I can mark it for follow-up and save the intake as a draft.",
+} as const
+
+const DISCARD_REASON_OPTIONS: Array<{ code: DiscardReasonCode; label: string }> = [
+  { code: 'not_proceeding', label: 'Client is not proceeding' },
+  { code: 'out_of_scope', label: 'Out of scope for M-THRYVE' },
+  { code: 'budget', label: 'Budget mismatch' },
+  { code: 'timing', label: 'Timing / not the right time' },
+  { code: 'duplicate', label: 'Duplicate or superseded intake' },
+  { code: 'other', label: 'Other' },
+]
+
+function OperatorSpiel({ text, tone = 'default' }: { text: string; tone?: 'default' | 'warning' | 'accent' }) {
+  const palette =
+    tone === 'warning'
+      ? { border: 'rgba(245,158,11,0.28)', bg: 'rgba(245,158,11,0.06)', accent: '#F59E0B' }
+      : tone === 'accent'
+        ? { border: 'rgba(139,92,246,0.28)', bg: 'rgba(139,92,246,0.06)', accent: '#B79CF9' }
+        : { border: 'rgba(57,214,199,0.22)', bg: 'rgba(57,214,199,0.04)', accent: '#39D6C7' }
+  return (
+    <div
+      style={{
+        padding: '14px 16px',
+        background: palette.bg,
+        border: `1px solid ${palette.border}`,
+        borderRadius: '10px',
+        marginBottom: '22px',
+        display: 'flex',
+        gap: '12px',
+        alignItems: 'flex-start',
+      }}
+    >
+      <span
+        style={{
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: '9px',
+          letterSpacing: '0.14em',
+          color: palette.accent,
+          textTransform: 'uppercase',
+          padding: '3px 8px',
+          borderRadius: '4px',
+          border: `1px solid ${palette.border}`,
+          flexShrink: 0,
+          marginTop: '1px',
+        }}
+      >
+        Say to client
+      </span>
+      <span
+        style={{
+          fontSize: '13px',
+          color: '#C4D8EA',
+          lineHeight: 1.65,
+          fontStyle: 'italic',
+        }}
+      >
+        “{text}”
+      </span>
+    </div>
+  )
 }
 
 // ── Main component ─────────────────────────────────────────────────────────────
@@ -493,6 +1025,13 @@ export default function App() {
   const [conciergeOpen, setConciergeOpen] = useState(false)
   const [conciergeQ, setConciergeQ] = useState<string | null>(null)
   const [voucherChecking, setVoucherChecking] = useState(false)
+
+  // ── Phase 2 outcome / discard state ─────────────────────────────────────
+  const [showDiscardModal, setShowDiscardModal] = useState(false)
+  const [discardReasonCode, setDiscardReasonCode] = useState<DiscardReasonCode>('not_proceeding')
+  const [discardNote, setDiscardNote] = useState('')
+  const [outcomeFinalized, setOutcomeFinalized] = useState<IntakeOutcome | null>(null)
+  const [submitAttempted, setSubmitAttempted] = useState(false)
 
   // Initialize idempotency key on mount
   useEffect(() => {
@@ -525,7 +1064,6 @@ export default function App() {
   const hasTierData = () => !!(form.templateId || form.projectVision || form.features.length > 0)
 
   const handleTierSelect = (newTier: Tier) => {
-    if (assetsBlocked && newTier === 'template') return
     if (form.tier && form.tier !== newTier && hasTierData()) {
       setPendingTier(newTier); setShowTierWarning(true)
     } else {
@@ -561,41 +1099,79 @@ export default function App() {
     }, 1200)
   }
 
-  const allConfirmed = form.confirmAccurate && form.confirmReceipt && form.confirmPayment
-    && form.confirmMaintenance && form.confirmBuildCard && form.confirmSubmission
+  // Snapshot of current gaps used by review, outcome, and draft flows.
+  const missingReqSnapshot: MissingRequirement[] = collectMissingRequirements(form)
 
   const handleNext = async () => {
-    // Validate current step
+    // Validate the current step. Outcome step is driven by its own action
+    // buttons, so we never advance from it via the primary "Continue" button.
+    if (currentStep === 'outcome') return
+
     const errors = validateStep(currentStep, form)
     if (errors.length > 0) return
 
-    if (currentStep === 'final-confirm') {
-      if (!allConfirmed) return
+    setStepIndex(i => Math.min(i + 1, flow.length - 1))
+  }
 
-      // Submit intake
-      setSubmitting(true)
-      setSubmissionError('')
+  const handleSaveDraft = () => {
+    // Draft is always allowed, regardless of missing requirements.
+    setForm(prev => ({
+      ...prev,
+      outcome: 'draft',
+      missingRequirements: missingReqSnapshot,
+    }))
+    setOutcomeFinalized('draft')
+  }
 
-      try {
-        const payload = toSubmissionPayload(form, pageContents)
-        const response = await submitIntake(payload, idempotencyKey)
-
-        if (response.success && response.buildReferenceNumber) {
-          setBuildRef(response.buildReferenceNumber)
-          setClientVoucher(`REF-${Math.random().toString(36).substring(2, 8).toUpperCase()}`)
-          setSubmitted(true)
-          setStepIndex(flow.indexOf('build-card'))
-        } else {
-          setSubmissionError(response.error || 'Submission failed. Please try again.')
-        }
-      } catch (error) {
-        setSubmissionError(error instanceof Error ? error.message : 'An unexpected error occurred')
-      } finally {
-        setSubmitting(false)
-      }
+  const handleSubmitIntake = async () => {
+    setSubmitAttempted(true)
+    const { ok, missing } = canSubmit(form)
+    if (!ok) {
+      // Persist the gap set so review/outcome can display it. Stay on
+      // outcome so operator can jump to the failing section.
+      setForm(prev => ({ ...prev, missingRequirements: missing }))
       return
     }
-    setStepIndex(i => Math.min(i + 1, flow.length - 1))
+
+    setSubmitting(true)
+    setSubmissionError('')
+    try {
+      const payload = toSubmissionPayload(form, pageContents, 'submitted')
+      const response = await submitIntake(payload, idempotencyKey)
+
+      if (response.success && response.buildReferenceNumber) {
+        setBuildRef(response.buildReferenceNumber)
+        setClientVoucher(`REF-${Math.random().toString(36).substring(2, 8).toUpperCase()}`)
+        setSubmitted(true)
+        setForm(prev => ({ ...prev, outcome: 'submitted', missingRequirements: [] }))
+        setOutcomeFinalized('submitted')
+        setStepIndex(flow.indexOf('build-card'))
+      } else {
+        setSubmissionError(response.error || 'Submission failed. Please try again.')
+      }
+    } catch (error) {
+      setSubmissionError(error instanceof Error ? error.message : 'An unexpected error occurred')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const openDiscardModal = () => {
+    setDiscardReasonCode('not_proceeding')
+    setDiscardNote('')
+    setShowDiscardModal(true)
+  }
+
+  const confirmDiscard = () => {
+    const reason = { code: discardReasonCode, note: discardNote.trim() || undefined }
+    setForm(prev => ({
+      ...prev,
+      outcome: 'discarded',
+      discardReason: reason,
+      missingRequirements: missingReqSnapshot,
+    }))
+    setOutcomeFinalized('discarded')
+    setShowDiscardModal(false)
   }
 
   const handleBack = () => setStepIndex(i => Math.max(i - 1, 0))
@@ -610,6 +1186,8 @@ export default function App() {
     setBuildRef(''); setClientVoucher(''); setPageContents({}); setUploads({})
     setCurrentPageIndex(0); setTemplateCatFilter('All')
     setCopiedRef(false); setCopiedVoucher(false)
+    setOutcomeFinalized(null); setSubmitAttempted(false)
+    setShowDiscardModal(false); setDiscardNote(''); setDiscardReasonCode('not_proceeding')
   }
 
   const copyToClipboard = (text: string, which: 'ref' | 'voucher') => {
@@ -636,9 +1214,7 @@ export default function App() {
 
   const canContinue = !(
     (currentStep === 'build-approach' && !form.tier) ||
-    (currentStep === 'company-assets' && !form.assetQualification) ||
-    (currentStep === 'payment' && !form.paymentPlan) ||
-    (currentStep === 'final-confirm' && !allConfirmed) ||
+    currentStep === 'outcome' ||
     submitting
   )
 
@@ -679,7 +1255,27 @@ export default function App() {
           <span style={{ fontWeight: 600, fontSize: '15px', letterSpacing: '-0.01em' }}>M-THRYVE</span>
         </div>
         {currentStep !== 'intro' && currentStep !== 'build-card' && (
-          <div style={{ ...monoLabel, margin: 0, fontSize: '11px' }}>Step {stepIndex} of {progressTotal}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{ ...monoLabel, margin: 0, fontSize: '11px' }}>Step {stepIndex} of {progressTotal}</div>
+            <button
+              onClick={openDiscardModal}
+              title="Discard intake (available throughout the call)"
+              style={{
+                padding: '6px 12px',
+                borderRadius: '7px',
+                border: '1px solid rgba(239,68,68,0.28)',
+                background: 'transparent',
+                color: '#EF4444',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: "'Inter', system-ui, sans-serif",
+                letterSpacing: '-0.01em',
+              }}
+            >
+              Discard
+            </button>
+          </div>
         )}
       </div>
 
@@ -734,8 +1330,9 @@ export default function App() {
             <StepHeader
               tag="Step 1 — Client & Project Details"
               title="Who are we building for?"
-              desc="Your contact details and project basics help us personalize your Build Card and connect you with the right team. All information stays private within M-THRYVE."
+              desc="Confirm the contact and project basics for this discovery call so notes, follow-ups, and the owner-review record stay tied to the right company and opportunity."
             />
+            <OperatorSpiel text={SPIELS.clientDetails} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <Field label="Full Name"><input value={form.fullName} onChange={e => set('fullName', e.target.value)} placeholder="Alex Johnson" style={inputStyle} /></Field>
@@ -774,14 +1371,14 @@ export default function App() {
           </div>
         )}
 
-        {/* ══ COMPANY ASSETS QUESTIONNAIRE ══ */}
+        {/* ══ COMPANY ASSETS QUESTIONNAIRE (v2.0 structured) ══ */}
         {currentStep === 'company-assets' && (
+          <CompanyAssetsStep form={form} setForm={setForm} />
+        )}
+
+        {/* Legacy assetQualification renderer — kept out of flow, deprecated in v2. */}
+        {false && (
           <div>
-            <StepHeader
-              tag="Step 2 — Company Assets"
-              title="Check your company assets."
-              desc="Your build may require brand files, written content, images, and company information. Tell us what is already available so we can guide you to the right build option."
-            />
             <div style={{ marginBottom: '6px', fontSize: '14px', fontWeight: 600, color: '#D4E4F0' }}>Are your company deck and complete brand materials already available?</div>
             <div style={{ fontSize: '13px', color: '#4B6278', marginBottom: '16px', lineHeight: 1.55 }}>This helps us determine what we need from you now. You can always provide additional assets later if needed.</div>
 
@@ -888,45 +1485,31 @@ export default function App() {
             <StepHeader
               tag="Step 3 — Choose Build Approach"
               title="How would you like to build?"
-              desc="Select the approach that best fits your project, budget, and timeline. Each tier has different levels of customization, required assets, and investment."
+              desc="Two active build paths: Custom Build starts from an existing template and adds supported extensions; Enterprise Level is a from-scratch product with wider scope. Prices remain preliminary until owner review."
             />
-            {assetsBlocked && (
-              <div style={{ padding: '12px 16px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', marginBottom: '20px', fontSize: '12px', color: '#EF4444', lineHeight: 1.6 }}>
-                Drag & Drop requires complete brand assets and prepared content. Based on your asset status, this tier is currently unavailable. Consider upgrading your assets first or choosing Custom Made or Enterprise.
-              </div>
-            )}
+            <OperatorSpiel text={SPIELS.customBuild} />
+            <OperatorSpiel text={SPIELS.enterprise} tone="accent" />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {[
                 {
-                  id: 'template' as Tier,
-                  name: 'Drag & Drop',
-                  badge: 'Most Affordable',
-                  badgeColor: '#22C55E',
-                  desc: 'Choose a ready-made M-THRYVE template with fixed structure and content areas. Add your prepared brand assets and content without layout or feature customization.',
-                  price: '₱15,000–₱40,000',
-                  priceNote: 'Configured template price',
-                  bullets: ['Fixed template structure', 'Complete assets required', 'No custom features', 'Fastest delivery'],
-                  disabled: assetsBlocked,
-                },
-                {
                   id: 'custom' as Tier,
-                  name: 'Custom Made',
-                  badge: 'Limited Customization',
+                  name: 'Custom Build',
+                  badge: 'Template-based',
                   badgeColor: '#39D6C7',
-                  desc: 'Start with an M-THRYVE template and make limited approved changes to its content, branding, colors, and selected components while preserving its core structure.',
-                  price: '₱50,000–₱150,000',
-                  priceNote: 'Based on template and selected modifications',
-                  bullets: ['Template foundation', 'Branding & layout changes', 'Predefined feature set', 'Moderate delivery'],
+                  desc: 'Start from an existing template and layer in the features and content the template already supports. Requests outside the supported catalog are flagged for owner review.',
+                  price: 'Preliminary — configured per template',
+                  priceNote: 'Base template price plus supported extensions',
+                  bullets: ['Template foundation', 'Supported extensions only', 'Preliminary cost per feature', 'Faster path to delivery'],
                   disabled: false,
                 },
                 {
                   id: 'enterprise' as Tier,
-                  name: 'Enterprise',
-                  badge: 'Fully Custom',
+                  name: 'Enterprise Level',
+                  badge: 'From scratch',
                   badgeColor: '#8B5CF6',
-                  desc: 'A fully custom product designed and built from scratch around your vision, workflows, users, integrations, and business requirements.',
-                  price: 'Starting at ₱200,000',
-                  priceNote: 'Confirmed after owner review and intake analysis',
+                  desc: 'Full discovery of vision, workflows, roles, integrations, and design direction for a from-scratch product. Preliminary scope and cost are confirmed only after owner review.',
+                  price: 'Preliminary — confirmed after owner review',
+                  priceNote: 'Depends on scope, integrations, and design discovery',
                   bullets: ['Built from scratch', 'Custom architecture', 'Custom workflows & features', 'Requires detailed review'],
                   disabled: false,
                 },
@@ -964,17 +1547,12 @@ export default function App() {
         {currentStep === 'template-select' && (
           <div>
             <StepHeader
-              tag={form.tier === 'custom' ? 'Step 4 — Base Template' : 'Step 4 — Template Selection'}
+              tag="Step 4 — Base Template"
               title="Choose your starting point."
-              desc={form.tier === 'custom'
-                ? 'Select the template that best reflects the direction of your project. We will customize it for your brand in the next steps.'
-                : 'Each template is a complete website or app structure. Your content, brand, and assets replace everything inside.'}
+              desc="Custom Build uses a template as its foundation. Select the template whose supported structure best matches the project; the template catalog defines available colorways, sizes, platforms, and extension points."
             />
-            {form.tier === 'template' && (
-              <div style={{ padding: '12px 16px', background: 'rgba(249,115,22,0.05)', border: '1px solid rgba(249,115,22,0.2)', borderRadius: '8px', marginBottom: '20px', fontSize: '13px', color: '#F97316', lineHeight: 1.5 }}>
-                Drag & Drop: structural customization is not available. Select Custom Made if you need layout or branding modifications beyond content replacement.
-              </div>
-            )}
+            <OperatorSpiel text={SPIELS.customBuild} />
+            <OperatorSpiel text={SPIELS.followUp} tone="warning" />
             <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap', marginBottom: '16px' }}>
               {TEMPLATE_CATEGORIES.map(cat => (
                 <button key={cat} onClick={() => setTemplateCatFilter(cat)} style={{ padding: '6px 14px', borderRadius: '100px', border: `1px solid ${templateCatFilter === cat ? '#39D6C7' : '#2A3441'}`, background: templateCatFilter === cat ? 'rgba(57,214,199,0.09)' : 'transparent', cursor: 'pointer', color: templateCatFilter === cat ? '#39D6C7' : '#4B6278', fontSize: '12px', fontWeight: templateCatFilter === cat ? 600 : 400, transition: 'all 0.15s', fontFamily: "'Inter', system-ui, sans-serif" }}>{cat}</button>
@@ -1178,8 +1756,10 @@ export default function App() {
             <StepHeader
               tag="Step 4 — Enterprise Vision"
               title="Tell us what you're building."
-              desc="Enterprise projects are designed from scratch. The more detail you provide, the more accurate your preliminary Build Card will be — and the smoother your owner review will go."
+              desc="Enterprise Level is a from-scratch build. Capture the product experience, target users, workflows, integrations, and design direction so the owner review has the full discovery record."
             />
+            <OperatorSpiel text={SPIELS.enterprise} tone="accent" />
+            <OperatorSpiel text={SPIELS.followUp} tone="warning" />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <Field label="Product Vision" hint="What are you building and why? What problem does it solve?">
                 <textarea value={form.projectVision} onChange={e => set('projectVision', e.target.value)} placeholder="We are building a platform that helps logistics companies track shipments in real time. Our target users are operations managers who need instant visibility into delivery status and exception handling..." rows={5} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.7 }} />
@@ -1218,14 +1798,9 @@ export default function App() {
               title="What should your software do?"
               desc="Select the features and capabilities your project needs. Mark each by priority so we know what matters most at launch."
             />
-            {form.tier === 'template' && (
-              <div style={{ padding: '12px 16px', background: 'rgba(249,115,22,0.05)', border: '1px solid rgba(249,115,22,0.18)', borderRadius: '8px', marginBottom: '20px', fontSize: '12px', color: '#F97316' }}>
-                Drag & Drop includes fixed template features only. Requests outside this scope will be flagged for Custom Made or Enterprise.
-              </div>
-            )}
             {form.tier === 'custom' && (
               <div style={{ padding: '12px 16px', background: 'rgba(57,214,199,0.04)', border: '1px solid rgba(57,214,199,0.15)', borderRadius: '8px', marginBottom: '20px', fontSize: '12px', color: '#39D6C7' }}>
-                Custom Made supports limited predefined feature adjustments. Requests exceeding this scope will be flagged and may recommend an Enterprise upgrade.
+                Custom Build supports features and add-ons documented for the selected template. Requests outside the supported catalog will be flagged as unconfirmed and routed for owner review.
               </div>
             )}
 
@@ -1324,18 +1899,32 @@ export default function App() {
                 {form.industry && <ReviewRow label="Industry" value={form.industry} />}
               </ReviewBlock>
 
-              <ReviewBlock title="Asset Readiness" onEdit={() => goToStep('company-assets')}>
-                <ReviewRow label="Status" value={{ 'provided': 'Already provided during discovery', 'ready': 'Available — not yet uploaded', 'incomplete': 'Partially available', 'no-assets': 'Needs asset creation' }[form.assetQualification] || '—'} />
-                {form.selectedAssetServices.length > 0 && <ReviewRow label="Asset Services" value={`${form.selectedAssetServices.length} service(s) selected`} />}
-              </ReviewBlock>
+              <ResourceReviewBlock form={form} onEdit={() => goToStep('company-assets')} />
 
-              <ReviewBlock title="Build Approach" onEdit={() => goToStep('build-approach')}>
-                <ReviewRow label="Tier" value={TIER_LABELS[form.tier] || '—'} />
+              <ReviewBlock title="Build Path" onEdit={() => goToStep('build-approach')}>
+                <ReviewRow label="Path" value={TIER_LABELS[form.tier] || '—'} />
+                {form.projectType && <ReviewRow label="Project Type" value={PROJECT_TYPES.find(t => t.id === form.projectType)?.label || '—'} />}
                 {selectedTemplate && <ReviewRow label="Template" value={selectedTemplate.name} />}
                 {form.projectVersion && <ReviewRow label="Platform" value={pricing.versionLabel} />}
                 {form.colorPreset && <ReviewRow label="Color Style" value={COLOR_OPTIONS.find(c => c.id === form.colorPreset)?.name || '—'} />}
-                {form.projectType && <ReviewRow label="Project Type" value={PROJECT_TYPES.find(t => t.id === form.projectType)?.label || '—'} />}
               </ReviewBlock>
+
+              {missingReqSnapshot.length > 0 && (
+                <div style={{ ...cardStyle, border: '1px solid rgba(245,158,11,0.28)' }}>
+                  <div style={{ ...monoLabel, color: '#F59E0B' }}>Missing / Incomplete — {missingReqSnapshot.length}</div>
+                  <div style={{ fontSize: '13px', color: '#4B6278', lineHeight: 1.55, marginBottom: '12px' }}>
+                    These items are not blocking a draft. Submission requires the items marked <strong style={{ color: '#EF4444' }}>required</strong>.
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {missingReqSnapshot.map(req => (
+                      <div key={req.key} style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', padding: '8px 10px', background: '#0D1620', border: '1px solid #1E2E3D', borderRadius: '6px' }}>
+                        <span style={{ fontSize: '12px', color: '#D4E4F0' }}>{req.label}</span>
+                        <span style={{ fontSize: '10px', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.08em', textTransform: 'uppercase', color: req.severity === 'required' ? '#EF4444' : req.severity === 'recommended' ? '#F59E0B' : '#4B6278' }}>{req.severity}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {allFeatures.length > 0 && (
                 <ReviewBlock title={`Features · ${allFeatures.length}`} onEdit={() => goToStep('pages-features')}>
@@ -1375,227 +1964,125 @@ export default function App() {
           </div>
         )}
 
-        {/* ══ PAYMENT PLAN ══ */}
-        {currentStep === 'payment' && (
+        {/* ══ OUTCOME (v2.0) ══ */}
+        {currentStep === 'outcome' && (
           <div>
             <StepHeader
-              tag="Step 8 — Payment Plan"
-              title="Choose your payment plan."
-              desc="Choose your preferred payment arrangement. Pricing, billing dates, maintenance coverage, and the final agreement remain subject to M-THRYVE owner review."
+              tag="Step 8 — Outcome"
+              title="How does this call end?"
+              desc="Every discovery call ends in one of three operator-controlled outcomes. Discard archives the record with a reason. Draft preserves everything you've captured — missing requirements are stored, not lost. Submitted requires the discovery contract to be complete and creates a preliminary Build Card for owner review."
             />
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '24px' }}>
-              {[
-                {
-                  id: 'one-time',
-                  icon: '◆',
-                  label: 'One-Time Payment',
-                  desc: 'Pay the full preliminary project price in a single payment. Includes three months of standard maintenance at no additional cost from your approved launch date.',
-                  tag: '3 Months Maintenance Included — Free',
-                  tagColor: '#22C55E',
-                  amount: pricing.total > 0 ? formatPhp(pricing.total) : 'Price pending review',
-                  period: 'one-time',
-                },
-                {
-                  id: 'monthly',
-                  icon: '◈',
-                  label: 'Monthly Payments',
-                  desc: 'Spread your project investment across 12 equal monthly installments. Monthly maintenance is mandatory and included in your combined monthly amount.',
-                  tag: 'Monthly Maintenance — Required',
-                  tagColor: '#F59E0B',
-                  amount: pricing.total > 0 ? formatPhp(Math.round(pricing.total / 12)) : 'Price pending review',
-                  period: '/month (project) + maintenance',
-                },
-                {
-                  id: 'annual',
-                  icon: '⊕',
-                  label: 'Annual Payment',
-                  desc: 'One annual project payment covering the full project amount, with annual maintenance required and billed together.',
-                  tag: 'Annual Maintenance — Required',
-                  tagColor: '#8B5CF6',
-                  amount: pricing.total > 0 ? formatPhp(pricing.total) : 'Price pending review',
-                  period: '/year (project) + maintenance',
-                },
-              ].map(plan => {
-                const sel = form.paymentPlan === plan.id
-                return (
-                  <button key={plan.id} onClick={() => { set('paymentPlan', plan.id); set('maintenanceAfterFree', ''); set('maintenanceEndAcknowledged', false) }} style={{ padding: '18px 20px', borderRadius: '12px', border: `1px solid ${sel ? '#39D6C7' : '#2A3441'}`, background: sel ? 'rgba(57,214,199,0.05)' : '#111827', cursor: 'pointer', textAlign: 'left', transition: 'all 0.18s', width: '100%' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
-                      <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', flex: 1 }}>
-                        <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: sel ? 'rgba(57,214,199,0.15)' : '#0D1620', display: 'flex', alignItems: 'center', justifyContent: 'center', color: sel ? '#39D6C7' : '#4B6278', fontSize: '14px', flexShrink: 0, transition: 'all 0.15s' }}>{plan.icon}</div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 700, fontSize: '15px', color: sel ? '#39D6C7' : '#D4E4F0', marginBottom: '4px' }}>{plan.label}</div>
-                          <div style={{ fontSize: '12px', color: '#4B6278', lineHeight: 1.55, marginBottom: '8px' }}>{plan.desc}</div>
-                          <span style={{ fontSize: '11px', padding: '3px 9px', borderRadius: '100px', background: `${plan.tagColor}12`, border: `1px solid ${plan.tagColor}30`, color: plan.tagColor }}>{plan.tag}</span>
-                        </div>
-                      </div>
-                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '15px', fontWeight: 700, color: sel ? '#39D6C7' : '#6B8099' }}>{plan.amount}</div>
-                        <div style={{ fontSize: '10px', color: '#3D5468', marginTop: '2px' }}>{plan.period}</div>
-                      </div>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-
-            {form.paymentPlan === 'one-time' && (
-              <div style={{ padding: '20px', background: '#0D1620', border: '1px solid #1E2E3D', borderRadius: '12px', marginBottom: '16px' }}>
-                <div style={{ padding: '14px 16px', background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: '8px', marginBottom: '16px' }}>
-                  <div style={{ fontWeight: 700, fontSize: '14px', color: '#22C55E', marginBottom: '4px' }}>3 Months of Maintenance Included — Free</div>
-                  <div style={{ fontSize: '13px', color: '#4B6278', lineHeight: 1.6 }}>Your one-time payment includes three months of standard maintenance beginning from your approved launch or handover date.</div>
-                  <div style={{ fontSize: '12px', color: '#3D5468', marginTop: '6px', fontFamily: "'JetBrains Mono', monospace" }}>₱0 for the first 3 months</div>
+            {submitAttempted && !canSubmit(form).ok && (
+              <div style={{ padding: '14px 16px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.28)', borderRadius: '10px', marginBottom: '18px' }}>
+                <div style={{ fontSize: '13px', color: '#EF4444', fontWeight: 600, marginBottom: '6px' }}>Cannot submit — required information is missing</div>
+                <div style={{ fontSize: '12px', color: '#9B6A6A', lineHeight: 1.6, marginBottom: '10px' }}>
+                  Save as Draft to preserve what's captured, or return to the flagged section to fill it in.
                 </div>
-                <div style={{ fontWeight: 600, fontSize: '14px', color: '#D4E4F0', marginBottom: '8px' }}>After the free three-month period, would you like to continue maintenance?</div>
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                  {[{ id: 'end', label: 'End after 3 months' }, { id: 'monthly', label: 'Continue monthly' }, { id: 'annual', label: 'Continue annually' }].map(opt => {
-                    const sel = form.maintenanceAfterFree === opt.id
-                    return <button key={opt.id} onClick={() => { set('maintenanceAfterFree', opt.id); set('maintenanceEndAcknowledged', false) }} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: `1px solid ${sel ? '#39D6C7' : '#2A3441'}`, background: sel ? 'rgba(57,214,199,0.08)' : 'transparent', cursor: 'pointer', color: sel ? '#39D6C7' : '#4B6278', fontSize: '12px', fontWeight: sel ? 600 : 400, transition: 'all 0.15s', fontFamily: "'Inter', system-ui, sans-serif" }}>{opt.label}</button>
-                  })}
-                </div>
-                {form.maintenanceAfterFree === 'end' && (
-                  <div>
-                    <div style={{ padding: '12px 16px', background: 'rgba(249,115,22,0.05)', border: '1px solid rgba(249,115,22,0.2)', borderRadius: '8px', marginBottom: '12px', fontSize: '12px', color: '#F97316', lineHeight: 1.6 }}>
-                      Without a continuing maintenance plan, ongoing monitoring, routine updates, backups, support, compatibility maintenance, and non-warranty changes will not be included after the free period ends.
-                    </div>
-                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
-                      <input type="checkbox" checked={form.maintenanceEndAcknowledged} onChange={e => set('maintenanceEndAcknowledged', e.target.checked)} style={{ marginTop: '2px', accentColor: '#39D6C7', width: '15px', height: '15px', flexShrink: 0 }} />
-                      <span style={{ fontSize: '12px', color: '#4B6278', lineHeight: 1.6 }}>I understand that after the complimentary three-month maintenance period ends, ongoing monitoring, routine updates, backups, and support will not be included unless I purchase another maintenance plan.</span>
-                    </label>
-                  </div>
-                )}
-                {(form.maintenanceAfterFree === 'monthly' || form.maintenanceAfterFree === 'annual') && (
-                  <div style={{ padding: '12px 14px', background: '#111827', borderRadius: '8px', border: '1px solid #2A3441', fontSize: '12px', color: '#4B6278', lineHeight: 1.6 }}>
-                    {formatPhp(form.maintenanceAfterFree === 'annual' ? maintenanceAnnual : maintenanceRate)}{form.maintenanceAfterFree === 'annual' ? '/year' : '/month'} maintenance · Coverage begins after the three-month free period. Final rate confirmed in owner agreement.
-                  </div>
-                )}
-              </div>
-            )}
-
-            {(form.paymentPlan === 'monthly' || form.paymentPlan === 'annual') && (
-              <div style={{ padding: '18px 20px', background: '#0D1620', border: '1px solid rgba(57,214,199,0.15)', borderRadius: '12px', marginBottom: '16px' }}>
-                <div style={{ fontWeight: 700, fontSize: '14px', color: '#D4E4F0', marginBottom: '10px' }}>{form.paymentPlan === 'annual' ? 'Annual' : 'Monthly'} Maintenance — Included</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px', marginBottom: '14px' }}>
-                  {['Routine dependency updates', 'Security patches', 'Availability monitoring', 'Error monitoring', 'Scheduled backups', 'Basic technical support', 'Compatibility adjustments', 'Deployment monitoring', 'Recovery assistance', 'Maintenance reporting'].map(item => (
-                    <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: '7px', fontSize: '12px', color: '#6B8099' }}>
-                      <span style={{ color: '#39D6C7', flexShrink: 0 }}>✓</span>{item}
-                    </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  {canSubmit(form).missing.filter(r => r.severity === 'required').map(req => (
+                    <button
+                      key={req.key}
+                      onClick={() => goToStep(req.section as StepId)}
+                      style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', padding: '8px 10px', background: '#0D1620', border: '1px solid #2A3441', borderRadius: '6px', cursor: 'pointer', textAlign: 'left', fontFamily: "'Inter', system-ui, sans-serif" }}
+                    >
+                      <span style={{ fontSize: '12px', color: '#D4E4F0' }}>{req.label}</span>
+                      <span style={{ fontSize: '11px', color: '#39D6C7' }}>Open {req.section} →</span>
+                    </button>
                   ))}
                 </div>
-                <div style={{ padding: '12px 14px', background: '#111827', borderRadius: '8px', border: '1px solid #2A3441' }}>
-                  <ReviewRow label={`${form.paymentPlan === 'annual' ? 'Annual' : 'Monthly'} maintenance rate`} value={form.paymentPlan === 'annual' ? `${formatPhp(maintenanceAnnual)}/year` : `${formatPhp(maintenanceRate)}/month`} />
-                  {form.paymentPlan === 'annual' && <ReviewRow label="Effective monthly equivalent" value={formatPhp(maintenanceRate)} />}
-                  <div style={{ fontSize: '11px', color: '#3D5468', marginTop: '6px', lineHeight: 1.5 }}>Does not include major new features, redesigns, new integrations, or large content migrations. Coverage defined in the final approved agreement.</div>
-                </div>
               </div>
             )}
 
-            {form.paymentPlan && (
-              <div style={{ marginBottom: '20px' }}>
-                <Field label="Preferred First Billing Date" hint="Billing begins only after the owner approves your project and a final agreement is signed.">
-                  <input value={form.preferredBillingDate} onChange={e => set('preferredBillingDate', e.target.value)} type="date" style={inputStyle} />
-                </Field>
-              </div>
-            )}
-
-            <div style={{ padding: '18px 20px', background: '#0D1620', border: '1px solid #1E2E3D', borderRadius: '12px', marginBottom: '16px' }}>
-              <div style={{ ...monoLabel, marginBottom: '10px' }}>Referral Voucher Code (Optional)</div>
-              <div style={{ fontSize: '13px', color: '#4B6278', lineHeight: 1.55, marginBottom: '14px' }}>Received a referral voucher from an M-THRYVE client? Enter it here to redeem the verified percentage discount available for your build purchase.</div>
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
-                <input value={form.voucherCode} onChange={e => { set('voucherCode', e.target.value.toUpperCase()); set('voucherStatus', '') }} placeholder="Enter your voucher code" style={{ ...inputStyle, flex: 1, fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.06em' }} />
-                <button onClick={applyVoucher} disabled={voucherChecking || !form.voucherCode.trim()} style={{ padding: '0 18px', borderRadius: '8px', border: 'none', background: form.voucherCode.trim() && !voucherChecking ? '#39D6C7' : '#1A2E3A', cursor: form.voucherCode.trim() && !voucherChecking ? 'pointer' : 'not-allowed', color: form.voucherCode.trim() && !voucherChecking ? '#060C10' : '#2A4455', fontWeight: 700, fontSize: '13px', whiteSpace: 'nowrap', fontFamily: "'Inter', system-ui, sans-serif", transition: 'all 0.15s' }}>
-                  {voucherChecking ? 'Checking…' : 'Apply Voucher'}
-                </button>
-              </div>
-              {form.voucherStatus === 'valid' && (
-                <div style={{ padding: '10px 14px', background: 'rgba(34,197,94,0.07)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: '8px', fontSize: '13px', color: '#22C55E', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span>✓</span> Voucher applied — discount pending verification. Final discount confirmed by the owner.
-                </div>
-              )}
-              {form.voucherStatus === 'invalid' && (
-                <div style={{ padding: '10px 14px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', fontSize: '13px', color: '#EF4444' }}>
-                  This voucher code was not recognized. Check the code and try again.
-                </div>
-              )}
-            </div>
-
-            {!form.paymentPlan && <div style={{ fontSize: '12px', color: '#3D5468' }}>Please select a payment plan to continue.</div>}
-          </div>
-        )}
-
-        {/* ══ FINAL CONFIRMATION ══ */}
-        {currentStep === 'final-confirm' && (
-          <div>
-            <StepHeader tag="Step 9 — Final Confirmation" title="Almost there." desc="Review your preliminary project receipt one last time and confirm the details below before submitting your intake." />
-
-            <div style={{ ...cardStyle, marginBottom: '16px', border: '1px solid rgba(57,214,199,0.2)' }}>
-              <div style={{ ...monoLabel, color: '#39D6C7' }}>Preliminary Project Receipt</div>
-              <ReviewRow label="Tier" value={TIER_LABELS[form.tier] || '—'} />
-              {selectedTemplate && <ReviewRow label="Template" value={selectedTemplate.name} />}
-              {form.projectVersion && <ReviewRow label="Platform" value={pricing.versionLabel} />}
-              {form.colorPreset && <ReviewRow label="Color Style" value={`${COLOR_OPTIONS.find(c => c.id === form.colorPreset)?.name || '—'} — Included`} />}
-              {form.customSizes && <ReviewRow label="Custom Sizes add-on" value="Price pending configuration" />}
-              {form.allSizes && <ReviewRow label="All Sizes add-on" value="Price pending configuration" />}
-              {form.selectedAssetServices.length > 0 && <ReviewRow label="Asset services" value={`${form.selectedAssetServices.length} service(s) — Price pending configuration`} />}
-              {form.voucherStatus === 'valid' && <ReviewRow label={`Voucher (${form.voucherCode})`} value="Discount pending verification" />}
-              {pricing.total > 0 && (
-                <>
-                  <div style={{ height: '1px', background: '#2A3441', margin: '12px 0' }} />
-                  <ReviewRow label="Project subtotal" value={formatPhp(pricing.total)} bold />
-                </>
-              )}
-              {form.paymentPlan === 'one-time' && <ReviewRow label="Included maintenance" value="3 months free — ₱0" />}
-              {form.paymentPlan === 'monthly' && <ReviewRow label="Monthly maintenance" value={`${formatPhp(maintenanceRate)}/month`} />}
-              {form.paymentPlan === 'annual' && <ReviewRow label="Annual maintenance" value={`${formatPhp(maintenanceAnnual)}/year`} />}
-              <div style={{ height: '1px', background: '#2A3441', margin: '12px 0' }} />
-              <ReviewRow label="Payment plan" value={{ 'one-time': 'One-Time Payment', 'monthly': 'Monthly Payments', 'annual': 'Annual Payment' }[form.paymentPlan] || '—'} bold />
-              {form.preferredBillingDate && <ReviewRow label="Preferred first billing date" value={new Date(form.preferredBillingDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} />}
-              {pricing.total > 0 && <ReviewRow label="Est. completion" value={`${pricing.delivery} working days from approval`} />}
-              <div style={{ marginTop: '12px', padding: '12px 14px', background: '#0D1620', border: '1px solid #1E2E3D', borderRadius: '8px', fontSize: '12px', color: '#3D5468', lineHeight: 1.6 }}>
-                This receipt, payment arrangement, timeline, and Build Card are preliminary and subject to M-THRYVE owner review and final approval. Submission does not automatically start development or authorize an immediate charge.
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {[
-                { field: 'confirmAccurate' as const, text: 'I confirm my project information is accurate to the best of my knowledge.' },
-                { field: 'confirmReceipt' as const, text: 'I have reviewed the preliminary project receipt shown above.' },
-                { field: 'confirmPayment' as const, text: 'I have reviewed and understand my selected payment arrangement.' },
-                { field: 'confirmMaintenance' as const, text: 'I understand the applicable maintenance coverage and its limitations.' },
-                { field: 'confirmBuildCard' as const, text: 'I understand that the preliminary Build Card is subject to M-THRYVE owner review and final approval.' },
-                { field: 'confirmSubmission' as const, text: 'I understand that submitting this intake does not automatically start development or trigger any payment.' },
-              ].map(item => (
-                <label key={item.field} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', padding: '12px 14px', background: '#111827', border: `1px solid ${form[item.field] ? '#39D6C740' : '#2A3441'}`, borderRadius: '8px', transition: 'border-color 0.15s' }}>
-                  <input type="checkbox" checked={form[item.field]} onChange={e => set(item.field, e.target.checked)} style={{ marginTop: '2px', accentColor: '#39D6C7', width: '15px', height: '15px', flexShrink: 0 }} />
-                  <span style={{ fontSize: '13px', color: form[item.field] ? '#C4D8EA' : '#4B6278', lineHeight: 1.6, transition: 'color 0.15s' }}>{item.text}</span>
-                </label>
+                {
+                  id: 'submitted' as IntakeOutcome,
+                  title: 'Submitted',
+                  badge: 'Ready for owner review',
+                  badgeColor: '#39D6C7',
+                  desc: 'Discovery is complete. Validates against the discovery contract, generates a preliminary Build Card, and places the intake in the owner-review queue.',
+                  action: 'Submit intake',
+                  onClick: handleSubmitIntake,
+                },
+                {
+                  id: 'draft' as IntakeOutcome,
+                  title: 'Draft',
+                  badge: 'Save without submitting',
+                  badgeColor: '#F59E0B',
+                  desc: 'Preserves everything captured so far. Missing requirements are recorded as follow-ups. Not placed in the owner-review queue and no Build Card is generated.',
+                  action: 'Save as draft',
+                  onClick: handleSaveDraft,
+                },
+                {
+                  id: 'discarded' as IntakeOutcome,
+                  title: 'Discard',
+                  badge: 'Client not proceeding',
+                  badgeColor: '#EF4444',
+                  desc: 'Archives the record with a reason and an audit event. Not routed to owner review. Captured state is preserved for the future persistence layer.',
+                  action: 'Discard intake…',
+                  onClick: openDiscardModal,
+                },
+              ].map(opt => (
+                <div key={opt.id} style={{ padding: '20px', borderRadius: '12px', border: `1px solid ${opt.badgeColor}40`, background: '#111827' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                    <div style={{ fontSize: '16px', fontWeight: 700, color: '#F0F6FF', letterSpacing: '-0.01em' }}>{opt.title}</div>
+                    <span style={{ padding: '3px 10px', borderRadius: '100px', background: `${opt.badgeColor}18`, border: `1px solid ${opt.badgeColor}40`, fontSize: '11px', fontWeight: 600, color: opt.badgeColor, whiteSpace: 'nowrap' }}>{opt.badge}</span>
+                  </div>
+                  <div style={{ fontSize: '13px', color: '#4B6278', lineHeight: 1.6, marginBottom: '14px' }}>{opt.desc}</div>
+                  <button
+                    onClick={opt.onClick}
+                    disabled={submitting}
+                    style={{
+                      padding: '10px 18px',
+                      borderRadius: '8px',
+                      border: `1px solid ${opt.badgeColor}`,
+                      background: submitting ? 'transparent' : `${opt.badgeColor}18`,
+                      color: opt.badgeColor,
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      cursor: submitting ? 'not-allowed' : 'pointer',
+                      fontFamily: "'Inter', system-ui, sans-serif",
+                      letterSpacing: '-0.01em',
+                    }}
+                  >
+                    {opt.action}
+                  </button>
+                </div>
               ))}
             </div>
 
-            {!allConfirmed && <div style={{ fontSize: '12px', color: '#3D5468', marginBottom: '8px' }}>Please confirm all items above to submit your intake.</div>}
+            {outcomeFinalized === 'draft' && (
+              <div style={{ marginTop: '20px', padding: '18px 20px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.28)', borderRadius: '10px' }}>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: '#F59E0B', marginBottom: '4px' }}>Draft saved locally</div>
+                <div style={{ fontSize: '13px', color: '#C4D8EA', lineHeight: 1.6 }}>
+                  All captured discovery information is preserved. {missingReqSnapshot.length > 0 && `${missingReqSnapshot.length} follow-up item${missingReqSnapshot.length === 1 ? ' is' : 's are'} recorded on the intake.`} No Build Card was generated and the intake is not in the owner-review queue.
+                </div>
+                <div style={{ fontSize: '11px', color: '#3D5468', marginTop: '10px', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.06em' }}>
+                  Persistence layer (Phase 4) will store this draft server-side.
+                </div>
+              </div>
+            )}
 
             {submitting && (
-              <div style={{ padding: '18px', background: '#0D1620', border: '1px solid rgba(57,214,199,0.2)', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '14px', marginTop: '12px' }}>
+              <div style={{ marginTop: '20px', padding: '18px', background: '#0D1620', border: '1px solid rgba(57,214,199,0.2)', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '14px' }}>
                 <div style={{ width: '20px', height: '20px', border: '2px solid #1A2535', borderTop: '2px solid #39D6C7', borderRadius: '50%', flexShrink: 0 }} />
                 <span style={{ fontSize: '13px', color: '#39D6C7' }}>Submitting your intake…</span>
               </div>
             )}
 
             {submissionError && (
-              <div style={{ padding: '18px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '10px', marginTop: '12px' }}>
+              <div style={{ marginTop: '20px', padding: '18px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '10px' }}>
                 <div style={{ fontSize: '13px', color: '#EF4444', lineHeight: 1.5 }}>
                   <strong>Submission Error:</strong> {submissionError}
-                </div>
-                <div style={{ fontSize: '12px', color: '#9B6A6A', marginTop: '8px' }}>
-                  Please check your connection and try again. If the problem persists, contact M-THRYVE support.
                 </div>
               </div>
             )}
           </div>
         )}
 
-        {/* ══ SUBMITTED BUILD CARD ══ */}
-        {currentStep === 'build-card' && submitted && (
+        {/* ══ SUBMITTED BUILD CARD (only for submitted outcome) ══ */}
+        {currentStep === 'build-card' && submitted && outcomeFinalized === 'submitted' && (
           <div>
             <div style={{ textAlign: 'center', marginBottom: '40px' }}>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 16px', background: 'rgba(57,214,199,0.08)', border: '1px solid rgba(57,214,199,0.25)', borderRadius: '100px', marginBottom: '20px' }}>
@@ -1666,40 +2153,11 @@ export default function App() {
               )}
 
               <div style={{ padding: '12px 14px', background: '#0D1620', borderRadius: '8px', border: '1px solid #1E2E3D' }}>
-                <ReviewRow label="Payment plan" value={{ 'one-time': 'One-Time Payment', 'monthly': 'Monthly Payments', 'annual': 'Annual Payment' }[form.paymentPlan] || '—'} />
-                {form.paymentPlan === 'monthly' && <ReviewRow label="Monthly maintenance" value={`${formatPhp(maintenanceRate)}/month — Required`} />}
-                {form.paymentPlan === 'annual' && <ReviewRow label="Annual maintenance" value={`${formatPhp(maintenanceAnnual)}/year — Required`} />}
-                {form.paymentPlan === 'one-time' && <ReviewRow label="Free maintenance" value="3 months from launch" />}
-                {form.voucherStatus === 'valid' && <ReviewRow label={`Applied voucher (${form.voucherCode})`} value="Discount pending verification" />}
-                {form.preferredBillingDate && <ReviewRow label="Preferred billing date" value={new Date(form.preferredBillingDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} />}
                 <ReviewRow label="Submission date" value={new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} />
                 <ReviewRow label="Status" value="Waiting for Owner Review" bold />
-              </div>
-            </div>
-
-            {/* Generated client referral voucher */}
-            <div style={{ ...cardStyle, border: '1px solid rgba(245,158,11,0.25)', marginBottom: '12px' }}>
-              <div style={{ ...monoLabel, color: '#F59E0B' }}>Your M-THRYVE Referral Voucher</div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '22px', fontWeight: 700, color: '#F59E0B', letterSpacing: '0.08em' }}>{clientVoucher}</div>
-                <button onClick={() => copyToClipboard(clientVoucher, 'voucher')} style={{ padding: '8px 14px', borderRadius: '7px', border: '1px solid rgba(245,158,11,0.3)', background: copiedVoucher ? 'rgba(245,158,11,0.15)' : 'transparent', cursor: 'pointer', color: copiedVoucher ? '#F59E0B' : '#6B8099', fontSize: '12px', fontWeight: 600, fontFamily: "'Inter', system-ui, sans-serif", transition: 'all 0.15s' }}>
-                  {copiedVoucher ? '✓ Copied' : 'Copy Code'}
-                </button>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-                <span style={{ padding: '3px 10px', borderRadius: '100px', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', fontSize: '11px', color: '#F59E0B' }}>New · 0 referrals</span>
-              </div>
-              <div style={{ fontSize: '13px', color: '#4B6278', lineHeight: 1.65, marginBottom: '12px' }}>Share this voucher with someone who wants to build with M-THRYVE. When an eligible referral successfully completes the required referral conditions, you can earn a configured percentage discount toward your qualifying build payment.</div>
-              <div style={{ fontSize: '11px', color: '#3D5468', lineHeight: 1.6, marginBottom: '14px' }}>Sharing a code does not immediately create a discount. Referral eligibility must be verified by M-THRYVE. A voucher cannot be self-redeemed. Reward eligibility remains subject to M-THRYVE terms.</div>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {[
-                  { label: 'Copy Code', action: () => copyToClipboard(clientVoucher, 'voucher') },
-                  { label: 'Copy Message', action: () => copyToClipboard(`I am building with M-THRYVE. Use my referral voucher ${clientVoucher} when selecting your payment plan to receive the eligible referral benefit.`, 'voucher') },
-                  { label: 'Share via Email', action: () => {} },
-                  { label: 'Copy Referral Link', action: () => {} },
-                ].map(s => (
-                  <button key={s.label} onClick={s.action} style={{ padding: '7px 14px', borderRadius: '7px', border: '1px solid rgba(245,158,11,0.2)', background: 'transparent', cursor: 'pointer', color: '#6B8099', fontSize: '12px', fontFamily: "'Inter', system-ui, sans-serif", transition: 'all 0.15s' }}>{s.label}</button>
-                ))}
+                <div style={{ marginTop: '10px', padding: '10px 12px', background: '#111827', border: '1px solid #1E2E3D', borderRadius: '6px', fontSize: '11px', color: '#3D5468', lineHeight: 1.6 }}>
+                  Payment, agreement, and billing are handled in a separate workflow after owner approval. This intake does not capture or authorize any charge.
+                </div>
               </div>
             </div>
 
@@ -1726,7 +2184,7 @@ export default function App() {
         )}
 
         {/* ── Navigation ── */}
-        {!submitting && (
+        {!submitting && currentStep !== 'outcome' && (
           <div style={{ display: 'flex', justifyContent: currentStep === 'intro' ? 'flex-end' : 'space-between', alignItems: 'center', marginTop: '48px' }}>
             {currentStep !== 'intro' && currentStep !== 'build-card' && (
               <button onClick={handleBack} style={ghostBtn}>← Back</button>
@@ -1737,15 +2195,110 @@ export default function App() {
             {currentStep !== 'build-card' && (
               <button onClick={handleNext} style={primaryBtn} disabled={!canContinue}>
                 {currentStep === 'intro' ? 'Start Project Intake →'
-                  : currentStep === 'review' ? 'Continue to Payment →'
-                    : currentStep === 'payment' ? 'Review Final Summary →'
-                      : currentStep === 'final-confirm' ? 'Submit Intake for Analysis →'
-                        : 'Continue →'}
+                  : currentStep === 'review' ? 'Continue to Outcome →'
+                    : 'Continue →'}
               </button>
             )}
           </div>
         )}
+
+        {currentStep === 'outcome' && !submitting && (
+          <div style={{ marginTop: '32px' }}>
+            <button onClick={handleBack} style={ghostBtn}>← Back to Review</button>
+          </div>
+        )}
       </div>
+
+      {/* ══ DISCARDED terminal view (Phase 2) ══ */}
+      {outcomeFinalized === 'discarded' && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(6,12,16,0.96)', zIndex: 250, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+          <div style={{ background: '#111827', border: '1px solid rgba(239,68,68,0.35)', borderRadius: '14px', width: '100%', maxWidth: '520px', padding: '32px' }}>
+            <div style={{ ...monoLabel, color: '#EF4444', marginBottom: '10px' }}>Intake Discarded</div>
+            <div style={{ fontSize: '22px', fontWeight: 700, color: '#F0F6FF', marginBottom: '10px' }}>Archived with reason</div>
+            <div style={{ fontSize: '13px', color: '#4B6278', lineHeight: 1.65, marginBottom: '18px' }}>
+              This intake has been marked <strong style={{ color: '#EF4444' }}>discarded</strong>. It is not routed to the owner-review queue and no Build Card was generated. Captured discovery state is preserved for the future persistence layer.
+            </div>
+            <div style={{ padding: '14px', background: '#0D1620', border: '1px solid #1E2E3D', borderRadius: '10px', marginBottom: '20px' }}>
+              <div style={{ fontSize: '11px', color: '#4B6278', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.06em', marginBottom: '6px' }}>Reason</div>
+              <div style={{ fontSize: '14px', color: '#D4E4F0', marginBottom: '6px' }}>
+                {DISCARD_REASON_OPTIONS.find(r => r.code === form.discardReason?.code)?.label || '—'}
+              </div>
+              {form.discardReason?.note && (
+                <div style={{ fontSize: '13px', color: '#4B6278', lineHeight: 1.55 }}>{form.discardReason.note}</div>
+              )}
+            </div>
+            <button onClick={resetAll} style={{ padding: '10px 18px', borderRadius: '8px', border: 'none', background: '#39D6C7', color: '#060C10', fontSize: '14px', fontWeight: 700, cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif" }}>
+              Start new intake
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ══ DISCARD CONFIRMATION MODAL (Phase 2) ══ */}
+      {showDiscardModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(6,12,16,0.92)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+          <div style={{ background: '#111827', border: '1px solid rgba(239,68,68,0.35)', borderRadius: '14px', width: '100%', maxWidth: '480px', padding: '28px' }}>
+            <div style={{ fontSize: '18px', fontWeight: 700, color: '#F0F6FF', marginBottom: '8px' }}>Discard this intake?</div>
+            <div style={{ fontSize: '13px', color: '#4B6278', lineHeight: 1.65, marginBottom: '20px' }}>
+              The record will be archived with the reason below. It will not be sent to owner review and no Build Card will be generated.
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <div style={labelStyle}>Reason</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {DISCARD_REASON_OPTIONS.map(opt => {
+                  const sel = discardReasonCode === opt.code
+                  return (
+                    <button
+                      key={opt.code}
+                      onClick={() => setDiscardReasonCode(opt.code)}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        border: `1px solid ${sel ? '#EF4444' : '#2A3441'}`,
+                        background: sel ? 'rgba(239,68,68,0.08)' : '#0D1620',
+                        color: sel ? '#F0F6FF' : '#4B6278',
+                        fontSize: '13px',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        fontFamily: "'Inter', system-ui, sans-serif",
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <div style={labelStyle}>Operator note (optional)</div>
+              <textarea
+                value={discardNote}
+                onChange={e => setDiscardNote(e.target.value)}
+                placeholder="Context, next steps, or verbatim client statement…"
+                rows={3}
+                style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowDiscardModal(false)}
+                style={{ padding: '10px 18px', borderRadius: '8px', border: '1px solid #2A3441', background: 'transparent', color: '#4B6278', fontSize: '14px', cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif" }}
+              >
+                Keep intake
+              </button>
+              <button
+                onClick={confirmDiscard}
+                style={{ padding: '10px 18px', borderRadius: '8px', border: 'none', background: '#EF4444', color: '#F0F6FF', fontSize: '14px', fontWeight: 700, cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif" }}
+              >
+                Discard intake
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ══ TIER CHANGE WARNING ══ */}
       {showTierWarning && (
