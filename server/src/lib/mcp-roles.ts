@@ -224,7 +224,12 @@ export function runScopeAnalysis(
   }
 
   if (context.design.styleCount === 0) {
-    ambiguities.push({ topic: "Design direction", question: "No design styles selected — is a style exploration session needed?", impact: "Potential delivery delay" });
+    // REV-05: Design step removed from intake — no longer an ambiguity.
+    // Kept as informational: when styles happen to be present (legacy records),
+    // the note is informational only.
+    if (context.design.styleCount > 0) {
+      // Only note it when styles ARE present but we want to confirm they're still relevant.
+    }
   }
 
   if (assetReadiness && assetReadiness.readinessStatus !== "ready") {

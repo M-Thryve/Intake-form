@@ -12,7 +12,7 @@ function validPayload(overrides: Record<string, unknown> = {}) {
     project: {
       projectName: "Test App",
       industry: "Technology",
-      projectType: "Web Application",
+      projectType: "website",
       businessDescription: "A test application",
     },
     assets: {
@@ -20,7 +20,7 @@ function validPayload(overrides: Record<string, unknown> = {}) {
       statuses: { logo: "Available", colors: "Available" },
       requestedServices: [],
     },
-    tier: "template",
+    tier: "custom",
     template: {
       templateId: "starter-portfolio",
       projectVersion: "desktop",
@@ -125,15 +125,18 @@ describe("validateIntakePayload", () => {
     expect(result.errors?.some((e) => e.field === "tier")).toBe(true);
   });
 
-  it("rejects template tier with incomplete assets", () => {
+  it("rejects legacy template tier (not an active tier)", () => {
     const result = validateIntakePayload(
       validPayload({
+        tier: "template",
         assets: { qualification: "incomplete", statuses: {}, requestedServices: [] },
       })
     );
     expect(result.success).toBe(false);
-    expect(result.errors?.some((e) => e.message.includes("Template tier"))).toBe(true);
+    expect(result.errors?.some((e) => e.field === "tier")).toBe(true);
   });
+
+  // Previous template+incomplete test replaced by the above (template tier itself is rejected).
 
   it("rejects template tier without template selection", () => {
     const result = validateIntakePayload(
@@ -165,14 +168,13 @@ describe("validateIntakePayload", () => {
     expect(result.errors?.some((e) => e.field.includes("features"))).toBe(true);
   });
 
-  it("rejects empty design styles", () => {
+  it("accepts empty design styles (REV-05 — default-empty payload)", () => {
     const result = validateIntakePayload(
       validPayload({
         design: { styles: [], inspirationLink: "" },
       })
     );
-    expect(result.success).toBe(false);
-    expect(result.errors?.some((e) => e.field.includes("styles"))).toBe(true);
+    expect(result.success).toBe(true);
   });
 
   it("rejects missing payment plan", () => {
@@ -232,5 +234,139 @@ describe("validateIntakePayload", () => {
       })
     );
     expect(result.success).toBe(false);
+  });
+
+  // ── Phase 4 Delta: New test cases ──────────────────────────────────────
+
+  it("REV-02: rejects saas project type for custom tier", () => {
+    const result = validateIntakePayload(
+      validPayload({
+        tier: "custom",
+        project: {
+          projectName: "Test",
+          industry: "Tech",
+          projectType: "saas",
+          businessDescription: "A SaaS",
+        },
+      })
+    );
+    expect(result.success).toBe(false);
+    expect(result.errors?.some((e) => e.field.includes("projectType"))).toBe(true);
+    expect(result.errors?.some((e) => e.message.includes("Custom Build"))).toBe(true);
+  });
+
+  it("REV-02: rejects webapp project type for custom tier", () => {
+    const result = validateIntakePayload(
+      validPayload({
+        tier: "custom",
+        project: {
+          projectName: "Test",
+          industry: "Tech",
+          projectType: "webapp",
+          businessDescription: "A web app",
+        },
+      })
+    );
+    expect(result.success).toBe(false);
+    expect(result.errors?.some((e) => e.field.includes("projectType"))).toBe(true);
+  });
+
+  it("REV-02: rejects saas project type for enterprise tier", () => {
+    const result = validateIntakePayload(
+      validPayload({
+        tier: "enterprise",
+        template: undefined,
+        enterprise: {
+          projectVision: "Platform",
+          targetUsers: "Teams",
+          userRoles: "Admin",
+          businessWorkflows: "Workflow",
+          integrations: "",
+          existingSystems: "",
+          dataSecurityRequirements: "",
+          scalabilityRequirements: "",
+          designInspiration: "",
+          competitors: "",
+          successCriteria: "",
+        },
+        project: {
+          projectName: "SaaS Product",
+          industry: "Tech",
+          projectType: "saas",
+          businessDescription: "A SaaS product",
+        },
+      })
+    );
+    expect(result.success).toBe(false);
+    expect(result.errors?.some((e) => e.message.includes("Enterprise Level"))).toBe(true);
+  });
+
+  it("REV-02: accepts website project type for custom tier", () => {
+    const result = validateIntakePayload(
+      validPayload({
+        tier: "custom",
+        project: {
+          projectName: "Website",
+          industry: "Tech",
+          projectType: "website",
+          businessDescription: "A website",
+        },
+      })
+    );
+    expect(result.success).toBe(true);
+  });
+
+  it("REV-02: accepts mobile project type for custom tier", () => {
+    const result = validateIntakePayload(
+      validPayload({
+        tier: "custom",
+        project: {
+          projectName: "Mobile App",
+          industry: "Tech",
+          projectType: "mobile",
+          businessDescription: "A mobile app",
+        },
+      })
+    );
+    expect(result.success).toBe(true);
+  });
+
+  it("REV-02: accepts all six enterprise project types", () => {
+    for (const pt of ["website", "webapp", "mobile", "ai-agent", "ecommerce", "internal"]) {
+      const result = validateIntakePayload(
+        validPayload({
+          tier: "enterprise",
+          template: undefined,
+          enterprise: {
+            projectVision: "Platform",
+            targetUsers: "Teams",
+            userRoles: "Admin",
+            businessWorkflows: "Wf",
+            integrations: "",
+            existingSystems: "",
+            dataSecurityRequirements: "",
+            scalabilityRequirements: "",
+            designInspiration: "",
+            competitors: "",
+            successCriteria: "",
+          },
+          project: {
+            projectName: "Project",
+            industry: "Tech",
+            projectType: pt,
+            businessDescription: "Desc",
+          },
+        })
+      );
+      expect(result.success).toBe(true);
+    }
+  });
+
+  it("Phase 4: rejects legacy 'template' tier", () => {
+    const result = validateIntakePayload(
+      validPayload({ tier: "template" })
+    );
+    expect(result.success).toBe(false);
+    expect(result.errors?.some((e) => e.field === "tier")).toBe(true);
   });
 });

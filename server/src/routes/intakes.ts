@@ -1,9 +1,12 @@
 import { Router, type Request, type Response } from "express";
+import { z } from "zod";
 import { supabase } from "../lib/supabase.js";
 import { validateIntakePayload, type ValidatedPayload } from "../lib/validation.js";
 import { generateBuildReferenceNumber } from "../lib/reference.js";
 import { hashPayload } from "../lib/hash.js";
 import { orchestrateAnalysis } from "../lib/mcp-orchestration.js";
+
+const COMMAND_SCHEMA = z.enum(["save_draft", "submit", "discard"]);
 
 export const intakeRouter = Router();
 
@@ -23,6 +26,22 @@ intakeRouter.post("/", async (req: Request, res: Response) => {
     res.status(400).json({ success: false, error: "Missing intake payload" });
     return;
   }
+
+  // Phase 4: Explicit lifecycle command with Zod validation.
+  const rawCommand =
+    (req.body?.command as string) ||
+    (req.headers["x-intake-command"] as string) ||
+    "submit";
+
+  const commandResult = COMMAND_SCHEMA.safeParse(rawCommand);
+  if (!commandResult.success) {
+    res.status(400).json({
+      success: false,
+      error: `Invalid command: "${rawCommand}". Must be one of: save_draft, submit, discard`,
+    });
+    return;
+  }
+  const command = commandResult.data;
 
   const validation = validateIntakePayload(intake);
   if (!validation.success) {
@@ -63,33 +82,45 @@ intakeRouter.post("/", async (req: Request, res: Response) => {
   }
 
   try {
-    const buildRef = await generateBuildReferenceNumber();
-    const result = await persistIntake(data, buildRef, idempotencyKey, pHash);
+    // Phase 4: Reference numbers are generated ONLY on submission.
+    // Drafts and discards do not get a reference number.
+    const buildRef = command === "submit" ? await generateBuildReferenceNumber() : null;
+    const result = await persistIntake(data, buildRef, idempotencyKey, pHash, command);
     const intakeId = result.intakeId;
 
-    res.status(201).json(result);
+    res.status(command === "submit" ? 201 : 200).json(result);
 
-    if (intakeId) {
+    // Only orchestrate analysis on submission.
+    if (intakeId && command === "submit") {
       orchestrateAnalysis(intakeId).catch((err) => {
         console.error(`Background analysis failed for intake ${intakeId}:`, err);
       });
     }
   } catch (err) {
-    console.error("Intake submission failed:", err);
+    console.error("Intake operation failed:", err);
     res.status(500).json({ success: false, error: "An internal error occurred. Please try again." });
   }
 });
 
 async function persistIntake(
   data: ValidatedPayload,
-  buildRef: string,
+  buildRef: string | null,
   idempotencyKey: string,
   payloadHash: string,
+  command: string,
 ) {
+  const lifecycleStatuses: Record<string, string> = {
+    save_draft: "draft",
+    submit: "submitted",
+    discard: "discarded",
+  };
+  const status = lifecycleStatuses[command] || "submitted";
+
   const { data: rpcResult, error: rpcError } = await supabase.rpc("submit_intake", {
     p_idempotency_key: idempotencyKey,
     p_payload_hash: payloadHash,
     p_build_ref: buildRef,
+    p_status: status,
     p_client_full_name: data.client.fullName,
     p_client_company: data.client.company,
     p_client_email: data.client.email,
@@ -129,16 +160,20 @@ async function persistIntake(
 
   const intakeId = rpcResult?.intake_id;
 
+  const isSubmitted = command === "submit";
   const responseBody = {
     success: true,
     buildReferenceNumber: buildRef,
     intakeId,
-    status: "submitted",
-    ownerReviewStatus: "waiting_owner_review",
-    preliminaryBuildCard: {
-      status: "queued",
-      message: "Your intake has been submitted. A preliminary Build Card will be generated and queued for owner review.",
-    },
+    status: isSubmitted ? "submitted" : status,
+    command,
+    ...(isSubmitted ? {
+      ownerReviewStatus: "waiting_owner_review",
+      preliminaryBuildCard: {
+        status: "queued",
+        message: "Your intake has been submitted. A preliminary Build Card will be generated and queued for owner review.",
+      },
+    } : {}),
   };
 
   // Store idempotency result
@@ -149,15 +184,22 @@ async function persistIntake(
     response_body: responseBody,
   });
 
-  // Audit event
+  // Phase 4: Audit event with lifecycle transition tracking
   await supabase.from("audit_events").insert({
     intake_id: intakeId,
     actor_type: "system",
-    event_type: "intake_submitted",
+    event_type: command === "save_draft"
+      ? "lifecycle_draft_saved"
+      : command === "discard"
+        ? "lifecycle_discarded"
+        : "lifecycle_submitted",
     event_payload: {
+      command,
       build_reference_number: buildRef,
       tier: data.tier,
       idempotency_key: idempotencyKey,
+      previous_status: "in_progress",
+      new_status: status,
     },
   });
 

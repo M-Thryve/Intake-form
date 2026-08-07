@@ -65,8 +65,10 @@ const contentSchema = z.object({
   pages: z.array(pageSchema).max(MAX_PAGES).default([]),
 });
 
+// REV-05: design step removed — design fields are optional with defaults.
+// Legacy records with design data are still readable.
 const designSchema = z.object({
-  styles: z.array(z.string()).min(1, "At least one design style is required"),
+  styles: z.array(z.string()).default([]),
   inspirationLink: z.string().max(2000).default(""),
 });
 
@@ -90,8 +92,8 @@ const basePayloadSchema = z.object({
   client: clientSchema,
   project: projectSchema,
   assets: assetsSchema,
-  tier: z.enum(["template", "custom", "enterprise"], {
-    errorMap: () => ({ message: "Tier must be template, custom, or enterprise" }),
+  tier: z.enum(["custom", "enterprise"], {
+    errorMap: () => ({ message: "Tier must be custom or enterprise. Template is legacy-read-only." }),
   }),
   template: templateSchema.optional(),
   enterprise: enterpriseSchema.optional(),
@@ -144,6 +146,29 @@ export function validateIntakePayload(payload: unknown): ValidationResult {
     tierErrors.push({
       field: "enterprise",
       message: "Enterprise requirements are required for enterprise tier",
+    });
+  }
+
+  // REV-02: Per-path project type validation.
+  // Custom Build (including legacy template) only accepts website and mobile-app.
+  // Enterprise Level accepts website, webapp, mobile_app, ai_agent, ecommerce, internal_tool.
+  const CUSTOM_PROJECT_TYPES = new Set(["website", "mobile"]);
+  const ENTERPRISE_PROJECT_TYPES = new Set([
+    "website", "webapp", "mobile", "ai-agent", "ecommerce", "internal",
+  ]);
+  const buildPath = data.tier === "enterprise" ? "enterprise" : "custom";
+
+  if (buildPath === "custom" && !CUSTOM_PROJECT_TYPES.has(data.project.projectType)) {
+    tierErrors.push({
+      field: "project.projectType",
+      message: `Custom Build only supports: Website, Mobile App. Got: "${data.project.projectType}"`,
+    });
+  }
+
+  if (buildPath === "enterprise" && !ENTERPRISE_PROJECT_TYPES.has(data.project.projectType)) {
+    tierErrors.push({
+      field: "project.projectType",
+      message: `Enterprise Level supports: Website, Web App, Mobile App, AI Agent, E-Commerce, Internal Tool. Got: "${data.project.projectType}"`,
     });
   }
 

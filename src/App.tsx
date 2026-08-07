@@ -49,16 +49,35 @@ const EMPTY_FORM: FormData = {
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const PROJECT_TYPES = [
-  { id: 'website', label: 'Website', icon: '◈' },
-  { id: 'webapp', label: 'Web App', icon: '⚡' },
-  { id: 'mobile', label: 'Mobile App', icon: '◉' },
-  { id: 'ai-agent', label: 'AI Agent', icon: '◆' },
-  { id: 'saas', label: 'SaaS', icon: '☁' },
-  { id: 'ecommerce', label: 'E-Commerce', icon: '◇' },
-  { id: 'internal', label: 'Internal Tool', icon: '⊕' },
-  { id: 'custom', label: 'Custom Build', icon: '✦' },
-]
+function getProjectTypes(tier: Tier): { id: string; label: string; icon: string }[] {
+  if (tier === 'custom' || tier === 'template') {
+    return [
+      { id: 'website', label: 'Website', icon: '◈' },
+      { id: 'mobile', label: 'Mobile App', icon: '◉' },
+    ]
+  }
+  if (tier === 'enterprise') {
+    return [
+      { id: 'website', label: 'Website', icon: '◈' },
+      { id: 'webapp', label: 'Web App', icon: '⚡' },
+      { id: 'mobile', label: 'Mobile App', icon: '◉' },
+      { id: 'ai-agent', label: 'AI Agent', icon: '◆' },
+      { id: 'ecommerce', label: 'E-Commerce', icon: '◇' },
+      { id: 'internal', label: 'Internal Tool', icon: '⊕' },
+    ]
+  }
+  return [
+    { id: 'website', label: 'Website', icon: '◈' },
+    { id: 'webapp', label: 'Web App', icon: '⚡' },
+    { id: 'mobile', label: 'Mobile App', icon: '◉' },
+    { id: 'ai-agent', label: 'AI Agent', icon: '◆' },
+    { id: 'saas', label: 'SaaS', icon: '☁' },
+    { id: 'ecommerce', label: 'E-Commerce', icon: '◇' },
+    { id: 'internal', label: 'Internal Tool', icon: '⊕' },
+    { id: 'custom', label: 'Custom Build', icon: '✦' },
+  ]
+}
+const PROJECT_TYPES_FULL = getProjectTypes('')
 
 const INDUSTRIES = [
   'Technology', 'Healthcare', 'Finance', 'E-Commerce', 'Education',
@@ -144,15 +163,6 @@ const FEATURE_CHIPS = [
 ]
 
 const FEATURE_PRIORITY_OPTIONS = ['Required', 'Nice to Have', 'Future Phase', 'Need Help Deciding']
-
-const DESIGN_STYLES = [
-  { id: 'minimal', label: 'Minimal', desc: 'Clean, focused, whitespace-led' },
-  { id: 'bold', label: 'Bold & Modern', desc: 'Strong type, high contrast' },
-  { id: 'enterprise', label: 'Enterprise', desc: 'Structured, data-dense' },
-  { id: 'playful', label: 'Playful', desc: 'Vibrant and expressive' },
-  { id: 'dark', label: 'Dark Mode', desc: 'Premium dark interface' },
-  { id: 'branded', label: 'Brand-Led', desc: 'Identity-first design' },
-]
 
 // ── Page content definitions ───────────────────────────────────────────────────
 
@@ -253,13 +263,6 @@ function getMaintenanceRate(tier: Tier): number {
   if (tier === 'enterprise') return 8000
   if (tier === 'custom') return 5000
   return 3500
-}
-
-function makeRef() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  let ref = 'MTH-'
-  for (let i = 0; i < 8; i++) ref += chars[Math.floor(Math.random() * chars.length)]
-  return ref
 }
 
 function makeClientVoucher() {
@@ -694,10 +697,8 @@ function CompanyAssetsStep({
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' }}>
           {[
-            { id: 'yes', label: 'Yes — full deck available', desc: 'We\'ll review section coverage below.' },
-            { id: 'partial', label: 'Partial — some sections available', desc: 'Mark each section\'s status below.' },
-            { id: 'no', label: 'No — no deck yet', desc: 'Deck sections are recorded as missing; consider add-on.' },
-            { id: 'add_on', label: 'M-THRYVE add-on requested', desc: 'M-THRYVE prepares the deck as an add-on, subject to owner confirmation.' },
+            { id: 'yes', label: 'Yes — full deck available', desc: 'We\'ll review section coverage below. Every section must be confirmed before submission.' },
+            { id: 'partial', label: 'Partial — some sections available', desc: 'Mark each section\'s status below. Unconfirmed sections become follow-ups.' },
           ].map(opt => {
             const sel = form.deckExists === opt.id
             return (
@@ -720,12 +721,6 @@ function CompanyAssetsStep({
             )
           })}
         </div>
-
-        {form.deckExists === 'add_on' && (
-          <div style={{ padding: '10px 12px', background: 'rgba(183,156,249,0.08)', border: '1px solid rgba(183,156,249,0.25)', borderRadius: '8px', fontSize: '12px', fontStyle: 'italic', color: '#B79CF9', lineHeight: 1.55 }}>
-            “{ADD_ON_SPIEL}”
-          </div>
-        )}
 
         {(form.deckExists === 'yes' || form.deckExists === 'partial') && (
           <div style={{ marginTop: '14px' }}>
@@ -860,8 +855,6 @@ function ResourceReviewBlock({ form, onEdit }: { form: FormData; onEdit: () => v
   const deckLabel: Record<string, string> = {
     yes: 'Full deck available',
     partial: 'Partial deck available',
-    no: 'No deck — recorded as missing',
-    add_on: 'M-THRYVE add-on requested',
     '': 'Not confirmed',
   }
 
@@ -1046,7 +1039,7 @@ export default function App() {
   const set = (field: keyof FormData, value: unknown) =>
     setForm(prev => ({ ...prev, [field]: value }))
 
-  const toggleArr = (field: 'features' | 'designStyles', val: string) =>
+  const toggleArr = (field: 'features', val: string) =>
     setForm(prev => ({
       ...prev,
       [field]: (prev[field] as string[]).includes(val)
@@ -1073,8 +1066,13 @@ export default function App() {
 
   const confirmTierChange = () => {
     const t = pendingTier
+    const validTypes = getProjectTypes(t).map(pt => pt.id)
+    const currentType = form.projectType
+    const typeCleared = currentType && !validTypes.includes(currentType)
     setForm(prev => ({
       ...prev, tier: t,
+      // Clear project type if it's not valid for the new tier
+      projectType: typeCleared ? '' : prev.projectType,
       templateId: '', templateCategory: '', projectVersion: '', colorPreset: '',
       projectVision: '', features: [], customFeatures: [], designStyles: [], inspirationLink: '',
       targetUsers: '', userRoles: '', businessWorkflows: '', integrations: '',
@@ -1348,7 +1346,7 @@ export default function App() {
               <div>
                 <div style={labelStyle}>Project Type</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
-                  {PROJECT_TYPES.map(type => {
+                  {getProjectTypes(form.tier).map(type => {
                     const sel = form.projectType === type.id
                     return (
                       <button key={type.id} onClick={() => set('projectType', type.id)} style={{ padding: '14px 8px', borderRadius: '10px', border: `1px solid ${sel ? '#39D6C7' : '#2A3441'}`, background: sel ? 'rgba(57,214,199,0.07)' : '#111827', cursor: 'pointer', color: sel ? '#39D6C7' : '#4B6278', fontSize: '12px', fontWeight: sel ? 600 : 400, textAlign: 'center', transition: 'all 0.15s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
@@ -1864,28 +1862,6 @@ export default function App() {
           </div>
         )}
 
-        {/* ══ DESIGN ══ */}
-        {currentStep === 'design' && (
-          <div>
-            <StepHeader tag="Step 6 — Design Preferences" title="How should it feel?" desc="These selections guide our designers on the visual direction for your project. Choose everything that resonates — you can refine these during the build." />
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '28px' }}>
-              {DESIGN_STYLES.map(s => {
-                const sel = form.designStyles.includes(s.id)
-                return (
-                  <button key={s.id} onClick={() => toggleArr('designStyles', s.id)} style={{ padding: '20px 16px', borderRadius: '12px', border: `1px solid ${sel ? '#39D6C7' : '#2A3441'}`, background: sel ? 'rgba(57,214,199,0.06)' : '#111827', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}>
-                    <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: sel ? '#39D6C7' : 'transparent', border: sel ? 'none' : '1px solid #2A3441', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#060C10', fontWeight: 800 }}>{sel ? '✓' : ''}</div>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: sel ? '#39D6C7' : '#D4E4F0', marginBottom: '4px' }}>{s.label}</div>
-                    <div style={{ fontSize: '12px', color: '#3D5468' }}>{s.desc}</div>
-                  </button>
-                )
-              })}
-            </div>
-            <Field label="Inspiration References" hint="Links to Figma files, competitor websites, or screenshots that capture the look and feel you're going for.">
-              <input value={form.inspirationLink} onChange={e => set('inspirationLink', e.target.value)} placeholder="figma.com/file/... or https://example.com" style={inputStyle} />
-            </Field>
-          </div>
-        )}
-
         {/* ══ PROJECT REVIEW ══ */}
         {currentStep === 'review' && (
           <div>
@@ -1903,7 +1879,7 @@ export default function App() {
 
               <ReviewBlock title="Build Path" onEdit={() => goToStep('build-approach')}>
                 <ReviewRow label="Path" value={TIER_LABELS[form.tier] || '—'} />
-                {form.projectType && <ReviewRow label="Project Type" value={PROJECT_TYPES.find(t => t.id === form.projectType)?.label || '—'} />}
+                {form.projectType && <ReviewRow label="Project Type" value={PROJECT_TYPES_FULL.find(t => t.id === form.projectType)?.label || '—'} />}
                 {selectedTemplate && <ReviewRow label="Template" value={selectedTemplate.name} />}
                 {form.projectVersion && <ReviewRow label="Platform" value={pricing.versionLabel} />}
                 {form.colorPreset && <ReviewRow label="Color Style" value={COLOR_OPTIONS.find(c => c.id === form.colorPreset)?.name || '—'} />}
@@ -2195,7 +2171,7 @@ export default function App() {
             {currentStep !== 'build-card' && (
               <button onClick={handleNext} style={primaryBtn} disabled={!canContinue}>
                 {currentStep === 'intro' ? 'Start Project Intake →'
-                  : currentStep === 'review' ? 'Continue to Outcome →'
+                  : currentStep === 'review' ? 'Continue →'
                     : 'Continue →'}
               </button>
             )}
@@ -2303,11 +2279,26 @@ export default function App() {
       {/* ══ TIER CHANGE WARNING ══ */}
       {showTierWarning && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(6,12,16,0.92)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-          <div style={{ background: '#111827', border: '1px solid #2A3441', borderRadius: '14px', width: '100%', maxWidth: '440px', padding: '28px' }}>
-            <div style={{ fontSize: '18px', fontWeight: 700, color: '#F0F6FF', marginBottom: '10px' }}>Switch build tier?</div>
-            <div style={{ fontSize: '14px', color: '#4B6278', lineHeight: 1.65, marginBottom: '20px' }}>
-              Switching tiers will clear your template selection, project vision, features, and design preferences. Your contact details and project name will be preserved.
+          <div style={{ background: '#111827', border: '1px solid #2A3441', borderRadius: '14px', width: '100%', maxWidth: '480px', padding: '28px' }}>
+            <div style={{ fontSize: '18px', fontWeight: 700, color: '#F0F6FF', marginBottom: '10px' }}>Switch to {TIER_LABELS[pendingTier] || pendingTier}?</div>
+            <div style={{ fontSize: '14px', color: '#4B6278', lineHeight: 1.65, marginBottom: '16px' }}>
+              Switching tiers will clear your template selection, features, and vision fields. Your contact details and project name will be preserved.
             </div>
+            {(() => {
+              const validTypes = getProjectTypes(pendingTier).map(pt => pt.id)
+              const currentLabel = PROJECT_TYPES_FULL.find(t => t.id === form.projectType)?.label
+              if (form.projectType && currentLabel && !validTypes.includes(form.projectType)) {
+                return (
+                  <div style={{ padding: '14px 16px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.30)', borderRadius: '10px', marginBottom: '16px' }}>
+                    <div style={{ fontSize: '12px', color: '#F59E0B', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.06em', marginBottom: '6px' }}>INCOMPATIBLE SELECTION</div>
+                    <div style={{ fontSize: '13px', color: '#C4D8EA', lineHeight: 1.6 }}>
+                      You selected <strong style={{ color: '#F59E0B' }}>{currentLabel}</strong> as the project type. <strong style={{ color: '#EF4444' }}>{currentLabel} is not available on the {TIER_LABELS[pendingTier] || pendingTier} path.</strong> This selection will be cleared if you continue.
+                    </div>
+                  </div>
+                )
+              }
+              return null
+            })()}
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button onClick={() => { setShowTierWarning(false); setPendingTier('') }} style={{ padding: '10px 18px', borderRadius: '8px', border: '1px solid #2A3441', background: 'transparent', cursor: 'pointer', color: '#4B6278', fontSize: '14px', fontFamily: "'Inter', system-ui, sans-serif" }}>Keep current tier</button>
               <button onClick={confirmTierChange} style={{ padding: '10px 18px', borderRadius: '8px', border: 'none', background: '#39D6C7', cursor: 'pointer', color: '#060C10', fontSize: '14px', fontWeight: 700, fontFamily: "'Inter', system-ui, sans-serif" }}>Switch to {TIER_LABELS[pendingTier] || pendingTier}</button>
