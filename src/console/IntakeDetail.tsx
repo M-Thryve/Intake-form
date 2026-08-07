@@ -12,6 +12,8 @@ import OwnerDecision from "./OwnerDecision";
 import McpStatusPanel from "./McpStatusPanel";
 import BuildCardView from "./BuildCardView";
 import AuditTrail from "./AuditTrail";
+import TemplateFilterPanel from "./TemplateFilterPanel";
+import type { TemplateDefinition } from "../data/templates";
 
 interface IntakeDetailViewProps {
   intakeId: string;
@@ -19,7 +21,7 @@ interface IntakeDetailViewProps {
   onClose: () => void;
 }
 
-type SectionId = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H";
+type SectionId = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I";
 
 const SECTION_LABELS: Record<SectionId, string> = {
   A: "Client & Project Summary",
@@ -30,6 +32,7 @@ const SECTION_LABELS: Record<SectionId, string> = {
   F: "Preliminary Build Card",
   G: "Decision History",
   H: "Audit Trail",
+  I: "Template Recommendations",
 };
 
 export default function IntakeDetailView({ intakeId, isOwner, onClose }: IntakeDetailViewProps) {
@@ -39,6 +42,23 @@ export default function IntakeDetailView({ intakeId, isOwner, onClose }: IntakeD
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<SectionId>>(new Set(["A", "D", "E", "F"]));
+
+  const [selectedTemplate, setSelectedTemplate] = useState<TemplateDefinition | null>(null);
+  const [overrideReason, setOverrideReason] = useState<string>("");
+  const [showTemplatePanel, setShowTemplatePanel] = useState(true);
+
+  function handleTemplateSelect(template: TemplateDefinition) {
+    setSelectedTemplate(template);
+  }
+
+  function handleTemplateOverride(
+    oldT: TemplateDefinition | null,
+    newT: TemplateDefinition,
+    reason: string,
+  ) {
+    setSelectedTemplate(newT);
+    setOverrideReason(reason);
+  }
 
   useEffect(() => {
     setLoading(true);
@@ -258,6 +278,33 @@ export default function IntakeDetailView({ intakeId, isOwner, onClose }: IntakeD
       <Section id="H" label={SECTION_LABELS.H} expanded={expanded.has("H")} onToggle={() => toggleSection("H")}>
         <AuditTrail intakeId={intakeId} initialEvents={auditHistory || []} />
       </Section>
+
+      {showTemplatePanel && detail.intake && (
+        <Section id="I" label={SECTION_LABELS.I} expanded={expanded.has("I")} onToggle={() => toggleSection("I")}>
+          <TemplateFilterPanel
+            industry={
+              ((detail.intake as Record<string, unknown>).project as Record<string, unknown>)
+                ?.industry as string ||
+              (detail.intake as Record<string, unknown>).industry as string ||
+              ""
+            }
+            onSelectTemplate={handleTemplateSelect}
+            onOverrideTemplate={handleTemplateOverride}
+            selectedTemplateId={selectedTemplate?.id}
+          />
+          {selectedTemplate && overrideReason && (
+            <div style={{ marginTop: "12px", padding: "10px 14px", background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.25)", borderRadius: "8px" }}>
+              <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: "#F59E0B", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "4px" }}>
+                Override Applied
+              </div>
+              <div style={{ fontSize: "12px", color: "#94A3B8" }}>{overrideReason}</div>
+              <div style={{ fontSize: "11px", color: "#64748B", marginTop: "4px" }}>
+                Template: {selectedTemplate.name}
+              </div>
+            </div>
+          )}
+        </Section>
+      )}
 
       {canDecide && (
         <div style={{ ...styles.card, border: "1px solid #A78BFA44", background: "#A78BFA08" }}>

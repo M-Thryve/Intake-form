@@ -6,10 +6,16 @@ import type {
   IntakeOutcome,
   DiscardReasonCode,
   MissingRequirement,
+  OperatorNote,
 } from './types/intake'
 import { getFlow } from './data/flow'
 import { validateStep, collectMissingRequirements, canSubmit } from './data/validation'
+import { getInlineWarnings, slugify, type ValidationState } from './data/field-validators'
+import InlineWarning from './components/InlineWarning'
 import { submitIntake, toSubmissionPayload, generateIdempotencyKey } from './api/intake'
+import { TEMPLATES, type TemplateDefinition } from './data/templates'
+import { filterTemplatesByIndustry } from './data/template-filter'
+import { getMappingForIndustry } from './data/industry-template-map'
 import {
   getRequiredResources,
   getOptionalResources,
@@ -86,29 +92,6 @@ const INDUSTRIES = [
 ]
 
 const TEMPLATE_CATEGORIES = ['All', 'Business', 'E-Commerce', 'Portfolio', 'Restaurant', 'Real Estate', 'Booking']
-
-interface Template {
-  id: string; name: string; category: string; accent: string; bg: string
-  pages: string[]; features: string[]; purpose: string
-  desktopPrice: number; mobilePrice: number; bothPrice: number
-  deliveryDesktop: number; deliveryMobile: number; deliveryBoth: number
-}
-
-// NOTE: All prices in PHP. Prototype/demonstration values only.
-const TEMPLATES: Template[] = [
-  { id: 'apex', name: 'Apex Business', category: 'Business', accent: '#39D6C7', bg: '#0D2035', purpose: 'Professional corporate website', pages: ['Home', 'About', 'Services', 'Contact'], features: ['Contact Form', 'Blog', 'Team Page', 'Newsletter'], desktopPrice: 25000, mobilePrice: 20000, bothPrice: 32000, deliveryDesktop: 7, deliveryMobile: 5, deliveryBoth: 10 },
-  { id: 'vertex', name: 'Vertex Pro', category: 'Business', accent: '#7C6FCD', bg: '#1A0F2E', purpose: 'Agency and portfolio showcase', pages: ['Home', 'About', 'Services', 'Portfolio', 'Contact'], features: ['Portfolio Gallery', 'Contact Form', 'Testimonials'], desktopPrice: 28000, mobilePrice: 22000, bothPrice: 36000, deliveryDesktop: 8, deliveryMobile: 6, deliveryBoth: 12 },
-  { id: 'meridian', name: 'Meridian', category: 'Business', accent: '#22C55E', bg: '#051A0E', purpose: 'Consulting and service firm', pages: ['Home', 'Services', 'Pricing', 'Contact'], features: ['Pricing Table', 'Lead Form', 'Newsletter', 'FAQ'], desktopPrice: 22000, mobilePrice: 18000, bothPrice: 28000, deliveryDesktop: 6, deliveryMobile: 5, deliveryBoth: 9 },
-  { id: 'storex', name: 'StoreX', category: 'E-Commerce', accent: '#F97316', bg: '#1C0800', purpose: 'Full-featured online store', pages: ['Home', 'Shop', 'Product', 'Cart', 'Checkout'], features: ['Product Catalog', 'Shopping Cart', 'Stripe Payments', 'Order Tracking'], desktopPrice: 38000, mobilePrice: 32000, bothPrice: 48000, deliveryDesktop: 10, deliveryMobile: 8, deliveryBoth: 14 },
-  { id: 'boutique', name: 'Boutique', category: 'E-Commerce', accent: '#EC4899', bg: '#200A1E', purpose: 'Elegant fashion and lifestyle store', pages: ['Home', 'Collections', 'Product', 'Cart', 'Checkout'], features: ['Collections', 'Wishlist', 'Stripe Payments', 'Reviews'], desktopPrice: 35000, mobilePrice: 30000, bothPrice: 44000, deliveryDesktop: 9, deliveryMobile: 7, deliveryBoth: 13 },
-  { id: 'marketpro', name: 'MarketPro', category: 'E-Commerce', accent: '#EAB308', bg: '#1A1200', purpose: 'Multi-category marketplace', pages: ['Home', 'Categories', 'Product', 'Cart', 'Checkout'], features: ['Multi-category', 'Search', 'Payments', 'Promo Codes'], desktopPrice: 40000, mobilePrice: 34000, bothPrice: 50000, deliveryDesktop: 11, deliveryMobile: 9, deliveryBoth: 15 },
-  { id: 'folio', name: 'Nexus Portfolio', category: 'Portfolio', accent: '#94A3B8', bg: '#080E16', purpose: 'Minimal creative portfolio', pages: ['Home', 'Work', 'About', 'Contact'], features: ['Project Gallery', 'Case Studies', 'Contact Form'], desktopPrice: 18000, mobilePrice: 15000, bothPrice: 24000, deliveryDesktop: 5, deliveryMobile: 4, deliveryBoth: 7 },
-  { id: 'studio', name: 'Studio', category: 'Portfolio', accent: '#F59E0B', bg: '#180E00', purpose: 'Creative studio showcase', pages: ['Home', 'Projects', 'Process', 'Contact'], features: ['Project Gallery', 'Video Reel', 'Client Logos'], desktopPrice: 20000, mobilePrice: 16000, bothPrice: 26000, deliveryDesktop: 6, deliveryMobile: 5, deliveryBoth: 8 },
-  { id: 'dine', name: 'Dine', category: 'Restaurant', accent: '#EF4444', bg: '#1A0500', purpose: 'Premium dining experience', pages: ['Home', 'Menu', 'Reservations', 'About', 'Contact'], features: ['Online Menu', 'Table Reservations', 'Hours & Location', 'Gallery'], desktopPrice: 30000, mobilePrice: 25000, bothPrice: 38000, deliveryDesktop: 8, deliveryMobile: 6, deliveryBoth: 11 },
-  { id: 'saveur', name: 'Saveur', category: 'Restaurant', accent: '#D97706', bg: '#1A0D00', purpose: 'Restaurant with events and gift cards', pages: ['Home', 'Menu', 'Events', 'Reservations', 'Contact'], features: ['Online Menu', 'Event Booking', 'Gift Cards', 'Newsletter'], desktopPrice: 32000, mobilePrice: 27000, bothPrice: 40000, deliveryDesktop: 9, deliveryMobile: 7, deliveryBoth: 12 },
-  { id: 'property', name: 'Property Pro', category: 'Real Estate', accent: '#10B981', bg: '#051A10', purpose: 'Real estate agency listings', pages: ['Home', 'Listings', 'Property Detail', 'About', 'Contact'], features: ['Property Listings', 'Search & Filter', 'Map View', 'Lead Capture'], desktopPrice: 35000, mobilePrice: 29000, bothPrice: 44000, deliveryDesktop: 9, deliveryMobile: 7, deliveryBoth: 13 },
-  { id: 'reserve', name: 'Commerce Starter', category: 'Booking', accent: '#0EA5E9', bg: '#021018', purpose: 'Service business booking system', pages: ['Home', 'Services', 'Book', 'Confirmation', 'Contact'], features: ['Online Booking', 'Calendar', 'Service Selection', 'SMS Notifications'], desktopPrice: 38000, mobilePrice: 32000, bothPrice: 48000, deliveryDesktop: 10, deliveryMobile: 8, deliveryBoth: 14 },
-]
 
 interface ColorOption { id: string; name: string; color: string }
 const COLOR_OPTIONS: ColorOption[] = [
@@ -227,7 +210,7 @@ function getPageDef(name: string): PageDef { return PAGE_DEFS[name] ?? DEFAULT_P
 
 // ── Pricing helpers ────────────────────────────────────────────────────────────
 
-function calcPrice(template: Template | undefined, version: string) {
+function calcPrice(template: TemplateDefinition | undefined, version: string) {
   if (!template) return { base: 0, total: 0, delivery: 0, versionLabel: '—' }
   const base = version === 'mobile' ? template.mobilePrice
     : version === 'both' ? template.bothPrice
@@ -566,6 +549,9 @@ function ResourceRow({
   onStatus,
   onNote,
   onAddOnCost,
+  fieldId,
+  touchField,
+  warning,
 }: {
   req: ResourceRequirement
   ctx: RequirementContext
@@ -575,15 +561,19 @@ function ResourceRow({
   onStatus: (v: AssetReadiness) => void
   onNote: (v: string) => void
   onAddOnCost: (v: number | undefined) => void
+  fieldId: string
+  touchField: (id: string) => void
+  warning: string | null
 }) {
   const borderColor = status ? READINESS_COLOR[status] + '55' : '#2A3441'
+  const rowBorder = warning ? '#F59E0B' : borderColor
   const showNote =
     status === 'missing' ||
     status === 'provide_later' ||
     status === 'm_thryve_add_on' ||
     status === 'not_applicable'
   return (
-    <div style={{ padding: '12px 14px', background: '#111827', border: `1px solid ${borderColor}`, borderRadius: '8px' }}>
+    <div id={fieldId} aria-describedby={`${fieldId}-warning`} onBlur={() => touchField(fieldId)} style={{ padding: '12px 14px', background: '#111827', border: `1px solid ${rowBorder}`, borderRadius: '8px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -634,6 +624,8 @@ function ResourceRow({
           />
         </div>
       )}
+
+      <InlineWarning fieldId={fieldId} message={warning} />
     </div>
   )
 }
@@ -641,9 +633,13 @@ function ResourceRow({
 function CompanyAssetsStep({
   form,
   setForm,
+  getWarning,
+  touchField,
 }: {
   form: FormData
   setForm: (updater: (prev: FormData) => FormData) => void
+  getWarning: (fieldId: string) => string | null
+  touchField: (fieldId: string) => void
 }) {
   const ctx: RequirementContext = {
     buildPath: form.tier === 'enterprise' ? 'enterprise' : form.tier ? 'custom' : '',
@@ -695,7 +691,7 @@ function CompanyAssetsStep({
         <div style={{ fontSize: '13px', color: '#C4D8EA', marginBottom: '10px', lineHeight: 1.55 }}>
           Does the client have a company deck we can reference?
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' }}>
+        <div id="field-deckExists" aria-describedby="field-deckExists-warning" onBlur={() => touchField('field-deckExists')} style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px', ...(getWarning('field-deckExists') ? { outline: '1px solid rgba(245,158,11,0.45)', borderRadius: '10px' } : {}) }}>
           {[
             { id: 'yes', label: 'Yes — full deck available', desc: 'We\'ll review section coverage below. Every section must be confirmed before submission.' },
             { id: 'partial', label: 'Partial — some sections available', desc: 'Mark each section\'s status below. Unconfirmed sections become follow-ups.' },
@@ -704,7 +700,7 @@ function CompanyAssetsStep({
             return (
               <button
                 key={opt.id}
-                onClick={() => setDeckExists(opt.id)}
+                onClick={() => { setDeckExists(opt.id); touchField('field-deckExists') }}
                 style={{
                   padding: '12px 14px',
                   borderRadius: '8px',
@@ -721,6 +717,7 @@ function CompanyAssetsStep({
             )
           })}
         </div>
+        <InlineWarning fieldId="field-deckExists" message={getWarning('field-deckExists')} />
 
         {(form.deckExists === 'yes' || form.deckExists === 'partial') && (
           <div style={{ marginTop: '14px' }}>
@@ -728,19 +725,25 @@ function CompanyAssetsStep({
               Deck Sections · required vs optional
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              {deckSections.map(sec => (
-                <ResourceRow
-                  key={sec.key}
-                  req={{ key: sec.key, label: sec.label, category: 'company_deck', severity: sec.severity, description: sec.description }}
-                  ctx={ctx}
-                  status={form.deckSectionStatuses[sec.key]}
-                  note={form.deckSectionNotes[sec.key] ?? ''}
-                  addOnCost={undefined}
-                  onStatus={next => setDeckStatus(sec.key, next)}
-                  onNote={next => setDeckNote(sec.key, next)}
-                  onAddOnCost={() => {}}
-                />
-              ))}
+              {deckSections.map(sec => {
+                const sectionFieldId = `field-deckSection-${sec.key}`
+                return (
+                  <ResourceRow
+                    key={sec.key}
+                    req={{ key: sec.key, label: sec.label, category: 'company_deck', severity: sec.severity, description: sec.description }}
+                    ctx={ctx}
+                    status={form.deckSectionStatuses[sec.key]}
+                    note={form.deckSectionNotes[sec.key] ?? ''}
+                    addOnCost={undefined}
+                    onStatus={next => { setDeckStatus(sec.key, next); touchField(sectionFieldId) }}
+                    onNote={next => { setDeckNote(sec.key, next); touchField(sectionFieldId) }}
+                    onAddOnCost={() => {}}
+                    fieldId={sectionFieldId}
+                    touchField={touchField}
+                    warning={getWarning(sectionFieldId)}
+                  />
+                )
+              })}
             </div>
           </div>
         )}
@@ -753,19 +756,25 @@ function CompanyAssetsStep({
           These resources are needed to complete the build accurately for this path and project type.
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {required.map(r => (
-            <ResourceRow
-              key={r.key}
-              req={r}
-              ctx={ctx}
-              status={form.resourceStatuses[r.key]}
-              note={form.resourceNotes[r.key] ?? ''}
-              addOnCost={form.resourceAddOnCosts[r.key]}
-              onStatus={next => setResourceStatus(r.key, next)}
-              onNote={next => setResourceNote(r.key, next)}
-              onAddOnCost={next => setAddOnCost(r.key, next)}
-            />
-          ))}
+          {required.map(r => {
+            const resourceFieldId = `field-resource-${r.key}`
+            return (
+              <ResourceRow
+                key={r.key}
+                req={r}
+                ctx={ctx}
+                status={form.resourceStatuses[r.key]}
+                note={form.resourceNotes[r.key] ?? ''}
+                addOnCost={form.resourceAddOnCosts[r.key]}
+                onStatus={next => { setResourceStatus(r.key, next); touchField(resourceFieldId) }}
+                onNote={next => { setResourceNote(r.key, next); touchField(resourceFieldId) }}
+                onAddOnCost={next => { setAddOnCost(r.key, next); touchField(resourceFieldId) }}
+                fieldId={resourceFieldId}
+                touchField={touchField}
+                warning={getWarning(resourceFieldId)}
+              />
+            )
+          })}
         </div>
       </div>
 
@@ -776,19 +785,25 @@ function CompanyAssetsStep({
           Nice-to-have items. Missing entries here do not block submission but improve the resulting build.
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {optional.map(r => (
-            <ResourceRow
-              key={r.key}
-              req={r}
-              ctx={ctx}
-              status={form.resourceStatuses[r.key]}
-              note={form.resourceNotes[r.key] ?? ''}
-              addOnCost={form.resourceAddOnCosts[r.key]}
-              onStatus={next => setResourceStatus(r.key, next)}
-              onNote={next => setResourceNote(r.key, next)}
-              onAddOnCost={next => setAddOnCost(r.key, next)}
-            />
-          ))}
+          {optional.map(r => {
+            const resourceFieldId = `field-resource-${r.key}`
+            return (
+              <ResourceRow
+                key={r.key}
+                req={r}
+                ctx={ctx}
+                status={form.resourceStatuses[r.key]}
+                note={form.resourceNotes[r.key] ?? ''}
+                addOnCost={form.resourceAddOnCosts[r.key]}
+                onStatus={next => { setResourceStatus(r.key, next); touchField(resourceFieldId) }}
+                onNote={next => { setResourceNote(r.key, next); touchField(resourceFieldId) }}
+                onAddOnCost={next => { setAddOnCost(r.key, next); touchField(resourceFieldId) }}
+                fieldId={resourceFieldId}
+                touchField={touchField}
+                warning={getWarning(resourceFieldId)}
+              />
+            )
+          })}
         </div>
       </div>
 
@@ -1019,6 +1034,12 @@ export default function App() {
   const [conciergeQ, setConciergeQ] = useState<string | null>(null)
   const [voucherChecking, setVoucherChecking] = useState(false)
 
+  // ── REV-03: industry template filter state (ephemeral, UI-only) ─────────
+  const [templateFilterOverride, setTemplateFilterOverride] = useState(false)
+
+  // ── REV-01: inline validation tracker (ephemeral, UI-only) ──────────────
+  const [validationState, setValidationState] = useState<ValidationState>({})
+
   // ── Phase 2 outcome / discard state ─────────────────────────────────────
   const [showDiscardModal, setShowDiscardModal] = useState(false)
   const [discardReasonCode, setDiscardReasonCode] = useState<DiscardReasonCode>('not_proceeding')
@@ -1096,6 +1117,46 @@ export default function App() {
       }
     }, 1200)
   }
+
+  // ── REV-01: inline validation trigger strategy ───────────────────────────
+  // Fields appear clean on arrival; warnings appear only after the operator
+  // blurs an input (or interacts with a discrete choice control). Warnings
+  // are derived live from the current form + touched flags, so corrections
+  // clear the warning on the next keystroke.
+  useEffect(() => {
+    setValidationState({})
+  }, [currentStep])
+
+  // REV-03: reset industry filter override when the selected industry changes.
+  useEffect(() => {
+    setTemplateFilterOverride(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.industry])
+
+  const stepWarnings = getInlineWarnings(currentStep, form)
+
+  const getWarning = (fieldId: string): string | null => {
+    if (fieldId.startsWith('field-priority-')) {
+      // Feature-priority warnings are gated on the features group being touched.
+      if (!validationState['field-features']?.touched) return null
+    } else if (!validationState[fieldId]?.touched) {
+      return null
+    }
+    return stepWarnings[fieldId] ?? null
+  }
+
+  const touchField = (fieldId: string) =>
+    setValidationState(prev => ({ ...prev, [fieldId]: { touched: true, warning: null } }))
+
+  const fieldStyle = (fieldId: string): CSSProperties => ({
+    ...inputStyle,
+    border: getWarning(fieldId) ? `1px solid #F59E0B` : inputStyle.border,
+  })
+
+  const groupWarningStyle = (fieldId: string): CSSProperties =>
+    getWarning(fieldId)
+      ? { outline: '1px solid rgba(245,158,11,0.45)', borderRadius: '10px' }
+      : { outline: 'none' }
 
   // Snapshot of current gaps used by review, outcome, and draft flows.
   const missingReqSnapshot: MissingRequirement[] = collectMissingRequirements(form)
@@ -1186,6 +1247,8 @@ export default function App() {
     setCopiedRef(false); setCopiedVoucher(false)
     setOutcomeFinalized(null); setSubmitAttempted(false)
     setShowDiscardModal(false); setDiscardNote(''); setDiscardReasonCode('not_proceeding')
+    setValidationState({})
+    setTemplateFilterOverride(false)
   }
 
   const copyToClipboard = (text: string, which: 'ref' | 'voucher') => {
@@ -1205,7 +1268,52 @@ export default function App() {
   const maintenanceRate = getMaintenanceRate(form.tier)
   const maintenanceAnnual = maintenanceRate * 12
 
-  const filteredTemplates = templateCatFilter === 'All' ? TEMPLATES : TEMPLATES.filter(t => t.category === templateCatFilter)
+  // ── REV-03: industry-driven template filtering ─────────────────────────
+  const industryFilter = filterTemplatesByIndustry(TEMPLATES, form.industry)
+  const byCategory = (list: TemplateDefinition[]) =>
+    templateCatFilter === 'All' ? list : list.filter(t => t.category === templateCatFilter)
+
+  const filterMapping = getMappingForIndustry(form.industry)
+  const industryActive = !!form.industry.trim() && filterMapping.compatibleTags.length > 0
+  const hasPrimary = industryFilter.primary.length > 0
+  const hasRecommended = industryFilter.recommended.length > 0
+  const override = templateFilterOverride
+
+  /** Whether the selected template is a primary match for the current industry. */
+  const isPrimaryTemplateMatch = (t: TemplateDefinition): boolean => {
+    const m = getMappingForIndustry(form.industry)
+    if (m.compatibleTags.length === 0) return true
+    return t.tags.some(tag => m.compatibleTags.includes(tag))
+  }
+
+  const handleTemplateSelect = (t: TemplateDefinition) => {
+    set('templateId', t.id)
+    set('templateCategory', t.category)
+    setCurrentPageIndex(0)
+    touchField('field-templateId')
+    touchField('field-projectVersion')
+
+    if (
+      form.industry &&
+      form.industry !== 'Other' &&
+      filterMapping.compatibleTags.length > 0 &&
+      !isPrimaryTemplateMatch(t)
+    ) {
+      const mapping = getMappingForIndustry(form.industry)
+      const note: OperatorNote = {
+        kind: 'assumption',
+        section: 'template-select',
+        note: `Template "${t.name}" selected outside the default "${mapping.label}" industry filter. Override was explicit.`,
+        createdAt: new Date().toISOString(),
+      }
+      setForm(prev => ({
+        ...prev,
+        operatorNotes: [...(prev.operatorNotes ?? []), note],
+      }))
+    }
+  }
+
+  const _filteredAll = byCategory(TEMPLATES)
   const templatePages = selectedTemplate?.pages ?? []
   const currentPageName = templatePages[currentPageIndex] ?? ''
   const pageDef = getPageDef(currentPageName)
@@ -1333,17 +1441,30 @@ export default function App() {
             <OperatorSpiel text={SPIELS.clientDetails} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <Field label="Full Name"><input value={form.fullName} onChange={e => set('fullName', e.target.value)} placeholder="Alex Johnson" style={inputStyle} /></Field>
-                <Field label="Company or Organization Name"><input value={form.company} onChange={e => set('company', e.target.value)} placeholder="Acme Corp" style={inputStyle} /></Field>
+                <Field label="Full Name">
+                  <input id="field-fullName" aria-describedby="field-fullName-warning" value={form.fullName} onChange={e => set('fullName', e.target.value)} onBlur={() => touchField('field-fullName')} placeholder="Alex Johnson" style={fieldStyle('field-fullName')} />
+                  <InlineWarning fieldId="field-fullName" message={getWarning('field-fullName')} />
+                </Field>
+                <Field label="Company or Organization Name">
+                  <input id="field-company" aria-describedby="field-company-warning" value={form.company} onChange={e => set('company', e.target.value)} onBlur={() => touchField('field-company')} placeholder="Acme Corp" style={fieldStyle('field-company')} />
+                  <InlineWarning fieldId="field-company" message={getWarning('field-company')} />
+                </Field>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <Field label="Business Email"><input value={form.email} onChange={e => set('email', e.target.value)} placeholder="alex@acmecorp.com" type="email" style={inputStyle} /></Field>
-                <Field label="Contact Number"><input value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="+63 917 000 0000" type="tel" style={inputStyle} /></Field>
+                <Field label="Business Email">
+                  <input id="field-email" aria-describedby="field-email-warning" value={form.email} onChange={e => set('email', e.target.value)} onBlur={() => touchField('field-email')} placeholder="alex@acmecorp.com" type="email" style={fieldStyle('field-email')} />
+                  <InlineWarning fieldId="field-email" message={getWarning('field-email')} />
+                </Field>
+                <Field label="Contact Number">
+                  <input id="field-phone" aria-describedby="field-phone-warning" value={form.phone} onChange={e => set('phone', e.target.value)} onBlur={() => touchField('field-phone')} placeholder="+63 917 000 0000" type="tel" style={fieldStyle('field-phone')} />
+                  <InlineWarning fieldId="field-phone" message={getWarning('field-phone')} />
+                </Field>
               </div>
               <Field label="Project Name" hint="A working name for your project. You can refine this before launch.">
-                <input value={form.projectName} onChange={e => set('projectName', e.target.value)} placeholder="e.g. Acme Client Portal" style={inputStyle} />
+                <input id="field-projectName" aria-describedby="field-projectName-warning" value={form.projectName} onChange={e => set('projectName', e.target.value)} onBlur={() => touchField('field-projectName')} placeholder="e.g. Acme Client Portal" style={fieldStyle('field-projectName')} />
+                <InlineWarning fieldId="field-projectName" message={getWarning('field-projectName')} />
               </Field>
-              <div>
+              <div id="field-projectType" aria-describedby="field-projectType-warning" onBlur={() => touchField('field-projectType')} style={groupWarningStyle('field-projectType')}>
                 <div style={labelStyle}>Project Type</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
                   {getProjectTypes(form.tier).map(type => {
@@ -1356,14 +1477,17 @@ export default function App() {
                   })}
                 </div>
               </div>
+              <InlineWarning fieldId="field-projectType" message={getWarning('field-projectType')} />
               <Field label="Industry">
-                <select value={form.industry} onChange={e => set('industry', e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
+                <select id="field-industry" aria-describedby="field-industry-warning" value={form.industry} onChange={e => set('industry', e.target.value)} onBlur={() => touchField('field-industry')} style={{ ...fieldStyle('field-industry'), cursor: 'pointer' }}>
                   <option value="">Select your industry</option>
                   {INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}
                 </select>
+                <InlineWarning fieldId="field-industry" message={getWarning('field-industry')} />
               </Field>
               <Field label="Brief Business Description" hint="A sentence or two describing what your business does and who it serves.">
-                <textarea value={form.businessDesc} onChange={e => set('businessDesc', e.target.value)} placeholder="e.g. We are a logistics company helping SMEs across Metro Manila track and manage their deliveries in real time..." rows={3} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.7 }} />
+                <textarea id="field-businessDesc" aria-describedby="field-businessDesc-warning" value={form.businessDesc} onChange={e => set('businessDesc', e.target.value)} onBlur={() => touchField('field-businessDesc')} placeholder="e.g. We are a logistics company helping SMEs across Metro Manila track and manage their deliveries in real time..." rows={3} style={{ ...fieldStyle('field-businessDesc'), resize: 'vertical', lineHeight: 1.7 }} />
+                <InlineWarning fieldId="field-businessDesc" message={getWarning('field-businessDesc')} />
               </Field>
             </div>
           </div>
@@ -1371,7 +1495,7 @@ export default function App() {
 
         {/* ══ COMPANY ASSETS QUESTIONNAIRE (v2.0 structured) ══ */}
         {currentStep === 'company-assets' && (
-          <CompanyAssetsStep form={form} setForm={setForm} />
+          <CompanyAssetsStep form={form} setForm={setForm} getWarning={getWarning} touchField={touchField} />
         )}
 
         {/* Legacy assetQualification renderer — kept out of flow, deprecated in v2. */}
@@ -1487,7 +1611,7 @@ export default function App() {
             />
             <OperatorSpiel text={SPIELS.customBuild} />
             <OperatorSpiel text={SPIELS.enterprise} tone="accent" />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div id="field-tier" aria-describedby="field-tier-warning" onBlur={() => touchField('field-tier')} style={{ display: 'flex', flexDirection: 'column', gap: '12px', ...groupWarningStyle('field-tier') }}>
               {[
                 {
                   id: 'custom' as Tier,
@@ -1538,6 +1662,7 @@ export default function App() {
                 )
               })}
             </div>
+            <InlineWarning fieldId="field-tier" message={getWarning('field-tier')} />
           </div>
         )}
 
@@ -1551,34 +1676,142 @@ export default function App() {
             />
             <OperatorSpiel text={SPIELS.customBuild} />
             <OperatorSpiel text={SPIELS.followUp} tone="warning" />
+            {/* ── REV-03: industry filter indicator ─────────────────────── */}
+            {industryActive && (
+              <div style={{ marginBottom: '14px' }}>
+                <div style={{ fontSize: '12px', color: '#4B6278', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '6px' }}>
+                  {override
+                    ? 'Showing all starting points'
+                    : hasPrimary
+                      ? `Showing starting points for: ${filterMapping.label}`
+                      : hasRecommended
+                        ? `Recommended alternatives for ${filterMapping.label}`
+                        : `No templates are specifically designed for ${filterMapping.label} yet. Showing all available templates.`}
+                </div>
+                <button
+                  onClick={() => setTemplateFilterOverride(!override)}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '100px',
+                    border: '1px solid #2A3441',
+                    background: 'transparent',
+                    color: override ? '#F59E0B' : '#39D6C7',
+                    fontSize: '11px',
+                    cursor: 'pointer',
+                    fontFamily: "'Inter', system-ui, sans-serif",
+                  }}
+                >
+                  {override
+                    ? `Reset to ${filterMapping.label}`
+                    : 'Show all templates'}
+                </button>
+              </div>
+            )}
+
             <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap', marginBottom: '16px' }}>
               {TEMPLATE_CATEGORIES.map(cat => (
                 <button key={cat} onClick={() => setTemplateCatFilter(cat)} style={{ padding: '6px 14px', borderRadius: '100px', border: `1px solid ${templateCatFilter === cat ? '#39D6C7' : '#2A3441'}`, background: templateCatFilter === cat ? 'rgba(57,214,199,0.09)' : 'transparent', cursor: 'pointer', color: templateCatFilter === cat ? '#39D6C7' : '#4B6278', fontSize: '12px', fontWeight: templateCatFilter === cat ? 600 : 400, transition: 'all 0.15s', fontFamily: "'Inter', system-ui, sans-serif" }}>{cat}</button>
               ))}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '28px' }}>
-              {filteredTemplates.map(t => {
-                const sel = form.templateId === t.id
-                return (
-                  <button key={t.id} onClick={() => { set('templateId', t.id); set('templateCategory', t.category); setCurrentPageIndex(0) }} style={{ borderRadius: '10px', border: `1.5px solid ${sel ? '#39D6C7' : '#2A3441'}`, background: sel ? 'rgba(57,214,199,0.06)' : '#111827', cursor: 'pointer', padding: 0, overflow: 'hidden', textAlign: 'left', transition: 'all 0.15s' }}>
-                    <div style={{ height: '64px', background: t.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                      <div style={{ width: '48px', height: '4px', borderRadius: '2px', background: t.accent, opacity: 0.7 }} />
-                      <div style={{ position: 'absolute', top: '10px', left: '10px', width: '16px', height: '3px', borderRadius: '2px', background: t.accent }} />
-                      <div style={{ position: 'absolute', bottom: '10px', right: '10px', width: '24px', height: '2px', borderRadius: '1px', background: `${t.accent}50` }} />
-                    </div>
-                    <div style={{ padding: '10px 12px' }}>
-                      <div style={{ fontSize: '12px', fontWeight: 600, color: sel ? '#39D6C7' : '#D4E4F0', marginBottom: '2px' }}>{t.name}</div>
-                      <div style={{ fontSize: '10px', color: '#3D5468', marginBottom: '5px' }}>{t.purpose}</div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', fontWeight: 600, color: sel ? '#39D6C7' : '#6B8099' }}>{formatPhp(t.desktopPrice)}</span>
-                        <span style={{ fontSize: '10px', color: '#3D5468' }}>{t.deliveryDesktop}d</span>
-                      </div>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
+            {(() => {
+              const sectionHeader: CSSProperties = {
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: '10px',
+                letterSpacing: '0.08em',
+                color: '#4B6278',
+                textTransform: 'uppercase',
+                marginBottom: '8px',
+                marginTop: '8px',
+              }
+              const isOverrideView = industryActive && override
+              const isOverrideOrRecommendedView = isOverrideView || (industryActive && !override && !hasPrimary && hasRecommended)
+
+              const renderGrid = (list: TemplateDefinition[], showBadge?: boolean) => (
+                <div id="field-templateId" aria-describedby="field-templateId-warning" onBlur={() => touchField('field-templateId')} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '14px' }}>
+                  {list.map(t => {
+                    const sel = form.templateId === t.id
+                    return (
+                      <button key={t.id} onClick={() => handleTemplateSelect(t)} style={{ borderRadius: '10px', border: `1.5px solid ${sel ? '#39D6C7' : '#2A3441'}`, background: sel ? 'rgba(57,214,199,0.06)' : '#111827', cursor: 'pointer', padding: 0, overflow: 'hidden', textAlign: 'left', transition: 'all 0.15s', position: 'relative' }}>
+                        {showBadge && (
+                          <span style={{
+                            position: 'absolute', top: '6px', right: '6px', zIndex: 2,
+                            padding: '1px 7px', borderRadius: '100px',
+                            background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)',
+                            fontSize: '9px', color: '#F59E0B', fontWeight: 600,
+                            fontFamily: "'JetBrains Mono', monospace",
+                          }}>
+                            Recommended alternative
+                          </span>
+                        )}
+                        <div style={{ height: '64px', background: t.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                          <div style={{ width: '48px', height: '4px', borderRadius: '2px', background: t.accent, opacity: 0.7 }} />
+                          <div style={{ position: 'absolute', top: '10px', left: '10px', width: '16px', height: '3px', borderRadius: '2px', background: t.accent }} />
+                          <div style={{ position: 'absolute', bottom: '10px', right: '10px', width: '24px', height: '2px', borderRadius: '1px', background: `${t.accent}50` }} />
+                        </div>
+                        <div style={{ padding: '10px 12px' }}>
+                          <div style={{ fontSize: '12px', fontWeight: 600, color: sel ? '#39D6C7' : '#D4E4F0', marginBottom: '2px' }}>{t.name}</div>
+                          <div style={{ fontSize: '10px', color: '#3D5468', marginBottom: '5px' }}>{t.purpose}</div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', fontWeight: 600, color: sel ? '#39D6C7' : '#6B8099' }}>{formatPhp(t.desktopPrice)}</span>
+                            <span style={{ fontSize: '10px', color: '#3D5468' }}>{t.deliveryDesktop}d</span>
+                          </div>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )
+
+              // Not overriding, not in override-or-recommended mode → render filtered primary (no sections).
+              if (!isOverrideView && !isOverrideOrRecommendedView) {
+                const list = industryActive ? byCategory(industryFilter.primary) : _filteredAll
+                return renderGrid(list)
+              }
+
+              // Override mode with sections.
+              const primaryByCat = byCategory(industryFilter.primary)
+              const recommendedByCat = byCategory(industryFilter.recommended)
+              const otherByCat = byCategory(industryFilter.other)
+
+              // No-match: industry active, recommended active, override off, no primary, has recommended
+              if (isOverrideOrRecommendedView && !isOverrideView && !hasPrimary && hasRecommended) {
+                return renderGrid(recommendedByCat, true)
+              }
+
+              // No-match fallback: no primary, no recommended, override off → show all with note
+              if (industryActive && !isOverrideView && !hasPrimary && !hasRecommended) {
+                return renderGrid(_filteredAll)
+              }
+
+              // Override view: all three sections.
+              return (
+                <>
+                  {primaryByCat.length > 0 && (
+                    <>
+                      <div style={sectionHeader}>Recommended for {filterMapping.label}</div>
+                      {renderGrid(primaryByCat)}
+                    </>
+                  )}
+                  {recommendedByCat.length > 0 && (
+                    <>
+                      <div style={sectionHeader}>Related templates</div>
+                      {renderGrid(recommendedByCat, true)}
+                    </>
+                  )}
+                  {otherByCat.length > 0 && (
+                    <>
+                      <div style={sectionHeader}>All other templates</div>
+                      {renderGrid(otherByCat)}
+                    </>
+                  )}
+                  {/* If all lists empty (shouldn't happen), show all unfiltered. */}
+                  {primaryByCat.length === 0 && recommendedByCat.length === 0 && otherByCat.length === 0 && (
+                    renderGrid(_filteredAll)
+                  )}
+                </>
+              )
+            })()}
 
             {selectedTemplate && (
               <div>
@@ -1586,11 +1819,12 @@ export default function App() {
 
                 <div style={{ marginBottom: '20px' }}>
                   <div style={labelStyle}>Choose Your Platform</div>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                  <div id="field-projectVersion" aria-describedby="field-projectVersion-warning" onBlur={() => touchField('field-projectVersion')} style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px', ...groupWarningStyle('field-projectVersion') }}>
                     {[['desktop', 'Website'], ['mobile', 'Mobile App'], ['both', 'Website + Mobile App']].map(([v, label]) => (
-                      <button key={v} onClick={() => set('projectVersion', v)} style={versionBtn(v)}>{label}</button>
+                      <button key={v} onClick={() => { set('projectVersion', v); touchField('field-projectVersion') }} style={versionBtn(v)}>{label}</button>
                     ))}
                   </div>
+                  <InlineWarning fieldId="field-projectVersion" message={getWarning('field-projectVersion')} />
 
                   {form.tier === 'template' && (
                     <div style={{ padding: '14px 16px', background: '#0D1620', border: '1px solid #1E2E3D', borderRadius: '10px', marginBottom: '12px' }}>
@@ -1708,7 +1942,8 @@ export default function App() {
                       </div>
                     </div>
                   )
-                })()}
+})()}
+            <InlineWarning fieldId="field-templateId" message={getWarning('field-templateId')} />
 
                 <div style={{ padding: '20px', background: '#0D1620', border: '1px solid #1E2E3D', borderRadius: '12px', marginBottom: '16px' }}>
                   <div style={{ ...monoLabel, color: '#39D6C7', marginBottom: '14px' }}>Content & Asset Notes — {currentPageName}</div>
@@ -1760,29 +1995,56 @@ export default function App() {
             <OperatorSpiel text={SPIELS.followUp} tone="warning" />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <Field label="Product Vision" hint="What are you building and why? What problem does it solve?">
-                <textarea value={form.projectVision} onChange={e => set('projectVision', e.target.value)} placeholder="We are building a platform that helps logistics companies track shipments in real time. Our target users are operations managers who need instant visibility into delivery status and exception handling..." rows={5} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.7 }} />
+                <textarea id="field-projectVision" aria-describedby="field-projectVision-warning" value={form.projectVision} onChange={e => set('projectVision', e.target.value)} onBlur={() => touchField('field-projectVision')} placeholder="We are building a platform that helps logistics companies track shipments in real time. Our target users are operations managers who need instant visibility into delivery status and exception handling..." rows={5} style={{ ...fieldStyle('field-projectVision'), resize: 'vertical', lineHeight: 1.7 }} />
+                <InlineWarning fieldId="field-projectVision" message={getWarning('field-projectVision')} />
               </Field>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <Field label="Target Users"><input value={form.targetUsers} onChange={e => set('targetUsers', e.target.value)} placeholder="e.g. Operations managers, field technicians" style={inputStyle} /></Field>
-                <Field label="User Roles"><input value={form.userRoles} onChange={e => set('userRoles', e.target.value)} placeholder="e.g. Admin, Manager, Viewer, Agent" style={inputStyle} /></Field>
+                <Field label="Target Users">
+                  <input id="field-targetUsers" aria-describedby="field-targetUsers-warning" value={form.targetUsers} onChange={e => set('targetUsers', e.target.value)} onBlur={() => touchField('field-targetUsers')} placeholder="e.g. Operations managers, field technicians" style={fieldStyle('field-targetUsers')} />
+                  <InlineWarning fieldId="field-targetUsers" message={getWarning('field-targetUsers')} />
+                </Field>
+                <Field label="User Roles">
+                  <input id="field-userRoles" aria-describedby="field-userRoles-warning" value={form.userRoles} onChange={e => set('userRoles', e.target.value)} onBlur={() => touchField('field-userRoles')} placeholder="e.g. Admin, Manager, Viewer, Agent" style={fieldStyle('field-userRoles')} />
+                  <InlineWarning fieldId="field-userRoles" message={getWarning('field-userRoles')} />
+                </Field>
               </div>
               <Field label="Key Business Workflows">
-                <textarea value={form.businessWorkflows} onChange={e => set('businessWorkflows', e.target.value)} placeholder="Walk us through how a user would accomplish the most important task in the system..." rows={4} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.7 }} />
+                <textarea id="field-businessWorkflows" aria-describedby="field-businessWorkflows-warning" value={form.businessWorkflows} onChange={e => set('businessWorkflows', e.target.value)} onBlur={() => touchField('field-businessWorkflows')} placeholder="Walk us through how a user would accomplish the most important task in the system..." rows={4} style={{ ...fieldStyle('field-businessWorkflows'), resize: 'vertical', lineHeight: 1.7 }} />
+                <InlineWarning fieldId="field-businessWorkflows" message={getWarning('field-businessWorkflows')} />
               </Field>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <Field label="Required Integrations"><input value={form.integrations} onChange={e => set('integrations', e.target.value)} placeholder="e.g. Salesforce, QuickBooks, Twilio" style={inputStyle} /></Field>
-                <Field label="Existing Systems to Connect"><input value={form.existingSystems} onChange={e => set('existingSystems', e.target.value)} placeholder="e.g. SAP ERP, legacy SQL database" style={inputStyle} /></Field>
+                <Field label="Required Integrations">
+                  <input id="field-integrations" aria-describedby="field-integrations-warning" value={form.integrations} onChange={e => set('integrations', e.target.value)} onBlur={() => touchField('field-integrations')} placeholder="e.g. Salesforce, QuickBooks, Twilio" style={fieldStyle('field-integrations')} />
+                  <InlineWarning fieldId="field-integrations" message={getWarning('field-integrations')} />
+                </Field>
+                <Field label="Existing Systems to Connect">
+                  <input id="field-existingSystems" aria-describedby="field-existingSystems-warning" value={form.existingSystems} onChange={e => set('existingSystems', e.target.value)} onBlur={() => touchField('field-existingSystems')} placeholder="e.g. SAP ERP, legacy SQL database" style={fieldStyle('field-existingSystems')} />
+                  <InlineWarning fieldId="field-existingSystems" message={getWarning('field-existingSystems')} />
+                </Field>
               </div>
               <Field label="Data & Security Requirements">
-                <textarea value={form.dataSecurityReqs} onChange={e => set('dataSecurityReqs', e.target.value)} placeholder="SOC 2, HIPAA, GDPR compliance, SSO, end-to-end encryption, data residency requirements..." rows={3} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.7 }} />
+                <textarea id="field-dataSecurityReqs" aria-describedby="field-dataSecurityReqs-warning" value={form.dataSecurityReqs} onChange={e => set('dataSecurityReqs', e.target.value)} onBlur={() => touchField('field-dataSecurityReqs')} placeholder="SOC 2, HIPAA, GDPR compliance, SSO, end-to-end encryption, data residency requirements..." rows={3} style={{ ...fieldStyle('field-dataSecurityReqs'), resize: 'vertical', lineHeight: 1.7 }} />
+                <InlineWarning fieldId="field-dataSecurityReqs" message={getWarning('field-dataSecurityReqs')} />
               </Field>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <Field label="Scalability Requirements"><input value={form.scalabilityReqs} onChange={e => set('scalabilityReqs', e.target.value)} placeholder="e.g. 10,000 DAU, 1M records, multi-region" style={inputStyle} /></Field>
-                <Field label="Design Inspiration"><input value={form.designInspiration} onChange={e => set('designInspiration', e.target.value)} placeholder="URLs or Figma references" style={inputStyle} /></Field>
+                <Field label="Scalability Requirements">
+                  <input id="field-scalabilityReqs" aria-describedby="field-scalabilityReqs-warning" value={form.scalabilityReqs} onChange={e => set('scalabilityReqs', e.target.value)} onBlur={() => touchField('field-scalabilityReqs')} placeholder="e.g. 10,000 DAU, 1M records, multi-region" style={fieldStyle('field-scalabilityReqs')} />
+                  <InlineWarning fieldId="field-scalabilityReqs" message={getWarning('field-scalabilityReqs')} />
+                </Field>
+                <Field label="Design Inspiration">
+                  <input id="field-designInspiration" aria-describedby="field-designInspiration-warning" value={form.designInspiration} onChange={e => set('designInspiration', e.target.value)} onBlur={() => touchField('field-designInspiration')} placeholder="URLs or Figma references" style={fieldStyle('field-designInspiration')} />
+                  <InlineWarning fieldId="field-designInspiration" message={getWarning('field-designInspiration')} />
+                </Field>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <Field label="Comparable Products"><input value={form.competitors} onChange={e => set('competitors', e.target.value)} placeholder="e.g. Linear, Notion, Airtable" style={inputStyle} /></Field>
-                <Field label="Success Criteria"><input value={form.successCriteria} onChange={e => set('successCriteria', e.target.value)} placeholder="e.g. 1,000 active users in 3 months" style={inputStyle} /></Field>
+                <Field label="Comparable Products">
+                  <input id="field-competitors" aria-describedby="field-competitors-warning" value={form.competitors} onChange={e => set('competitors', e.target.value)} onBlur={() => touchField('field-competitors')} placeholder="e.g. Linear, Notion, Airtable" style={fieldStyle('field-competitors')} />
+                  <InlineWarning fieldId="field-competitors" message={getWarning('field-competitors')} />
+                </Field>
+                <Field label="Success Criteria">
+                  <input id="field-successCriteria" aria-describedby="field-successCriteria-warning" value={form.successCriteria} onChange={e => set('successCriteria', e.target.value)} onBlur={() => touchField('field-successCriteria')} placeholder="e.g. 1,000 active users in 3 months" style={fieldStyle('field-successCriteria')} />
+                  <InlineWarning fieldId="field-successCriteria" message={getWarning('field-successCriteria')} />
+                </Field>
               </div>
             </div>
           </div>
@@ -1803,16 +2065,17 @@ export default function App() {
             )}
 
             <div style={{ ...monoLabel, marginBottom: '12px' }}>Select Features</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px', marginBottom: '20px' }}>
+            <div id="field-features" aria-describedby="field-features-warning" onBlur={() => touchField('field-features')} style={{ display: 'flex', flexWrap: 'wrap', gap: '7px', marginBottom: '20px', ...groupWarningStyle('field-features') }}>
               {FEATURE_CHIPS.map(f => {
                 const sel = form.features.includes(f)
                 return (
-                  <button key={f} onClick={() => toggleArr('features', f)} style={{ padding: '7px 13px', borderRadius: '100px', border: `1px solid ${sel ? '#39D6C7' : '#2A3441'}`, background: sel ? 'rgba(57,214,199,0.09)' : '#111827', cursor: 'pointer', color: sel ? '#39D6C7' : '#4B6278', fontSize: '13px', fontWeight: sel ? 500 : 400, transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Inter', system-ui, sans-serif" }}>
+                  <button key={f} onClick={() => { toggleArr('features', f); touchField('field-features') }} style={{ padding: '7px 13px', borderRadius: '100px', border: `1px solid ${sel ? '#39D6C7' : '#2A3441'}`, background: sel ? 'rgba(57,214,199,0.09)' : '#111827', cursor: 'pointer', color: sel ? '#39D6C7' : '#4B6278', fontSize: '13px', fontWeight: sel ? 500 : 400, transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Inter', system-ui, sans-serif" }}>
                     {sel && <span style={{ fontSize: '9px', fontWeight: 700 }}>✓</span>}{f}
                   </button>
                 )
               })}
             </div>
+            <InlineWarning fieldId="field-features" message={getWarning('field-features')} />
 
             {form.features.length > 0 && (
               <div style={{ marginBottom: '20px' }}>
@@ -1820,14 +2083,18 @@ export default function App() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {form.features.map(f => {
                     const priority = form.featurePriorities[f] || ''
+                    const priorityFieldId = `field-priority-${slugify(f)}`
                     return (
-                      <div key={f} style={{ padding: '12px 14px', background: '#111827', border: '1px solid #2A3441', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 500, color: '#D4E4F0' }}>{f}</span>
-                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                          {FEATURE_PRIORITY_OPTIONS.map(opt => (
-                            <button key={opt} onClick={() => set('featurePriorities', { ...form.featurePriorities, [f]: opt })} style={{ padding: '3px 9px', borderRadius: '100px', border: `1px solid ${priority === opt ? '#39D6C7' : '#2A3441'}`, background: priority === opt ? 'rgba(57,214,199,0.1)' : 'transparent', color: priority === opt ? '#39D6C7' : '#4B6278', fontSize: '11px', cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif", transition: 'all 0.12s', whiteSpace: 'nowrap' }}>{opt}</button>
-                          ))}
+                      <div key={f} style={{ padding: '12px 14px', background: '#111827', border: `1px solid ${getWarning(priorityFieldId) ? '#F59E0B' : '#2A3441'}`, borderRadius: '8px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                          <span style={{ fontSize: '13px', fontWeight: 500, color: '#D4E4F0' }}>{f}</span>
+                          <div id={priorityFieldId} aria-describedby={`${priorityFieldId}-warning`} onBlur={() => touchField(priorityFieldId)} style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                            {FEATURE_PRIORITY_OPTIONS.map(opt => (
+                              <button key={opt} onClick={() => { set('featurePriorities', { ...form.featurePriorities, [f]: opt }); touchField(priorityFieldId) }} style={{ padding: '3px 9px', borderRadius: '100px', border: `1px solid ${priority === opt ? '#39D6C7' : '#2A3441'}`, background: priority === opt ? 'rgba(57,214,199,0.1)' : 'transparent', color: priority === opt ? '#39D6C7' : '#4B6278', fontSize: '11px', cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif", transition: 'all 0.12s', whiteSpace: 'nowrap' }}>{opt}</button>
+                            ))}
+                          </div>
                         </div>
+                        <InlineWarning fieldId={priorityFieldId} message={getWarning(priorityFieldId)} />
                       </div>
                     )
                   })}
@@ -2030,7 +2297,7 @@ export default function App() {
 
             {outcomeFinalized === 'draft' && (
               <div style={{ marginTop: '20px', padding: '18px 20px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.28)', borderRadius: '10px' }}>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: '#F59E0B', marginBottom: '4px' }}>Draft saved locally</div>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: '#F59E0B', marginBottom: '4px' }}>Draft saved. Review warnings before submit.</div>
                 <div style={{ fontSize: '13px', color: '#C4D8EA', lineHeight: 1.6 }}>
                   All captured discovery information is preserved. {missingReqSnapshot.length > 0 && `${missingReqSnapshot.length} follow-up item${missingReqSnapshot.length === 1 ? ' is' : 's are'} recorded on the intake.`} No Build Card was generated and the intake is not in the owner-review queue.
                 </div>
