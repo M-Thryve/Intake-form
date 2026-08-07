@@ -15,13 +15,14 @@ const mockRpc = vi.fn().mockResolvedValue({
   error: null,
 });
 
-const mockSelect = vi.fn().mockReturnThis();
 const mockInsert = vi.fn().mockReturnThis();
 const mockEq = vi.fn().mockReturnThis();
 let mockMaybeSingleResult: unknown = null;
 
-mockSelect.eq = mockEq;
-mockSelect.maybeSingle = vi.fn(() => Promise.resolve({ data: mockMaybeSingleResult, error: null }));
+const mockSelect = Object.assign(vi.fn().mockReturnThis(), {
+  eq: mockEq,
+  maybeSingle: vi.fn(() => Promise.resolve({ data: mockMaybeSingleResult, error: null })),
+});
 const fromMock = vi.fn().mockReturnValue({
   select: vi.fn().mockReturnValue({
     eq: mockEq,
@@ -141,7 +142,7 @@ describe("Intake Lifecycle API", () => {
     idempotencyKey = "test-key-001",
     command,
     commandHeader,
-    payloadOverrides = {}, nil,
+    payloadOverrides = {},
   }: {
     idempotencyKey?: string;
     command?: string;
