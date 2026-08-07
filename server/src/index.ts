@@ -24,7 +24,7 @@ if (!preflight.ok) {
 const config = validateConfig();
 
 function parseOrigins(raw: string): string[] | true {
-  if (raw === "*") return true;
+  if (raw === "*" || raw === "") return true;
   return raw.split(",").map((o) => o.trim()).filter(Boolean);
 }
 

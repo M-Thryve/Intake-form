@@ -394,6 +394,12 @@ Asset status values should support at least `available`, `missing`, `provide_lat
 - Verify that incomplete assets and validation failures produce recoverable drafts.
 - Document support procedures for draft follow-up, discard, resubmission, and owner review.
 
+### Forward Roadmap - Phases 8-12
+
+Phases 8-12 are defined in `MTHRYVE_OS_PHASES_8_12_PLAN.md` as a forward-roadmap addendum to this section.
+
+The addendum does not supersede this handover or `REVISION_NOTES.md`. Phase prompts continue to be sourced from this document, and revision prompts continue to be sourced from `REVISION_NOTES.md`.
+
 ## 14. Verification and Acceptance Criteria
 
 ### Custom Build

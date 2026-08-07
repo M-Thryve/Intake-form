@@ -1393,7 +1393,7 @@ export default function App() {
       )}
 
       {/* ── Main content ── */}
-      <div style={{ maxWidth: currentStep === 'build-card' ? '860px' : '680px', margin: '0 auto', padding: '52px 28px 160px', transition: 'max-width 0.3s' }}>
+      <div data-testid={`wizard-step-${currentStep}`} style={{ maxWidth: currentStep === 'build-card' ? '860px' : '680px', margin: '0 auto', padding: '52px 28px 160px', transition: 'max-width 0.3s' }}>
 
         {/* ══ INTRO ══ */}
         {currentStep === 'intro' && (
@@ -2276,6 +2276,7 @@ export default function App() {
                   <button
                     onClick={opt.onClick}
                     disabled={submitting}
+                    data-testid={`outcome-${opt.id}`}
                     style={{
                       padding: '10px 18px',
                       borderRadius: '8px',
@@ -2430,13 +2431,13 @@ export default function App() {
         {!submitting && currentStep !== 'outcome' && (
           <div style={{ display: 'flex', justifyContent: currentStep === 'intro' ? 'flex-end' : 'space-between', alignItems: 'center', marginTop: '48px' }}>
             {currentStep !== 'intro' && currentStep !== 'build-card' && (
-              <button onClick={handleBack} style={ghostBtn}>← Back</button>
+              <button onClick={handleBack} data-testid="wizard-back" style={ghostBtn}>← Back</button>
             )}
             {currentStep === 'build-card' && (
               <button onClick={resetAll} style={ghostBtn}>← Start New Intake</button>
             )}
             {currentStep !== 'build-card' && (
-              <button onClick={handleNext} style={primaryBtn} disabled={!canContinue}>
+              <button onClick={handleNext} data-testid="wizard-next" style={primaryBtn} disabled={!canContinue}>
                 {currentStep === 'intro' ? 'Start Project Intake →'
                   : currentStep === 'review' ? 'Continue →'
                     : 'Continue →'}
@@ -2534,6 +2535,7 @@ export default function App() {
               </button>
               <button
                 onClick={confirmDiscard}
+                data-testid="discard-confirm"
                 style={{ padding: '10px 18px', borderRadius: '8px', border: 'none', background: '#EF4444', color: '#F0F6FF', fontSize: '14px', fontWeight: 700, cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif" }}
               >
                 Discard intake

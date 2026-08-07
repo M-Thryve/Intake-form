@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS public.asset_state_log (
 -- RLS for asset_state_log
 ALTER TABLE public.asset_state_log ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS asl_select ON public.asset_state_log;
 CREATE POLICY asl_select ON public.asset_state_log
   FOR SELECT TO authenticated
   USING (public.is_internal_user());

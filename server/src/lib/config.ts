@@ -30,7 +30,7 @@ const configSchema = z.object({
   MAX_UPLOAD_SIZE_MB: z.coerce.number().int().min(1).max(100).default(25),
   ALLOWED_ORIGINS: z
     .string()
-    .default("*"),
+    .default(""),
 });
 
 export type ServerConfig = z.infer<typeof configSchema>;
@@ -66,7 +66,7 @@ export function validateConfig(): ServerConfig {
         "  NODE_ENV               — Environment: development | test | staging | production",
         "  SUPABASE_STORAGE_BUCKET — Storage bucket name (default: intake-assets)",
         "  MAX_UPLOAD_SIZE_MB     — Max upload size in MB (default: 25)",
-        "  ALLOWED_ORIGINS        — Comma-separated allowed CORS origins (default: * for dev)",
+        "  ALLOWED_ORIGINS        — Comma-separated allowed CORS origins (required in production/staging)",
         "",
         "Set these in your environment or .env file (never commit real values).",
         "See .env.example for the template.",
@@ -80,6 +80,30 @@ export function validateConfig(): ServerConfig {
   }
 
   _config = result.data;
+
+  if (
+    (_config.NODE_ENV === "production" || _config.NODE_ENV === "staging") &&
+    (!_config.ALLOWED_ORIGINS || _config.ALLOWED_ORIGINS === "*")
+  ) {
+    console.error(
+      [
+        "",
+        "=== CORS CONFIGURATION ERROR ===",
+        "",
+        "ALLOWED_ORIGINS must be set to an explicit comma-separated list",
+        "of allowed origins in production and staging environments.",
+        "",
+        "Example: ALLOWED_ORIGINS=https://app.mthryve.com,https://staging.mthryve.com",
+        "",
+        "A wildcard (*) or empty value is not permitted outside development.",
+        "",
+        "=================================",
+        "",
+      ].join("\n"),
+    );
+    process.exit(1);
+  }
+
   return result.data;
 }
 
