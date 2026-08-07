@@ -27,6 +27,7 @@ import {
   type ResourceRequirement,
 } from './data/assets'
 import type { AssetReadiness } from './types/intake'
+import ClientPortal from './portal/ClientPortal'
 
 const EMPTY_FORM: FormData = {
   fullName: '', company: '', email: '', phone: '', projectName: '',
@@ -1012,6 +1013,10 @@ function OperatorSpiel({ text, tone = 'default' }: { text: string; tone?: 'defau
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function App() {
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/portal')) {
+    return <ClientPortal />
+  }
+
   const [stepIndex, setStepIndex] = useState(0)
   const [form, setForm] = useState<FormData>(EMPTY_FORM)
   const [customInput, setCustomInput] = useState('')
