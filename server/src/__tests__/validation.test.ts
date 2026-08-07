@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateIntakePayload } from "../lib/validation.js";
+import { validateIntakePayload, validateDraftPayload } from "../lib/validation.js";
 
 function validPayload(overrides: Record<string, unknown> = {}) {
   return {
@@ -368,5 +368,70 @@ describe("validateIntakePayload", () => {
     );
     expect(result.success).toBe(false);
     expect(result.errors?.some((e) => e.field === "tier")).toBe(true);
+  });
+});
+
+describe("validateDraftPayload", () => {
+  it("accepts a minimal draft with only clientName", () => {
+    const result = validateDraftPayload({ client: { fullName: "A" } });
+    expect(result.success).toBe(true);
+    expect(result.missingRequirements.length).toBeGreaterThan(0);
+  });
+
+  it("accepts a completely empty object", () => {
+    const result = validateDraftPayload({});
+    expect(result.success).toBe(true);
+    expect(result.missingRequirements.length).toBeGreaterThan(0);
+  });
+
+  it("returns missingRequirements listing all gaps", () => {
+    const result = validateDraftPayload({ client: { fullName: "A" } });
+    expect(result.success).toBe(true);
+    const fields = result.missingRequirements.map((m) => m.field);
+    expect(fields).toContain("client.email");
+    expect(fields).toContain("project.projectName");
+    expect(fields).toContain("tier");
+  });
+
+  it("does not list fullName as missing when provided", () => {
+    const result = validateDraftPayload({ client: { fullName: "Juan" } });
+    const fields = result.missingRequirements.map((m) => m.field);
+    expect(fields).not.toContain("client.fullName");
+  });
+
+  it("accepts a full valid payload with zero gaps", () => {
+    const result = validateDraftPayload(validPayload());
+    expect(result.success).toBe(true);
+    expect(result.missingRequirements.length).toBe(0);
+  });
+
+  it("rejects payloads that violate shape constraints (field too long)", () => {
+    const result = validateDraftPayload({
+      client: { fullName: "x".repeat(501) },
+    });
+    expect(result.success).toBe(false);
+    expect(result.errors).toBeDefined();
+  });
+
+  it("lists custom-tier template gaps when tier is custom", () => {
+    const result = validateDraftPayload({
+      client: { fullName: "A", email: "a@b.com" },
+      project: { projectName: "P", industry: "Tech", projectType: "website" },
+      tier: "custom",
+    });
+    const fields = result.missingRequirements.map((m) => m.field);
+    expect(fields).toContain("template.templateId");
+    expect(fields).toContain("template.projectVersion");
+  });
+
+  it("lists enterprise gaps when tier is enterprise", () => {
+    const result = validateDraftPayload({
+      client: { fullName: "A", email: "a@b.com" },
+      project: { projectName: "P", industry: "Tech", projectType: "website" },
+      tier: "enterprise",
+    });
+    const fields = result.missingRequirements.map((m) => m.field);
+    expect(fields).toContain("enterprise.projectVision");
+    expect(fields).toContain("enterprise.targetUsers");
   });
 });

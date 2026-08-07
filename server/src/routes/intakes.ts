@@ -1,7 +1,12 @@
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { supabase } from "../lib/supabase.js";
-import { validateIntakePayload, type ValidatedPayload } from "../lib/validation.js";
+import {
+  validateIntakePayload,
+  validateDraftPayload,
+  type ValidatedPayload,
+  type DraftPayload,
+} from "../lib/validation.js";
 import { generateBuildReferenceNumber } from "../lib/reference.js";
 import { hashPayload } from "../lib/hash.js";
 import { orchestrateAnalysis } from "../lib/mcp-orchestration.js";
@@ -27,7 +32,6 @@ intakeRouter.post("/", async (req: Request, res: Response) => {
     return;
   }
 
-  // Phase 4: Explicit lifecycle command with Zod validation.
   const rawCommand =
     (req.body?.command as string) ||
     (req.headers["x-intake-command"] as string) ||
@@ -43,19 +47,126 @@ intakeRouter.post("/", async (req: Request, res: Response) => {
   }
   const command = commandResult.data;
 
-  const validation = validateIntakePayload(intake);
-  if (!validation.success) {
+  // Route on command BEFORE parsing: drafts use lenient schema,
+  // submit uses strict schema. Discards use draft schema (minimal shape check).
+  if (command === "submit") {
+    const validation = validateIntakePayload(intake);
+    if (!validation.success) {
+      res.status(422).json({
+        success: false,
+        error: "Validation failed",
+        details: validation.errors,
+      });
+      return;
+    }
+    const data = validation.data!;
+    const pHash = hashPayload(intake);
+    await handleSubmitOrDiscard(req, res, data, pHash, idempotencyKey, command);
+    return;
+  }
+
+  // save_draft or discard — lenient validation
+  const draftValidation = validateDraftPayload(intake);
+  if (!draftValidation.success) {
     res.status(422).json({
       success: false,
-      error: "Validation failed",
-      details: validation.errors,
+      error: "Payload shape validation failed",
+      details: draftValidation.errors,
     });
     return;
   }
 
-  const data = validation.data!;
+  const draftData = draftValidation.data!;
   const pHash = hashPayload(intake);
 
+  // Coerce draft data into the persistIntake shape with safe defaults
+  const coercedData = coerceDraftForPersistence(draftData);
+
+  await handleSubmitOrDiscard(
+    req, res, coercedData, pHash, idempotencyKey, command,
+    command === "save_draft" ? draftValidation.missingRequirements : undefined,
+  );
+});
+
+function coerceDraftForPersistence(draft: DraftPayload): ValidatedPayload {
+  return {
+    client: {
+      fullName: draft.client?.fullName || "",
+      company: draft.client?.company || "",
+      email: draft.client?.email || "",
+      phone: draft.client?.phone || "",
+    },
+    project: {
+      projectName: draft.project?.projectName || "",
+      industry: draft.project?.industry || "",
+      projectType: draft.project?.projectType || "",
+      businessDescription: draft.project?.businessDescription || "",
+    },
+    assets: {
+      qualification: draft.assets?.qualification || "incomplete",
+      statuses: draft.assets?.statuses || {},
+      requestedServices: draft.assets?.requestedServices || [],
+    },
+    tier: (draft.tier as "custom" | "enterprise") || "custom",
+    template: draft.template ? {
+      templateId: draft.template.templateId || "",
+      projectVersion: draft.template.projectVersion || "desktop",
+      colorPreset: draft.template.colorPreset || "",
+    } : undefined,
+    enterprise: draft.enterprise ? {
+      projectVision: draft.enterprise.projectVision || "",
+      targetUsers: draft.enterprise.targetUsers || "",
+      userRoles: draft.enterprise.userRoles || "",
+      businessWorkflows: draft.enterprise.businessWorkflows || "",
+      integrations: draft.enterprise.integrations || "",
+      existingSystems: draft.enterprise.existingSystems || "",
+      dataSecurityRequirements: draft.enterprise.dataSecurityRequirements || "",
+      scalabilityRequirements: draft.enterprise.scalabilityRequirements || "",
+      designInspiration: draft.enterprise.designInspiration || "",
+      competitors: draft.enterprise.competitors || "",
+      successCriteria: draft.enterprise.successCriteria || "",
+    } : undefined,
+    content: {
+      features: draft.content?.features?.map(f => ({
+        name: f.name || "",
+        priority: f.priority || "Need Help Deciding",
+        source: f.source || "chip",
+      })) || [],
+      pages: draft.content?.pages?.map(p => ({
+        name: p.name || "",
+        fields: p.fields || {},
+      })) || [],
+    },
+    design: {
+      styles: draft.design?.styles || [],
+      inspirationLink: draft.design?.inspirationLink || "",
+    },
+    payment: {
+      plan: draft.payment?.plan || "",
+      maintenanceAfterFree: draft.payment?.maintenanceAfterFree || "",
+      maintenanceEndAcknowledged: draft.payment?.maintenanceEndAcknowledged || false,
+      voucherCode: draft.payment?.voucherCode || "",
+    },
+    confirmations: {
+      accurate: true,
+      receipt: true,
+      payment: true,
+      maintenance: true,
+      buildCard: true,
+      submission: true,
+    },
+  } as ValidatedPayload;
+}
+
+async function handleSubmitOrDiscard(
+  req: Request,
+  res: Response,
+  data: ValidatedPayload,
+  pHash: string,
+  idempotencyKey: string,
+  command: string,
+  missingRequirements?: Array<{ field: string; message: string }>,
+) {
   // Check idempotency
   const { data: existingKey, error: lookupError } = await supabase
     .from("idempotency_keys")
@@ -82,15 +193,12 @@ intakeRouter.post("/", async (req: Request, res: Response) => {
   }
 
   try {
-    // Phase 4: Reference numbers are generated ONLY on submission.
-    // Drafts and discards do not get a reference number.
     const buildRef = command === "submit" ? await generateBuildReferenceNumber() : null;
-    const result = await persistIntake(data, buildRef, idempotencyKey, pHash, command);
+    const result = await persistIntake(data, buildRef, idempotencyKey, pHash, command, missingRequirements);
     const intakeId = result.intakeId;
 
     res.status(command === "submit" ? 201 : 200).json(result);
 
-    // Only orchestrate analysis on submission.
     if (intakeId && command === "submit") {
       orchestrateAnalysis(intakeId).catch((err) => {
         console.error(`Background analysis failed for intake ${intakeId}:`, err);
@@ -100,7 +208,7 @@ intakeRouter.post("/", async (req: Request, res: Response) => {
     console.error("Intake operation failed:", err);
     res.status(500).json({ success: false, error: "An internal error occurred. Please try again." });
   }
-});
+}
 
 async function persistIntake(
   data: ValidatedPayload,
@@ -108,6 +216,7 @@ async function persistIntake(
   idempotencyKey: string,
   payloadHash: string,
   command: string,
+  missingRequirements?: Array<{ field: string; message: string }>,
 ) {
   const lifecycleStatuses: Record<string, string> = {
     save_draft: "draft",
@@ -161,6 +270,7 @@ async function persistIntake(
   const intakeId = rpcResult?.intake_id;
 
   const isSubmitted = command === "submit";
+  const isDraft = command === "save_draft";
   const responseBody = {
     success: true,
     buildReferenceNumber: buildRef,
@@ -174,6 +284,7 @@ async function persistIntake(
         message: "Your intake has been submitted. A preliminary Build Card will be generated and queued for owner review.",
       },
     } : {}),
+    ...(isDraft && missingRequirements ? { missingRequirements } : {}),
   };
 
   // Store idempotency result
@@ -184,15 +295,17 @@ async function persistIntake(
     response_body: responseBody,
   });
 
-  // Phase 4: Audit event with lifecycle transition tracking
+  const gapCount = missingRequirements?.length ?? 0;
+  const eventType = isDraft
+    ? (gapCount > 0 ? "draft_saved_with_gaps" : "lifecycle_draft_saved")
+    : command === "discard"
+      ? "lifecycle_discarded"
+      : "lifecycle_submitted";
+
   await supabase.from("audit_events").insert({
     intake_id: intakeId,
     actor_type: "system",
-    event_type: command === "save_draft"
-      ? "lifecycle_draft_saved"
-      : command === "discard"
-        ? "lifecycle_discarded"
-        : "lifecycle_submitted",
+    event_type: eventType,
     event_payload: {
       command,
       build_reference_number: buildRef,
@@ -200,6 +313,7 @@ async function persistIntake(
       idempotency_key: idempotencyKey,
       previous_status: "in_progress",
       new_status: status,
+      ...(isDraft && gapCount > 0 ? { gap_count: gapCount } : {}),
     },
   });
 

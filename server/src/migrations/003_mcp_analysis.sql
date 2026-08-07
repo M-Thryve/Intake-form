@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS public.owner_release_packages (
 
 ALTER TABLE public.owner_release_packages ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS orp_select ON public.owner_release_packages;
 CREATE POLICY orp_select ON public.owner_release_packages
   FOR SELECT TO authenticated
   USING (public.is_internal_user());
