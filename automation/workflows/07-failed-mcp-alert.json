@@ -1,0 +1,71 @@
+{
+  "name": "Intake – Failed MCP Run Alert",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "minutes", "minutesInterval": 15 }] }
+      },
+      "id": "schedule-trigger",
+      "name": "Every 15 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/mcp_runs?retry_count=gte.{{ $env.MCP_MAX_RETRIES || 3 }}&status=eq.failed&alerted=is.null&select=id,intake_id,tool_name,error_message,retry_count,created_at,intakes(reference,company)",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_ANON_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" }
+          ]
+        }
+      },
+      "id": "fetch-failed-runs",
+      "name": "Fetch Failed MCP Runs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "version": 2 },
+          "combinator": "and",
+          "conditions": [{ "leftValue": "={{ $input.all().length }}", "operator": { "type": "number", "operation": "gt" }, "rightValue": 0 }]
+        }
+      },
+      "id": "has-failures",
+      "name": "Any Failures?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "channel": "#intake-escalations",
+        "text": "=:x: *MCP Run Exhausted Retries*\n{{ $input.all().map(i => `• ${i.json.intakes?.reference || i.json.intake_id} – ${i.json.tool_name}: ${(i.json.error_message || 'unknown error').substring(0, 200)}`).join('\\n') }}"
+      },
+      "id": "slack-mcp-alert",
+      "name": "Slack – MCP Failure Alert",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [1000, 300],
+      "credentials": { "slackOAuth2Api": { "id": "slack-ops", "name": "Slack Ops" } }
+    }
+  ],
+  "connections": {
+    "Every 15 Minutes": { "main": [[{ "node": "Fetch Failed MCP Runs", "type": "main", "index": 0 }]] },
+    "Fetch Failed MCP Runs": { "main": [[{ "node": "Any Failures?", "type": "main", "index": 0 }]] },
+    "Any Failures?": {
+      "main": [
+        [{ "node": "Slack – MCP Failure Alert", "type": "main", "index": 0 }],
+        []
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": { "phase": "11", "version": "1.0.0" }
+}
