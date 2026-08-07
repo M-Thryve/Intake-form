@@ -1,5 +1,17 @@
 const API_BASE = "http://localhost:3000";
 const CONSOLE_API = `${API_BASE}/api/console`;
+const ANALYSIS_API = `${API_BASE}/api/analysis`;
+
+async function handleResponse<T>(res: Response): Promise<T> {
+  if (res.status === 403) {
+    throw new Error("403:Unauthorized — you do not have permission to access this resource");
+  }
+  if (res.status === 409) {
+    const body = await res.json().catch(() => ({}));
+    throw Object.assign(new Error((body as Record<string, unknown>).error as string || "Conflict"), { status: 409 });
+  }
+  return res.json() as Promise<T>;
+}
 
 export interface QueueItem {
   id: string;
@@ -59,6 +71,44 @@ export interface AuditEvent {
   created_at: string;
 }
 
+export interface McpRun {
+  id: string;
+  server_role: string;
+  status: string;
+  started_at: string | null;
+  completed_at: string | null;
+  output_payload: Record<string, unknown> | null;
+  output_version: string | null;
+  error_message: string | null;
+  retry_count: number;
+}
+
+export interface ReleasePackage {
+  buildCard: Record<string, unknown> | null;
+  mcpRuns: McpRun[];
+  analysis_status: string;
+  ownerReviewRequired: boolean;
+  generatedAt: string;
+}
+
+export interface PackageResponse {
+  success: boolean;
+  intakeId: string;
+  package: ReleasePackage;
+  lastUpdated?: string;
+}
+
+export interface RunsResponse {
+  success: boolean;
+  intakeId: string;
+  runs: McpRun[];
+}
+
+export interface RetryResponse {
+  success: boolean;
+  message: string;
+}
+
 export async function fetchQueue(params: {
   status?: string;
   tier?: string;
@@ -72,12 +122,12 @@ export async function fetchQueue(params: {
   if (params.offset) searchParams.set("offset", String(params.offset));
 
   const res = await fetch(`${CONSOLE_API}/queue?${searchParams}`);
-  return res.json();
+  return handleResponse<QueueResponse>(res);
 }
 
 export async function fetchIntakeDetail(id: string): Promise<DetailResponse> {
   const res = await fetch(`${CONSOLE_API}/intakes/${id}`);
-  return res.json();
+  return handleResponse<DetailResponse>(res);
 }
 
 export async function submitDecision(id: string, data: DecisionRequest): Promise<DecisionResponse> {
@@ -86,10 +136,28 @@ export async function submitDecision(id: string, data: DecisionRequest): Promise
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-  return res.json();
+  return handleResponse<DecisionResponse>(res);
 }
 
-export async function fetchAudit(id: string): Promise<{ success: boolean; events: AuditEvent[]; total: number }> {
-  const res = await fetch(`${CONSOLE_API}/intakes/${id}/audit`);
-  return res.json();
+export async function fetchAudit(id: string, limit?: number, offset?: number): Promise<{ success: boolean; events: AuditEvent[]; total: number }> {
+  const searchParams = new URLSearchParams();
+  if (limit) searchParams.set("limit", String(limit));
+  if (offset) searchParams.set("offset", String(offset));
+  const res = await fetch(`${CONSOLE_API}/intakes/${id}/audit?${searchParams}`);
+  return handleResponse<{ success: boolean; events: AuditEvent[]; total: number }>(res);
+}
+
+export async function fetchAnalysisRuns(intakeId: string): Promise<RunsResponse> {
+  const res = await fetch(`${ANALYSIS_API}/intakes/${intakeId}/runs`);
+  return handleResponse<RunsResponse>(res);
+}
+
+export async function fetchAnalysisPackage(intakeId: string): Promise<ReleasePackage> {
+  const res = await fetch(`${ANALYSIS_API}/intakes/${intakeId}/package`);
+  return handleResponse<{ success: boolean; package: ReleasePackage }>(res).then((r) => r.package);
+}
+
+export async function retryMcpRun(runId: string): Promise<RetryResponse> {
+  const res = await fetch(`${ANALYSIS_API}/runs/${runId}/retry`, { method: "POST" });
+  return handleResponse<RetryResponse>(res);
 }
