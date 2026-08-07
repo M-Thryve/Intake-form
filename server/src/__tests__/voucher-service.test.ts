@@ -30,8 +30,8 @@ const mockSupabase = vi.hoisted(() => {
     return chain;
   }
 
-  chain.from = (table: string) => {
-    (state as { lastTable: string }).lastTable = table;
+  chain.from = (table: unknown) => {
+    (state as { lastTable: string }).lastTable = String(table);
     return chain;
   };
   chain.select = () => chain;
