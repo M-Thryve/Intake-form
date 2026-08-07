@@ -1,0 +1,78 @@
+{
+  "name": "Intake – Outbox Sweeper",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "minutes", "minutesInterval": 5 }] }
+      },
+      "id": "schedule-trigger",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.INTAKE_API_BASE }}/api/internal/outbox?status=pending&olderThan=300&limit=50",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{ $env.API_INTERNAL_KEY }}" }] }
+      },
+      "id": "fetch-stale-pending",
+      "name": "Fetch Stale Pending",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300],
+      "notes": "Catches rows the Supabase webhook missed (>5 min old and still pending)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "version": 2 },
+          "combinator": "and",
+          "conditions": [{ "leftValue": "={{ $json.count }}", "operator": { "type": "number", "operation": "gt" }, "rightValue": 0 }]
+        }
+      },
+      "id": "has-rows",
+      "name": "Has Pending Rows?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data"
+      },
+      "id": "split-rows",
+      "name": "Split Into Items",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [1000, 250]
+    },
+    {
+      "parameters": {
+        "channel": "#intake-ops",
+        "text": "=:warning: Outbox sweeper re-processing {{ $json.count }} stale notification(s)"
+      },
+      "id": "slack-sweeper-alert",
+      "name": "Alert Ops – Stale Rows",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [1000, 400],
+      "credentials": { "slackOAuth2Api": { "id": "slack-ops", "name": "Slack Ops" } },
+      "notes": "Only fires when the sweeper actually finds missed rows"
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes": { "main": [[{ "node": "Fetch Stale Pending", "type": "main", "index": 0 }]] },
+    "Fetch Stale Pending": { "main": [[{ "node": "Has Pending Rows?", "type": "main", "index": 0 }]] },
+    "Has Pending Rows?": {
+      "main": [
+        [{ "node": "Split Into Items", "type": "main", "index": 0 }, { "node": "Alert Ops – Stale Rows", "type": "main", "index": 0 }],
+        []
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": { "phase": "11", "version": "1.0.0" }
+}

@@ -1,0 +1,95 @@
+{
+  "name": "Intake – Owner Review SLA",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 * * * *" }] }
+      },
+      "id": "hourly-trigger",
+      "name": "Every Hour",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/intakes?status=eq.waiting_owner_review&select=id,reference,company,updated_at",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_ANON_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" }
+          ]
+        }
+      },
+      "id": "fetch-pending-reviews",
+      "name": "Fetch Pending Reviews",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const now = Date.now();\nconst HOURS_48 = 48 * 60 * 60 * 1000;\nconst HOURS_96 = 96 * 60 * 60 * 1000;\n\nconst results = [];\nfor (const item of $input.all()) {\n  const age = now - new Date(item.json.updated_at).getTime();\n  if (age >= HOURS_96) {\n    results.push({ json: { ...item.json, sla_level: 'escalation', hours_waiting: Math.floor(age / 3600000) } });\n  } else if (age >= HOURS_48) {\n    results.push({ json: { ...item.json, sla_level: 'warning', hours_waiting: Math.floor(age / 3600000) } });\n  }\n}\nreturn results;"
+      },
+      "id": "classify-sla",
+      "name": "Classify SLA Breach",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            { "outputKey": "warning", "conditions": { "options": { "version": 2 }, "combinator": "and", "conditions": [{ "leftValue": "={{ $json.sla_level }}", "operator": { "type": "string", "operation": "equals" }, "rightValue": "warning" }] } },
+            { "outputKey": "escalation", "conditions": { "options": { "version": 2 }, "combinator": "and", "conditions": [{ "leftValue": "={{ $json.sla_level }}", "operator": { "type": "string", "operation": "equals" }, "rightValue": "escalation" }] } }
+          ]
+        }
+      },
+      "id": "route-by-severity",
+      "name": "Route by Severity",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [1000, 300]
+    },
+    {
+      "parameters": {
+        "channel": "#intake-notifications",
+        "text": "=:clock3: *Owner Review SLA Warning*\nRef: {{ $json.reference }} ({{ $json.company }})\nWaiting {{ $json.hours_waiting }}h for owner review"
+      },
+      "id": "slack-warning",
+      "name": "Slack – SLA Warning",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [1250, 200],
+      "credentials": { "slackOAuth2Api": { "id": "slack-ops", "name": "Slack Ops" } }
+    },
+    {
+      "parameters": {
+        "channel": "#intake-escalations",
+        "text": "=:rotating_light: *Owner Review SLA ESCALATION*\nRef: {{ $json.reference }} ({{ $json.company }})\nWaiting {{ $json.hours_waiting }}h — requires admin attention"
+      },
+      "id": "slack-escalation",
+      "name": "Slack – SLA Escalation",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [1250, 400],
+      "credentials": { "slackOAuth2Api": { "id": "slack-ops", "name": "Slack Ops" } }
+    }
+  ],
+  "connections": {
+    "Every Hour": { "main": [[{ "node": "Fetch Pending Reviews", "type": "main", "index": 0 }]] },
+    "Fetch Pending Reviews": { "main": [[{ "node": "Classify SLA Breach", "type": "main", "index": 0 }]] },
+    "Classify SLA Breach": { "main": [[{ "node": "Route by Severity", "type": "main", "index": 0 }]] },
+    "Route by Severity": {
+      "main": [
+        [{ "node": "Slack – SLA Warning", "type": "main", "index": 0 }],
+        [{ "node": "Slack – SLA Escalation", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": { "phase": "11", "version": "1.0.0" }
+}

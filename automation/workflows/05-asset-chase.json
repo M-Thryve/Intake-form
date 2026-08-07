@@ -1,0 +1,98 @@
+{
+  "name": "Intake – Weekly Asset Chase",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 10 * * 1" }] }
+      },
+      "id": "weekly-trigger",
+      "name": "Monday 10:00 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/intake_assets?status=eq.provide_later&select=id,intake_id,label,intakes(id,reference,company,client_id)",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_ANON_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" }
+          ]
+        }
+      },
+      "id": "fetch-outstanding-assets",
+      "name": "Fetch Outstanding Assets",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const grouped = {};\nfor (const item of $input.all()) {\n  const d = item.json;\n  const key = d.intake_id;\n  if (!grouped[key]) {\n    grouped[key] = {\n      intake_id: d.intake_id,\n      reference: d.intakes?.reference || 'N/A',\n      company: d.intakes?.company || 'N/A',\n      client_id: d.intakes?.client_id || null,\n      assets: []\n    };\n  }\n  grouped[key].assets.push(d.label);\n}\nreturn Object.values(grouped).map(g => ({ json: g }));"
+      },
+      "id": "group-by-intake",
+      "name": "Group by Intake",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "version": 2 },
+          "combinator": "and",
+          "conditions": [{ "leftValue": "={{ $json.client_id }}", "operator": { "type": "string", "operation": "isNotEmpty" } }]
+        }
+      },
+      "id": "has-client",
+      "name": "Has Client?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1000, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.INTAKE_API_BASE }}/api/internal/outbox",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{ $env.API_INTERNAL_KEY }}" }] },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ intake_id: $json.intake_id, channel: 'email', event_type: 'asset_chase', recipient_ref: 'client:' + $json.client_id, payload: { reference: $json.reference, company: $json.company, outstanding_assets: $json.assets, portal_link: $env.PORTAL_BASE_URL + '/assets' } }) }}"
+      },
+      "id": "write-chase-outbox",
+      "name": "Write Chase to Outbox",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "channel": "#intake-ops",
+        "text": "=:package: *Asset Chase* – {{ $json.reference }} ({{ $json.company }})\nOutstanding: {{ $json.assets.join(', ') }}\nNo client linked – manual follow-up needed"
+      },
+      "id": "slack-manual-chase",
+      "name": "Slack – Manual Chase Needed",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [1250, 400],
+      "credentials": { "slackOAuth2Api": { "id": "slack-ops", "name": "Slack Ops" } }
+    }
+  ],
+  "connections": {
+    "Monday 10:00 UTC": { "main": [[{ "node": "Fetch Outstanding Assets", "type": "main", "index": 0 }]] },
+    "Fetch Outstanding Assets": { "main": [[{ "node": "Group by Intake", "type": "main", "index": 0 }]] },
+    "Group by Intake": { "main": [[{ "node": "Has Client?", "type": "main", "index": 0 }]] },
+    "Has Client?": {
+      "main": [
+        [{ "node": "Write Chase to Outbox", "type": "main", "index": 0 }],
+        [{ "node": "Slack – Manual Chase Needed", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": { "phase": "11", "version": "1.0.0" }
+}

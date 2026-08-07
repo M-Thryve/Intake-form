@@ -1,0 +1,76 @@
+{
+  "name": "Intake – Daily Owner Digest",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 8 * * *" }] }
+      },
+      "id": "daily-trigger",
+      "name": "Daily 08:00 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/rpc/owner_daily_digest",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_ANON_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" }
+          ]
+        }
+      },
+      "id": "fetch-digest-data",
+      "name": "Fetch Digest Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300],
+      "notes": "RPC function returns: new_intakes_count, pending_decisions, pipeline_value_by_stage, builds_in_flight"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst lines = [\n  ':sunrise: *Daily Owner Digest*',\n  '',\n  `:new: New intakes (24h): ${d.new_intakes_count || 0}`,\n  `:hourglass: Pending decisions: ${d.pending_decisions || 0}`,\n  '',\n  '*Pipeline by Stage:*'\n];\nif (d.pipeline_value_by_stage) {\n  for (const [stage, value] of Object.entries(d.pipeline_value_by_stage)) {\n    lines.push(`  • ${stage}: $${Number(value).toLocaleString()}`);\n  }\n}\nlines.push('');\nlines.push(`:hammer_and_wrench: Builds in flight: ${d.builds_in_flight || 0}`);\nreturn [{ json: { digest_text: lines.join('\\n') } }];"
+      },
+      "id": "format-digest",
+      "name": "Format Digest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "channel": "#intake-owner",
+        "text": "={{ $json.digest_text }}"
+      },
+      "id": "slack-digest",
+      "name": "Slack – Owner Digest",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [1000, 200],
+      "credentials": { "slackOAuth2Api": { "id": "slack-ops", "name": "Slack Ops" } }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $env.OWNER_EMAIL }}",
+        "subject": "=Daily Intake Digest – {{ new Date().toISOString().split('T')[0] }}",
+        "message": "={{ $json.digest_text.replace(/:[a-z_]+:/g, '').replace(/\\*/g, '') }}"
+      },
+      "id": "email-digest",
+      "name": "Email – Owner Digest",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1000, 400],
+      "credentials": { "gmailOAuth2": { "id": "gmail-notifications", "name": "Gmail Notifications" } }
+    }
+  ],
+  "connections": {
+    "Daily 08:00 UTC": { "main": [[{ "node": "Fetch Digest Data", "type": "main", "index": 0 }]] },
+    "Fetch Digest Data": { "main": [[{ "node": "Format Digest", "type": "main", "index": 0 }]] },
+    "Format Digest": { "main": [[{ "node": "Slack – Owner Digest", "type": "main", "index": 0 }, { "node": "Email – Owner Digest", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": { "phase": "11", "version": "1.0.0" }
+}

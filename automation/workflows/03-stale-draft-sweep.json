@@ -1,0 +1,92 @@
+{
+  "name": "Intake – Stale Draft Sweep",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 9 * * *" }] }
+      },
+      "id": "daily-trigger",
+      "name": "Daily 09:00 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/rpc/find_stale_drafts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_ANON_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": { "parameters": [{ "name": "stale_days", "value": "3" }] }
+      },
+      "id": "find-stale-drafts",
+      "name": "Find Stale Drafts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300],
+      "notes": "Calls a Supabase RPC function that returns drafts untouched > 3 days"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "version": 2 },
+          "combinator": "and",
+          "conditions": [{ "leftValue": "={{ $json.length }}", "operator": { "type": "number", "operation": "gt" }, "rightValue": 0 }]
+        }
+      },
+      "id": "has-stale",
+      "name": "Any Stale Drafts?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.INTAKE_API_BASE }}/api/internal/outbox",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{ $env.API_INTERNAL_KEY }}" }] },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ intake_id: $json.id, channel: 'email', event_type: 'stale_draft', recipient_ref: $json.operator_email || 'ops', payload: { reference: $json.reference, days_stale: $json.days_stale, company: $json.company } }) }}"
+      },
+      "id": "write-outbox-followup",
+      "name": "Write Follow-up to Outbox",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1000, 250],
+      "notes": "Creates an outbox entry so the core notification workflow handles delivery"
+    },
+    {
+      "parameters": {
+        "channel": "#intake-ops",
+        "text": "=:broom: Stale draft sweep found {{ $json.length }} draft(s) older than 3 days"
+      },
+      "id": "slack-stale-summary",
+      "name": "Slack – Stale Summary",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [1000, 400],
+      "credentials": { "slackOAuth2Api": { "id": "slack-ops", "name": "Slack Ops" } }
+    }
+  ],
+  "connections": {
+    "Daily 09:00 UTC": { "main": [[{ "node": "Find Stale Drafts", "type": "main", "index": 0 }]] },
+    "Find Stale Drafts": { "main": [[{ "node": "Any Stale Drafts?", "type": "main", "index": 0 }]] },
+    "Any Stale Drafts?": {
+      "main": [
+        [{ "node": "Write Follow-up to Outbox", "type": "main", "index": 0 }, { "node": "Slack – Stale Summary", "type": "main", "index": 0 }],
+        []
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": { "phase": "11", "version": "1.0.0" }
+}

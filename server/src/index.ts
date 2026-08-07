@@ -11,6 +11,8 @@ import { financeRouter } from "./routes/finance.js"
 import { buildDeliveryRouter } from "./routes/build-delivery.js"
 import { buildOrchestrationRouter } from "./routes/build-orchestration.js"
 import { portalRouter } from "./routes/portal.js"
+import { internalOutboxRouter } from "./routes/internal-outbox.js"
+import { requireInternalService } from "./middleware/internal-auth.js"
 
 const preflight = preflightCheck()
 if (!preflight.ok) {
@@ -62,6 +64,7 @@ app.use("/api/agreement", requireAuth, agreementRouter)
 app.use("/api/finance", requireAuth, financeRouter)
 app.use("/api/build-delivery", requireAuth, buildDeliveryRouter)
 app.use("/api/build-orchestration", requireAuth, buildOrchestrationRouter)
+app.use("/api/internal/outbox", requireInternalService, internalOutboxRouter)
 
 app.use((_req, res) => {
   res.status(404).json({ success: false, error: "Not found" })
