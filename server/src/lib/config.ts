@@ -1,4 +1,25 @@
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
+import { loadEnvFile } from "node:process";
 import { z } from "zod";
+
+const envFile = resolve(process.cwd(), ".env");
+if (existsSync(envFile)) {
+  loadEnvFile(envFile);
+}
+
+function getEnvironment(): NodeJS.ProcessEnv {
+  const environment = { ...process.env };
+
+  // Supabase's modern secret key replaces the legacy service-role key. Keep a
+  // canonical internal field so the rest of the server does not need to care
+  // which key format the deployment uses.
+  if (!environment.SUPABASE_SERVICE_ROLE_KEY && environment.SUPABASE_SECRET_KEY) {
+    environment.SUPABASE_SERVICE_ROLE_KEY = environment.SUPABASE_SECRET_KEY;
+  }
+
+  return environment;
+}
 
 const configSchema = z.object({
   SUPABASE_URL: z
@@ -31,6 +52,10 @@ const configSchema = z.object({
   ALLOWED_ORIGINS: z
     .string()
     .default(""),
+  DEV_AUTH_BYPASS: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
 });
 
 export type ServerConfig = z.infer<typeof configSchema>;
@@ -38,7 +63,7 @@ export type ServerConfig = z.infer<typeof configSchema>;
 let _config: ServerConfig | null = null;
 
 export function validateConfig(): ServerConfig {
-  const result = configSchema.safeParse(process.env);
+  const result = configSchema.safeParse(getEnvironment());
 
   if (!result.success) {
     const missing = result.error.issues.map((issue) => {
@@ -120,15 +145,20 @@ export function preflightCheck(): { ok: boolean; errors: string[] } {
   if (!process.env.SUPABASE_URL) {
     errors.push("SUPABASE_URL is not set");
   }
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  const serviceKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || "";
+
+  if (!serviceKey) {
     errors.push("SUPABASE_SERVICE_ROLE_KEY is not set");
   }
   if (!process.env.SUPABASE_ANON_KEY) {
     errors.push("SUPABASE_ANON_KEY is not set");
   }
 
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-  if (key && key === "your-service-role-key-here") {
+  if (
+    serviceKey &&
+    (serviceKey === "your-service-role-key-here" || serviceKey === "your-secret-key-here")
+  ) {
     errors.push("SUPABASE_SERVICE_ROLE_KEY still has the placeholder value from .env.example");
   }
 

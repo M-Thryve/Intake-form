@@ -281,7 +281,7 @@ export interface IntakeSubmissionPayload {
     projectType: string
     businessDescription: string
   }
-  buildPath: BuildPath
+  tier: Tier
   template?: {
     templateId: string
     projectVersion: string
@@ -306,7 +306,7 @@ export interface IntakeSubmissionPayload {
     requestedServices: string[]
     checklist?: AssetChecklistItem[]
   }
-  scope: {
+  content: {
     pages: Array<{ name: string; fields: Record<string, string> }>
     features: Array<{
       name: string
@@ -320,10 +320,36 @@ export interface IntakeSubmissionPayload {
     styles: string[]
     inspirationLink: string
   }
-  outcome: IntakeOutcome
+  payment: {
+    plan: string
+    maintenanceAfterFree: string
+    maintenanceEndAcknowledged: boolean
+    voucherCode: string
+  }
+  confirmations: {
+    accurate: boolean
+    receipt: boolean
+    payment: boolean
+    maintenance: boolean
+    buildCard: boolean
+    submission: boolean
+  }
+  // Later lifecycle metadata remains optional for read compatibility.
+  buildPath?: BuildPath
+  scope?: {
+    pages: Array<{ name: string; fields: Record<string, string> }>
+    features: Array<{
+      name: string
+      priority: string
+      source: string
+      preliminaryCost?: number
+      note?: string
+    }>
+  }
+  outcome?: IntakeOutcome
   discardReason?: DiscardReason
-  missingRequirements: MissingRequirement[]
-  operatorNotes: OperatorNote[]
+  missingRequirements?: MissingRequirement[]
+  operatorNotes?: OperatorNote[]
   sourceMetadata?: {
     operator?: string
     appointmentId?: string
@@ -336,6 +362,7 @@ export interface IntakeSubmissionResponse {
   success: boolean
   buildReferenceNumber?: string
   intakeId?: string
+  clientId?: string
   status?: IntakeStatus
   outcome?: IntakeOutcome
   preliminaryBuildCard?: Record<string, unknown>

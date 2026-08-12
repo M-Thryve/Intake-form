@@ -5,28 +5,22 @@ import type {
   IntakeOutcome,
   IntakeStatus,
   LegacyIntakePayload,
-  BuildPath,
   AssetReadiness,
   DiscardReason,
 } from '../types/intake'
-import { normalizeToBuildPath } from '../data/flow'
-import { collectMissingRequirements } from '../data/validation'
 
-const API_BASE_URL = 'http://localhost:3000'
+const API_BASE_URL = ''
 const API_ENDPOINT = '/api/intakes'
 
 /**
- * v2.0 payload mapper.
- *
- * Payment, voucher, maintenance, and final-confirmation fields are NOT
- * included in the v2.0 contract, even when present in FormData.
+ * Phase 2 payload mapper. Payment and final confirmations are part of the
+ * original Phase 1 wire contract and are sent to the backend here.
  */
 export function toSubmissionPayload(
   formData: FormData,
   pageContents: Record<string, Record<string, string>>,
   outcome: IntakeOutcome = 'draft',
 ): IntakeSubmissionPayload {
-  const buildPath: BuildPath = normalizeToBuildPath(formData.tier)
   const allFeatures = [...formData.features, ...formData.customFeatures]
   const pages = Object.entries(pageContents).map(([name, fields]) => ({ name, fields }))
 
@@ -43,13 +37,13 @@ export function toSubmissionPayload(
       projectType: formData.projectType,
       businessDescription: formData.businessDesc,
     },
-    buildPath,
+    tier: formData.tier,
     assets: {
       qualification: formData.assetQualification,
       statuses: formData.assetStatuses,
       requestedServices: formData.selectedAssetServices,
     },
-    scope: {
+    content: {
       pages,
       features: allFeatures.map(name => ({
         name,
@@ -61,19 +55,29 @@ export function toSubmissionPayload(
       styles: formData.designStyles,
       inspirationLink: formData.inspirationLink,
     },
-    outcome,
-    discardReason: formData.discardReason,
-    missingRequirements: formData.missingRequirements ?? collectMissingRequirements(formData),
-    operatorNotes: formData.operatorNotes ?? [],
+    payment: {
+      plan: formData.paymentPlan,
+      maintenanceAfterFree: formData.maintenanceAfterFree,
+      maintenanceEndAcknowledged: formData.maintenanceEndAcknowledged,
+      voucherCode: formData.voucherCode,
+    },
+    confirmations: {
+      accurate: formData.confirmAccurate,
+      receipt: formData.confirmReceipt,
+      payment: formData.confirmPayment,
+      maintenance: formData.confirmMaintenance,
+      buildCard: formData.confirmBuildCard,
+      submission: formData.confirmSubmission,
+    },
   }
 
-  if (buildPath === 'custom') {
+  if (formData.tier === 'template' || formData.tier === 'custom') {
     payload.template = {
       templateId: formData.templateId,
       projectVersion: formData.projectVersion,
       colorPreset: formData.colorPreset,
     }
-  } else {
+  } else if (formData.tier === 'enterprise') {
     payload.enterprise = {
       projectVision: formData.projectVision,
       targetUsers: formData.targetUsers,
@@ -93,31 +97,25 @@ export function toSubmissionPayload(
 }
 
 /**
- * Compatibility mapper: normalizes a legacy v1.x stored record into the v2.0
+ * Compatibility mapper: normalizes a legacy stored record into the Phase 2
  * IntakeSubmissionPayload shape. Read-only — legacy records are never used to
  * create new submissions.
  *
- * - Legacy tier 'template' (Drag & Drop) is mapped to buildPath 'custom'.
- * - Legacy `payment`, `confirmations`, voucher, and maintenance fields are
- *   dropped; the caller may inspect them on the original LegacyIntakePayload
- *   if surfaced in an admin/history view.
- * - Legacy `content` becomes `scope`.
+ * - Legacy tier, content, payment, and confirmation values remain readable.
  */
 export function fromLegacyPayload(legacy: LegacyIntakePayload): IntakeSubmissionPayload {
-  const buildPath: BuildPath = legacy.tier === 'enterprise' ? 'enterprise' : 'custom'
-
   const statuses: Record<string, AssetReadiness | string> = { ...(legacy.assets?.statuses ?? {}) }
 
   const payload: IntakeSubmissionPayload = {
     client: { ...legacy.client },
     project: { ...legacy.project },
-    buildPath,
+    tier: legacy.tier,
     assets: {
       qualification: legacy.assets?.qualification ?? '',
       statuses,
       requestedServices: legacy.assets?.requestedServices ?? [],
     },
-    scope: {
+    content: {
       pages: legacy.content?.pages ?? [],
       features: (legacy.content?.features ?? []).map(f => ({
         name: f.name,
@@ -129,16 +127,27 @@ export function fromLegacyPayload(legacy: LegacyIntakePayload): IntakeSubmission
       styles: legacy.design?.styles ?? [],
       inspirationLink: legacy.design?.inspirationLink ?? '',
     },
-    outcome: 'submitted',
-    missingRequirements: [],
-    operatorNotes: [],
+    payment: {
+      plan: legacy.payment?.plan ?? '',
+      maintenanceAfterFree: legacy.payment?.maintenanceAfterFree ?? '',
+      maintenanceEndAcknowledged: legacy.payment?.maintenanceEndAcknowledged ?? false,
+      voucherCode: legacy.payment?.voucherCode ?? '',
+    },
+    confirmations: {
+      accurate: legacy.confirmations?.accurate ?? false,
+      receipt: legacy.confirmations?.receipt ?? false,
+      payment: legacy.confirmations?.payment ?? false,
+      maintenance: legacy.confirmations?.maintenance ?? false,
+      buildCard: legacy.confirmations?.buildCard ?? false,
+      submission: legacy.confirmations?.submission ?? false,
+    },
     sourceMetadata: { importedFrom: 'legacy_v1' },
   }
 
-  if (buildPath === 'custom' && legacy.template) {
+  if ((legacy.tier === 'template' || legacy.tier === 'custom') && legacy.template) {
     payload.template = { ...legacy.template }
   }
-  if (buildPath === 'enterprise' && legacy.enterprise) {
+  if (legacy.tier === 'enterprise' && legacy.enterprise) {
     payload.enterprise = { ...legacy.enterprise }
   }
 

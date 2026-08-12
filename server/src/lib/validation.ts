@@ -182,6 +182,15 @@ const intakeSubmitSchema = z.object({
   confirmations: confirmationsSubmitSchema,
 });
 
+// Phase 2 accepts the complete Phase 1 wire contract. Later lifecycle code
+// may keep the narrower active-path validator above, but submission itself
+// must continue to accept all three Phase 1 tiers.
+const phase2IntakeSubmitSchema = intakeSubmitSchema.extend({
+  tier: z.enum(["template", "custom", "enterprise"], {
+    errorMap: () => ({ message: "Tier must be template, custom, or enterprise" }),
+  }),
+});
+
 // ═══════════════════════════════════════════════════════════
 // Draft schema — shape-only validation. Every business-
 // required field is optional. Validates UUIDs, enum values
@@ -283,7 +292,7 @@ const intakeDraftSchema = z.object({
 // Exports and types
 // ═══════════════════════════════════════════════════════════
 
-export type ValidatedPayload = z.infer<typeof intakeSubmitSchema>;
+export type ValidatedPayload = z.infer<typeof phase2IntakeSubmitSchema>;
 export type DraftPayload = z.infer<typeof intakeDraftSchema>;
 
 export interface MissingRequirementItem {
@@ -357,6 +366,63 @@ export function validateIntakePayload(payload: unknown): ValidationResult {
   }
 
   return { success: true, data };
+}
+
+export function validatePhase2Payload(payload: unknown): ValidationResult {
+  const result = phase2IntakeSubmitSchema.safeParse(payload);
+
+  if (!result.success) {
+    return {
+      success: false,
+      errors: result.error.issues.map((issue) => ({
+        field: issue.path.join("."),
+        message: issue.message,
+      })),
+    };
+  }
+
+  const data = result.data;
+  const tierErrors: Array<{ field: string; message: string }> = [];
+
+  if (
+    data.tier === "template" &&
+    (data.assets.qualification === "incomplete" || data.assets.qualification === "no-assets")
+  ) {
+    tierErrors.push({
+      field: "assets.qualification",
+      message: "Template tier requires at least 'ready' asset status",
+    });
+  }
+
+  if ((data.tier === "template" || data.tier === "custom") && !data.template) {
+    tierErrors.push({
+      field: "template",
+      message: "Template selection is required for template/custom tier",
+    });
+  }
+
+  if (data.tier === "enterprise" && !data.enterprise) {
+    tierErrors.push({
+      field: "enterprise",
+      message: "Enterprise requirements are required for enterprise tier",
+    });
+  }
+
+  const customProjectTypes = new Set(["website", "mobile"]);
+  const enterpriseProjectTypes = new Set([
+    "website", "webapp", "mobile", "ai-agent", "ecommerce", "internal",
+  ]);
+  const projectTypes = data.tier === "enterprise" ? enterpriseProjectTypes : customProjectTypes;
+  if (!projectTypes.has(data.project.projectType)) {
+    tierErrors.push({
+      field: "project.projectType",
+      message: `${data.tier === "enterprise" ? "Enterprise" : "Template/Custom"} tier does not support project type "${data.project.projectType}"`,
+    });
+  }
+
+  return tierErrors.length > 0
+    ? { success: false, errors: tierErrors }
+    : { success: true, data };
 }
 
 export function validateDraftPayload(payload: unknown): DraftValidationResult {

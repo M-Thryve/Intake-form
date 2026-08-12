@@ -12,7 +12,7 @@ import { getFlow } from './data/flow'
 import { validateStep, collectMissingRequirements, canSubmit } from './data/validation'
 import { getInlineWarnings, slugify, type ValidationState } from './data/field-validators'
 import InlineWarning from './components/InlineWarning'
-import { submitIntake, toSubmissionPayload, generateIdempotencyKey } from './api/intake'
+import { submitIntake, saveDraft, discardIntake, toSubmissionPayload, generateIdempotencyKey } from './api/intake'
 import { TEMPLATES, type TemplateDefinition } from './data/templates'
 import { filterTemplatesByIndustry } from './data/template-filter'
 import { getMappingForIndustry } from './data/industry-template-map'
@@ -680,7 +680,7 @@ function CompanyAssetsStep({
   return (
     <div>
       <StepHeader
-        tag="Step 4 — Company Assets & Resources"
+        tag="Step 3 — Company Assets & Resources"
         title="What's ready, what's missing?"
         desc={`Requirements below are derived from the ${ctx.buildPath === 'enterprise' ? 'Enterprise Level' : 'Custom Build'} path${ctx.projectType ? ` and a ${ctx.projectType} project` : ''}. Missing items don't block a draft — they're recorded as follow-ups or M-THRYVE add-ons.`}
       />
@@ -1177,14 +1177,29 @@ export default function App() {
     setStepIndex(i => Math.min(i + 1, flow.length - 1))
   }
 
-  const handleSaveDraft = () => {
-    // Draft is always allowed, regardless of missing requirements.
-    setForm(prev => ({
-      ...prev,
-      outcome: 'draft',
-      missingRequirements: missingReqSnapshot,
-    }))
-    setOutcomeFinalized('draft')
+  const handleSaveDraft = async () => {
+    setSubmitting(true)
+    setSubmissionError('')
+    try {
+      const payload = toSubmissionPayload(form, pageContents, 'draft')
+      const response = await saveDraft(payload, idempotencyKey)
+
+      if (response.success) {
+        setForm(prev => ({
+          ...prev,
+          outcome: 'draft',
+          missingRequirements: missingReqSnapshot,
+        }))
+        setOutcomeFinalized('draft')
+        if (response.clientId) setClientVoucher(response.clientId)
+      } else {
+        setSubmissionError(response.error || 'Draft save failed. Please try again.')
+      }
+    } catch (error) {
+      setSubmissionError(error instanceof Error ? error.message : 'An unexpected error occurred')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleSubmitIntake = async () => {
@@ -1205,7 +1220,7 @@ export default function App() {
 
       if (response.success && response.buildReferenceNumber) {
         setBuildRef(response.buildReferenceNumber)
-        setClientVoucher(`REF-${Math.random().toString(36).substring(2, 8).toUpperCase()}`)
+        setClientVoucher(response.clientId || `REF-${Math.random().toString(36).substring(2, 8).toUpperCase()}`)
         setSubmitted(true)
         setForm(prev => ({ ...prev, outcome: 'submitted', missingRequirements: [] }))
         setOutcomeFinalized('submitted')
@@ -1226,16 +1241,28 @@ export default function App() {
     setShowDiscardModal(true)
   }
 
-  const confirmDiscard = () => {
+  const confirmDiscard = async () => {
     const reason = { code: discardReasonCode, note: discardNote.trim() || undefined }
-    setForm(prev => ({
-      ...prev,
-      outcome: 'discarded',
-      discardReason: reason,
-      missingRequirements: missingReqSnapshot,
-    }))
-    setOutcomeFinalized('discarded')
-    setShowDiscardModal(false)
+    setSubmitting(true)
+    setSubmissionError('')
+    try {
+      const payload = toSubmissionPayload(form, pageContents, 'discarded')
+      await discardIntake(payload, reason, idempotencyKey)
+
+      setForm(prev => ({
+        ...prev,
+        outcome: 'discarded',
+        discardReason: reason,
+        missingRequirements: missingReqSnapshot,
+      }))
+      setOutcomeFinalized('discarded')
+      setShowDiscardModal(false)
+    } catch (error) {
+      setSubmissionError(error instanceof Error ? error.message : 'Discard failed')
+      setShowDiscardModal(false)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleBack = () => setStepIndex(i => Math.max(i - 1, 0))
@@ -1439,7 +1466,7 @@ export default function App() {
         {currentStep === 'client-details' && (
           <div>
             <StepHeader
-              tag="Step 1 — Client & Project Details"
+              tag="Step 2 — Client & Project Details"
               title="Who are we building for?"
               desc="Confirm the contact and project basics for this discovery call so notes, follow-ups, and the owner-review record stay tied to the right company and opportunity."
             />
@@ -1610,7 +1637,7 @@ export default function App() {
         {currentStep === 'build-approach' && (
           <div>
             <StepHeader
-              tag="Step 3 — Choose Build Approach"
+              tag="Step 1 — Choose Build Approach"
               title="How would you like to build?"
               desc="Two active build paths: Custom Build starts from an existing template and adds supported extensions; Enterprise Level is a from-scratch product with wider scope. Prices remain preliminary until owner review."
             />
@@ -2137,7 +2164,7 @@ export default function App() {
         {/* ══ PROJECT REVIEW ══ */}
         {currentStep === 'review' && (
           <div>
-            <StepHeader tag="Step 7 — Project Review" title="Review your project." desc="Take a moment to confirm everything looks right. Each section has an Edit link if you need to make changes. This review is based on your selected options so far." />
+            <StepHeader tag="Step 6 — Project Review" title="Review your project." desc="Take a moment to confirm everything looks right. Each section has an Edit link if you need to make changes. This review is based on your selected options so far." />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <ReviewBlock title="Client & Contact" onEdit={() => goToStep('client-details')}>
                 <ReviewRow label="Name" value={form.fullName || '—'} />
@@ -2216,7 +2243,7 @@ export default function App() {
         {currentStep === 'outcome' && (
           <div>
             <StepHeader
-              tag="Step 8 — Outcome"
+              tag="Step 7 — Outcome"
               title="How does this call end?"
               desc="Every discovery call ends in one of three operator-controlled outcomes. Discard archives the record with a reason. Draft preserves everything you've captured — missing requirements are stored, not lost. Submitted requires the discovery contract to be complete and creates a preliminary Build Card for owner review."
             />
@@ -2308,7 +2335,7 @@ export default function App() {
                   All captured discovery information is preserved. {missingReqSnapshot.length > 0 && `${missingReqSnapshot.length} follow-up item${missingReqSnapshot.length === 1 ? ' is' : 's are'} recorded on the intake.`} No Build Card was generated and the intake is not in the owner-review queue.
                 </div>
                 <div style={{ fontSize: '11px', color: '#3D5468', marginTop: '10px', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.06em' }}>
-                  Persistence layer (Phase 4) will store this draft server-side.
+                  Draft saved to the server.
                 </div>
               </div>
             )}

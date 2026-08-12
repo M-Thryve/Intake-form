@@ -8,7 +8,7 @@ export function getFlow(tier: Tier): StepId[] {
   // v2.0 flow per TECHNICAL_HANDOVER §6: build-approach precedes
   // company-assets so that the resource checklist can be derived from the
   // chosen build path and project type.
-  const base: StepId[] = ['intro', 'client-details', 'build-approach']
+  const base: StepId[] = ['intro', 'build-approach', 'client-details']
   if (!tier) return base
 
   const path = normalizeToBuildPath(tier)
@@ -48,7 +48,6 @@ export function isStepAllowed(stepId: StepId, formData: FormData): boolean {
   const currentIndex = flow.indexOf(stepId)
   if (currentIndex < 0) return false
 
-  if (stepId === 'build-approach' && !formData.tier) return false
   if (stepId === 'company-assets' && !formData.tier) return false
 
   return true

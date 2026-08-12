@@ -2,14 +2,13 @@ import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { supabase } from "../lib/supabase.js";
 import {
-  validateIntakePayload,
+  validatePhase2Payload,
   validateDraftPayload,
   type ValidatedPayload,
   type DraftPayload,
 } from "../lib/validation.js";
 import { generateBuildReferenceNumber } from "../lib/reference.js";
 import { hashPayload } from "../lib/hash.js";
-import { orchestrateAnalysis } from "../lib/mcp-orchestration.js";
 
 const COMMAND_SCHEMA = z.enum(["save_draft", "submit", "discard"]);
 
@@ -26,7 +25,10 @@ intakeRouter.post("/", async (req: Request, res: Response) => {
     return;
   }
 
-  const intake = req.body?.intake;
+  // Phase 1 sends the payload in an `intake` envelope. Accepting the payload
+  // directly as well keeps POST /api/intakes faithful to the public Phase 2
+  // contract and remains backwards-compatible with that client.
+  const intake = req.body?.intake ?? req.body;
   if (!intake || typeof intake !== "object") {
     res.status(400).json({ success: false, error: "Missing intake payload" });
     return;
@@ -50,7 +52,7 @@ intakeRouter.post("/", async (req: Request, res: Response) => {
   // Route on command BEFORE parsing: drafts use lenient schema,
   // submit uses strict schema. Discards use draft schema (minimal shape check).
   if (command === "submit") {
-    const validation = validateIntakePayload(intake);
+    const validation = validatePhase2Payload(intake);
     if (!validation.success) {
       res.status(422).json({
         success: false,
@@ -195,17 +197,18 @@ async function handleSubmitOrDiscard(
   try {
     const buildRef = command === "submit" ? await generateBuildReferenceNumber() : null;
     const result = await persistIntake(data, buildRef, idempotencyKey, pHash, command, missingRequirements);
-    const intakeId = result.intakeId;
 
     res.status(command === "submit" ? 201 : 200).json(result);
 
-    if (intakeId && command === "submit") {
-      orchestrateAnalysis(intakeId).catch((err) => {
-        console.error(`Background analysis failed for intake ${intakeId}:`, err);
-      });
-    }
   } catch (err) {
     console.error("Intake operation failed:", err);
+    if (err instanceof Error && err.message === "IDEMPOTENCY_CONFLICT") {
+      res.status(409).json({
+        success: false,
+        error: "Idempotency key already used with a different payload",
+      });
+      return;
+    }
     res.status(500).json({ success: false, error: "An internal error occurred. Please try again." });
   }
 }
@@ -259,15 +262,57 @@ async function persistIntake(
     if (rpcError.code === "23505" && rpcError.message?.includes("idempotency")) {
       const { data: existing } = await supabase
         .from("idempotency_keys")
-        .select("response_body")
+        .select("payload_hash, response_body")
         .eq("idempotency_key", idempotencyKey)
         .single();
-      if (existing) return existing.response_body;
+      if (existing?.payload_hash !== payloadHash) {
+        throw new Error("IDEMPOTENCY_CONFLICT");
+      }
+      if (existing?.response_body) return existing.response_body;
     }
     throw rpcError;
   }
 
   const intakeId = rpcResult?.intake_id;
+
+  if (rpcResult?.response_body) {
+    return rpcResult.response_body;
+  }
+
+  let clientId: string | null = null;
+  if (intakeId) {
+    const { data: existing } = await supabase
+      .from("intake_clients")
+      .select("id")
+      .eq("intake_id", intakeId)
+      .maybeSingle();
+
+    if (existing) {
+      clientId = existing.id;
+      await supabase
+        .from("intake_clients")
+        .update({
+          full_name: data.client.fullName,
+          company: data.client.company,
+          email: data.client.email,
+          phone: data.client.phone,
+        })
+        .eq("id", clientId);
+    } else {
+      const { data: inserted } = await supabase
+        .from("intake_clients")
+        .insert({
+          intake_id: intakeId,
+          full_name: data.client.fullName,
+          company: data.client.company,
+          email: data.client.email,
+          phone: data.client.phone,
+        })
+        .select("id")
+        .single();
+      if (inserted) clientId = inserted.id;
+    }
+  }
 
   const isSubmitted = command === "submit";
   const isDraft = command === "save_draft";
@@ -275,6 +320,7 @@ async function persistIntake(
     success: true,
     buildReferenceNumber: buildRef,
     intakeId,
+    clientId,
     status: isSubmitted ? "submitted" : status,
     command,
     ...(isSubmitted ? {

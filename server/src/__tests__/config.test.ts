@@ -41,6 +41,14 @@ describe("preflightCheck", () => {
     expect(result.errors.some((e) => e.includes("placeholder"))).toBe(true);
   });
 
+  it("accepts the modern Supabase secret key alias", () => {
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    process.env.SUPABASE_SECRET_KEY = "sb_secret_test-key-value-here";
+    const result = preflightCheck();
+    expect(result.ok).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
   it("fails when SUPABASE_ANON_KEY is missing", () => {
     delete process.env.SUPABASE_ANON_KEY;
     const result = preflightCheck();

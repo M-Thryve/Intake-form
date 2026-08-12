@@ -44,6 +44,7 @@ app.use(
       "Content-Type",
       "Authorization",
       "Idempotency-Key",
+      "X-Intake-Command",
       "apikey",
     ],
   }),
@@ -56,7 +57,10 @@ app.get("/api/health", (_req, res) => {
 })
 
 app.use("/api/portal", requireClientAuth, portalRouter)
-app.use("/api/intakes", requireAuth, intakeRouter)
+// Phase 2 submission intentionally has no authentication dependency. The
+// endpoint validates the complete payload and protects retries with the
+// idempotency key; authentication/RBAC belongs to later internal workflows.
+app.use("/api/intakes", intakeRouter)
 app.use("/api/assets", requireAuth, assetRouter)
 app.use("/api/analysis", requireAuth, analysisRouter)
 app.use("/api/console", requireAuth, consoleRouter)
