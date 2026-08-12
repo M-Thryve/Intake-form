@@ -19,13 +19,24 @@ Returns server status.
 
 ### `POST /api/intakes`
 
-Submit a new intake. See Phase 2 documentation for full payload contract.
+Submit a new intake using the Phase 1 `IntakeSubmissionPayload` contract.
+The request may send the payload directly or inside the `intake` envelope.
 
 **Request**
 ```json
 {
   "idempotencyKey": "string (min 5 chars)",
-  "intake": { /* IntakeSubmissionPayload */ }
+  "intake": {
+    "client": { "fullName": "...", "company": "...", "email": "...", "phone": "..." },
+    "project": { "projectName": "...", "industry": "...", "projectType": "...", "businessDescription": "..." },
+    "assets": { "qualification": "ready", "statuses": {}, "requestedServices": [] },
+    "tier": "template | custom | enterprise",
+    "template": { "templateId": "...", "projectVersion": "desktop | mobile | both", "colorPreset": "..." },
+    "content": { "pages": [], "features": [{ "name": "...", "priority": "Required", "source": "chip" }] },
+    "design": { "styles": ["Modern"], "inspirationLink": "" },
+    "payment": { "plan": "...", "maintenanceAfterFree": "...", "maintenanceEndAcknowledged": true, "voucherCode": "" },
+    "confirmations": { "accurate": true, "receipt": true, "payment": true, "maintenance": true, "buildCard": true, "submission": true }
+  }
 }
 ```
 
@@ -35,6 +46,13 @@ Submit a new intake. See Phase 2 documentation for full payload contract.
 - `400` — Missing idempotency key or intake payload
 - `409` — Idempotency key reused with different payload
 - `422` — Validation errors
+
+---
+
+Successful submission returns the server-generated `buildReferenceNumber`,
+`intakeId`, `status: "submitted"`, `ownerReviewStatus: "waiting_owner_review"`,
+and a queued preliminary Build Card. Submission never approves, charges, or
+starts a build.
 
 ---
 

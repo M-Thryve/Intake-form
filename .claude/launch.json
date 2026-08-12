@@ -5,7 +5,8 @@
       "name": "intake-form-dev",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "port": 8443
+      "port": 8443,
+      "autoPort": true
     }
   ]
 }

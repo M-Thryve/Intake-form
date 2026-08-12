@@ -16,7 +16,7 @@ npm run dev         # starts on http://localhost:3000
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `SUPABASE_URL` | Yes | — | Supabase project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | Yes | — | Service role key (server-side only) |
+| `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_SECRET_KEY` | Yes | — | Server-side key (server-only; use one, never both) |
 | `SUPABASE_ANON_KEY` | No | — | Anon key for future client-scoped auth |
 | `PORT` | No | 3000 | Server port |
 | `NODE_ENV` | No | development | Environment name |
@@ -50,14 +50,24 @@ This validates all required variables are present, not placeholder values, and c
 
 ## Database Migrations
 
-Apply migrations in order after deploying the schema from Phase 2:
+Apply every migration in `server/src/migrations` in filename order. The Phase 2
+foundation and atomic submission function are included in
+`000_phase2_intake_schema.sql` and `015_phase2_atomic_submit.sql`.
 
 ```sql
--- 1. RLS policies (Phase 3)
+-- 1. Phase 2 foundation
+-- Run: server/src/migrations/000_phase2_intake_schema.sql
+
+-- 2. RLS policies (Phase 3)
 -- Run: server/src/migrations/001_rls_policies.sql
 
--- 2. Asset pipeline tables (Phase 3)
+-- 3. Asset pipeline tables (Phase 3)
 -- Run: server/src/migrations/002_asset_pipeline.sql
+
+-- ...continue through 014_client_rls.sql...
+
+-- Final atomic submission RPC
+-- Run: server/src/migrations/015_phase2_atomic_submit.sql
 ```
 
 Apply via Supabase Dashboard SQL Editor or `supabase db push`.

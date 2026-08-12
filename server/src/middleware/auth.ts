@@ -47,6 +47,16 @@ export function requireAuth(
   res: Response,
   next: NextFunction,
 ): void {
+  const config = getConfig()
+
+  // The internal intake SPA predates the authenticated console session. Keep
+  // local development usable without ever weakening staging/production auth.
+  if (config.NODE_ENV === "development" && config.DEV_AUTH_BYPASS) {
+    req.isInternalService = true
+    next()
+    return
+  }
+
   const authHeader = req.headers.authorization
   if (!authHeader) {
     res
@@ -54,8 +64,6 @@ export function requireAuth(
       .json({ success: false, error: "Authorization header required" })
     return
   }
-
-  const config = getConfig()
 
   // Check for internal service key (used by scanner, background jobs)
   if (

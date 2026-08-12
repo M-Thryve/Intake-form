@@ -15,6 +15,16 @@ const state = vi.hoisted(() => ({
   rows: {} as Record<string, unknown>,
 }))
 
+const configState = vi.hoisted(() => ({
+  value: {
+    SUPABASE_URL: "https://test.supabase.co",
+    SUPABASE_ANON_KEY: "test-anon-key",
+    API_INTERNAL_KEY: "internal-test-key",
+    NODE_ENV: "test",
+    DEV_AUTH_BYPASS: false,
+  },
+}))
+
 const fromMock = vi.fn((table: string) => {
   const result = state.rows[table] || null
   const chain: Record<string, (...args: unknown[]) => unknown> = {}
@@ -29,10 +39,7 @@ vi.mock("../lib/supabase.js", () => ({
 }))
 
 vi.mock("../lib/config.js", () => ({
-  getConfig: () => ({
-    SUPABASE_URL: "https://test.supabase.co",
-    SUPABASE_ANON_KEY: "test-anon-key",
-  }),
+  getConfig: () => configState.value,
 }))
 
 vi.mock("@supabase/supabase-js", () => ({
@@ -80,6 +87,13 @@ beforeEach(() => {
   state.authUser = { id: "user-1", email: "client@example.com" }
   state.authError = null
   state.rows = {}
+  configState.value = {
+    SUPABASE_URL: "https://test.supabase.co",
+    SUPABASE_ANON_KEY: "test-anon-key",
+    API_INTERNAL_KEY: "internal-test-key",
+    NODE_ENV: "test",
+    DEV_AUTH_BYPASS: false,
+  }
   vi.clearAllMocks()
 })
 
@@ -87,6 +101,32 @@ describe("client authentication boundary", () => {
   it("requires an authorization header", async () => {
     const { requireClientAuth } = await import("../middleware/auth.js")
     const response = await request(appWith(requireClientAuth)).get("/probe")
+    expect(response.status).toBe(401)
+  })
+
+  it("allows the explicit development-only bypass for the internal SPA", async () => {
+    configState.value = {
+      SUPABASE_URL: "https://test.supabase.co",
+      SUPABASE_ANON_KEY: "test-anon-key",
+      API_INTERNAL_KEY: "internal-test-key",
+      NODE_ENV: "development",
+      DEV_AUTH_BYPASS: true,
+    }
+    const { requireAuth } = await import("../middleware/auth.js")
+    const response = await request(appWith(requireAuth)).get("/probe")
+    expect(response.status).toBe(200)
+  })
+
+  it("never applies the development bypass outside development", async () => {
+    configState.value = {
+      SUPABASE_URL: "https://test.supabase.co",
+      SUPABASE_ANON_KEY: "test-anon-key",
+      API_INTERNAL_KEY: "internal-test-key",
+      NODE_ENV: "production",
+      DEV_AUTH_BYPASS: true,
+    }
+    const { requireAuth } = await import("../middleware/auth.js")
+    const response = await request(appWith(requireAuth)).get("/probe")
     expect(response.status).toBe(401)
   })
 
