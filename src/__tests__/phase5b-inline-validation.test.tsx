@@ -1,10 +1,24 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import App from '../App'
 
+// Mock network calls so draft/submit tests don't depend on a live API server.
+vi.mock('../api/intake', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../api/intake')>()
+  return {
+    ...actual,
+    saveDraft: vi.fn().mockResolvedValue({ success: true, clientId: 'mock-client-id', status: 'draft' }),
+    submitIntake: vi.fn().mockResolvedValue({ success: true, buildReferenceNumber: 'MTH-TEST-001', clientId: 'mock-client-id' }),
+  }
+})
+
+// v2.0 flow: intro → build-approach → client-details → …
+// "Start Project Intake" lands on build-approach; navigate through it first.
 function startAtClientDetails() {
   render(<App />)
   fireEvent.click(screen.getByRole('button', { name: /Start Project Intake/ }))
+  fireEvent.click(screen.getByRole('button', { name: /Custom Build/ }))
+  fireEvent.click(screen.getByRole('button', { name: /Continue/ }))
 }
 
 describe('PHASE_5B_REV01 — company_name warning', () => {
@@ -61,37 +75,39 @@ describe('PHASE_5B_REV01 — project_description warning', () => {
 })
 
 describe('PHASE_5B_REV01 — draft save toast message', () => {
-  it('shows the updated draft save toast message', () => {
-    // Navigate through multiple steps to reach outcome and save draft
+  it('shows the updated draft save toast message', async () => {
+    // Navigate through multiple steps to reach outcome and save draft.
+    // v2.0 flow: intro → build-approach → client-details → company-assets → template-select → pages-features → review → outcome
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /Start Project Intake/ }))
 
-    // Fill basics
+    // On build-approach
+    fireEvent.click(screen.getByRole('button', { name: /Custom Build/ }))
+
+    const next = () => fireEvent.click(screen.getByRole('button', { name: /Continue/ }))
+    next() // → client-details
+
+    // Fill client basics
     fireEvent.change(screen.getByPlaceholderText('Alex Johnson'), { target: { value: 'Alex Johnson' } })
     fireEvent.change(screen.getByPlaceholderText('alex@acmecorp.com'), { target: { value: 'alex@acmecorp.com' } })
     fireEvent.change(screen.getByPlaceholderText('e.g. Acme Client Portal'), { target: { value: 'Client Portal' } })
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Technology' } })
     fireEvent.click(screen.getByRole('button', { name: /Website/ }))
-
-    const next = () => fireEvent.click(screen.getByRole('button', { name: /Continue/ }))
-    next()
-
-    fireEvent.click(screen.getByRole('button', { name: /Custom Build/ }))
-    next()
+    next() // → company-assets
 
     fireEvent.click(screen.getByRole('button', { name: /full deck available/ }))
-    next()
+    next() // → template-select
 
     fireEvent.click(screen.getByRole('button', { name: /Apex Business/ }))
     fireEvent.click(screen.getByRole('button', { name: 'Website' }))
-    next()
+    next() // → pages-features
 
     fireEvent.click(screen.getByRole('button', { name: /Authentication/ }))
-    next()
+    next() // → review
 
-    next()
+    next() // → outcome
 
     fireEvent.click(screen.getByRole('button', { name: 'Save as draft' }))
-    expect(screen.getByText('Draft saved. Review warnings before submit.')).toBeInTheDocument()
+    expect(await screen.findByText('Draft saved. Review warnings before submit.')).toBeInTheDocument()
   })
 })

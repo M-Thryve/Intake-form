@@ -129,7 +129,33 @@ CREATE POLICY fr_select ON public.finance_reviews
 -- Guarantees exactly one *valid* redemption per intake and tracks the verifier.
 -- ═══════════════════════════════════════════════════════════
 
+ALTER TABLE public.vouchers
+  ADD COLUMN IF NOT EXISTS voucher_code text,
+  ADD COLUMN IF NOT EXISTS owner_client_id uuid REFERENCES public.clients(id),
+  ADD COLUMN IF NOT EXISTS discount_percent numeric,
+  ADD COLUMN IF NOT EXISTS expires_at timestamptz,
+  ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+
+-- The server reads vouchers by voucher_code; backfill it from the legacy
+-- `code` column when present (migration 000 used `code`).
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'vouchers' AND column_name = 'code'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'vouchers' AND column_name = 'voucher_code'
+  ) THEN
+    ALTER TABLE public.vouchers RENAME COLUMN code TO voucher_code;
+  END IF;
+END $$;
+
 ALTER TABLE public.intake_voucher_redemptions
+  ADD COLUMN IF NOT EXISTS submitted_code text,
+  ADD COLUMN IF NOT EXISTS verification_status text,
+  ADD COLUMN IF NOT EXISTS discount_amount_php integer,
+  ADD COLUMN IF NOT EXISTS verified_at timestamptz,
   ADD COLUMN IF NOT EXISTS verified_by uuid REFERENCES public.users(id);
 
 -- Existing UNIQUE (intake_id) permits one row per intake; a re-check overwrites.

@@ -40,7 +40,7 @@ const configSchema = z.object({
     .string()
     .min(32, "API_INTERNAL_KEY must be at least 32 characters")
     .optional(),
-  PORT: z.coerce.number().int().min(1).max(65535).default(3000),
+  PORT: z.coerce.number().int().min(1).max(65535).default(3200),
   NODE_ENV: z
     .enum(["development", "test", "staging", "production"])
     .default("development"),
@@ -87,7 +87,7 @@ export function validateConfig(): ServerConfig {
         "Optional variables:",
         "  SUPABASE_JWT_SECRET    — JWT secret for token verification (Settings > API > JWT Settings)",
         "  API_INTERNAL_KEY       — Shared key for internal service calls (scanner, etc.)",
-        "  PORT                   — Server port (default: 3000)",
+        "  PORT                   — Server port (default: 3200)",
         "  NODE_ENV               — Environment: development | test | staging | production",
         "  SUPABASE_STORAGE_BUCKET — Storage bucket name (default: intake-assets)",
         "  MAX_UPLOAD_SIZE_MB     — Max upload size in MB (default: 25)",

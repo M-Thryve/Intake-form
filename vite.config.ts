@@ -36,7 +36,7 @@ export default defineConfig(({ mode }) => {
       watch: { ignored: ['**/.figma/**'] },
       proxy: {
         '/api': {
-          target: 'http://localhost:3000',
+          target: 'http://localhost:3200',
           changeOrigin: true,
         },
       },

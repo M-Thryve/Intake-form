@@ -19,10 +19,10 @@ DECLARE
 BEGIN
   FOR r IN
     SELECT i.id        AS intake_id,
-           i.full_name,
-           i.company,
-           i.email,
-           i.phone
+           i.client_details->>'full_name' AS full_name,
+           i.client_details->>'company'   AS company,
+           i.client_details->>'email'     AS email,
+           i.client_details->>'phone'     AS phone
       FROM public.intakes i
      WHERE i.client_id IS NULL
   LOOP

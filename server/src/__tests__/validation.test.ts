@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateIntakePayload, validateDraftPayload } from "../lib/validation.js";
+import { validateIntakePayload, validateDraftPayload, validatePhase2Payload } from "../lib/validation.js";
 
 function validPayload(overrides: Record<string, unknown> = {}) {
   return {
@@ -372,6 +372,30 @@ describe("validateIntakePayload", () => {
 });
 
 describe("validateDraftPayload", () => {
+  it("accepts the frontend's empty placeholders and reports them as gaps", () => {
+    const result = validateDraftPayload({
+      client: { fullName: "", company: "", email: "", phone: "" },
+      project: { projectName: "", industry: "", projectType: "", businessDescription: "" },
+      tier: "",
+      assets: { qualification: "", statuses: {}, requestedServices: [] },
+      template: { templateId: "", projectVersion: "", colorPreset: "" },
+      content: { pages: [], features: [] },
+      design: { styles: [], inspirationLink: "" },
+      payment: { plan: "", maintenanceAfterFree: "", maintenanceEndAcknowledged: false, voucherCode: "" },
+      confirmations: {
+        accurate: false,
+        receipt: false,
+        payment: false,
+        maintenance: false,
+        buildCard: false,
+        submission: false,
+      },
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.missingRequirements.map((item) => item.field)).toContain("tier");
+  });
+
   it("accepts a minimal draft with only clientName", () => {
     const result = validateDraftPayload({ client: { fullName: "A" } });
     expect(result.success).toBe(true);
@@ -433,5 +457,21 @@ describe("validateDraftPayload", () => {
     const fields = result.missingRequirements.map((m) => m.field);
     expect(fields).toContain("enterprise.projectVision");
     expect(fields).toContain("enterprise.targetUsers");
+  });
+});
+
+describe("validatePhase2Payload", () => {
+  it("accepts a complete v2 submission without legacy payment or confirmation controls", () => {
+    const result = validatePhase2Payload({
+      client: { fullName: "A", company: "", email: "a@example.com", phone: "" },
+      project: { projectName: "Project", industry: "Tech", projectType: "website", businessDescription: "" },
+      assets: { qualification: "ready", statuses: {}, requestedServices: [] },
+      tier: "custom",
+      template: { templateId: "starter", projectVersion: "desktop", colorPreset: "" },
+      content: { pages: [], features: [{ name: "Feature", priority: "Required", source: "chip" }] },
+      design: { styles: [], inspirationLink: "" },
+    });
+
+    expect(result.success).toBe(true);
   });
 });
