@@ -39,8 +39,7 @@ UPDATE public.clients
    AND btrim(email) <> '';
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_clients_normalized_email
-  ON public.clients(normalized_email)
-  WHERE normalized_email IS NOT NULL;
+  ON public.clients(normalized_email);
 
 -- Backfill legacy rows before enforcing the identity invariant. Existing
 -- installations may already have client_id NOT NULL from migration 009; the

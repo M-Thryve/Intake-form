@@ -9,7 +9,10 @@ import type {
   DiscardReason,
 } from '../types/intake'
 
-const API_BASE_URL = ''
+// Keep local development same-origin so Vite can proxy /api to localhost:3200.
+// Deployments can point the static frontend at the separately hosted API by
+// setting VITE_API_BASE_URL (for example, https://api.example.com).
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
 const API_ENDPOINT = '/api/intakes'
 
 /**
@@ -23,6 +26,19 @@ export function toSubmissionPayload(
 ): IntakeSubmissionPayload {
   const allFeatures = [...formData.features, ...formData.customFeatures]
   const pages = Object.entries(pageContents).map(([name, fields]) => ({ name, fields }))
+  const structuredAssetStatuses = {
+    ...formData.assetStatuses,
+    ...formData.resourceStatuses,
+    ...Object.fromEntries(
+      Object.entries(formData.deckSectionStatuses).map(([key, status]) => [`deck.${key}`, status]),
+    ),
+  }
+  // v2 uses the structured resource checklist instead of the legacy asset
+  // qualification control. Keep the legacy field when present and provide a
+  // valid default for a complete v2 submission; drafts may remain blank.
+  const assetQualification = formData.assetQualification || (
+    Object.keys(structuredAssetStatuses).length > 0 ? 'ready' : ''
+  )
 
   const payload: IntakeSubmissionPayload = {
     client: {
@@ -39,8 +55,8 @@ export function toSubmissionPayload(
     },
     tier: formData.tier,
     assets: {
-      qualification: formData.assetQualification,
-      statuses: formData.assetStatuses,
+      qualification: assetQualification,
+      statuses: structuredAssetStatuses,
       requestedServices: formData.selectedAssetServices,
     },
     content: {

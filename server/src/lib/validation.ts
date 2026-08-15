@@ -182,13 +182,41 @@ const intakeSubmitSchema = z.object({
   confirmations: confirmationsSubmitSchema,
 });
 
-// Phase 2 accepts the complete Phase 1 wire contract. Later lifecycle code
-// may keep the narrower active-path validator above, but submission itself
-// must continue to accept all three Phase 1 tiers.
-const phase2IntakeSubmitSchema = intakeSubmitSchema.extend({
+// The active v2 lifecycle contract accepts all three tier values for legacy
+// compatibility, while new UI selections remain custom/enterprise. The active
+// v2 intake no longer collects payment preferences or payment
+// confirmations. Keep accepting those legacy fields when a caller sends them,
+// but make them informational/defaulted so the v2 frontend can submit without
+// controls that were intentionally removed from the flow.
+const phase2PaymentSchema = z.object({
+  plan: z.string().default(""),
+  maintenanceAfterFree: z.string().default(""),
+  maintenanceEndAcknowledged: z.boolean().default(false),
+  voucherCode: z.string().default(""),
+}).default({});
+
+const phase2ConfirmationsSchema = z.object({
+  accurate: z.boolean().default(false),
+  receipt: z.boolean().default(false),
+  payment: z.boolean().default(false),
+  maintenance: z.boolean().default(false),
+  buildCard: z.boolean().default(false),
+  submission: z.boolean().default(false),
+}).default({});
+
+const phase2IntakeSubmitSchema = z.object({
+  client: clientSubmitSchema,
+  project: projectSubmitSchema,
+  assets: assetsSubmitSchema,
   tier: z.enum(["template", "custom", "enterprise"], {
     errorMap: () => ({ message: "Tier must be template, custom, or enterprise" }),
   }),
+  template: templateSubmitSchema.optional(),
+  enterprise: enterpriseSubmitSchema.optional(),
+  content: contentSubmitSchema,
+  design: designSubmitSchema,
+  payment: phase2PaymentSchema,
+  confirmations: phase2ConfirmationsSchema,
 });
 
 // ═══════════════════════════════════════════════════════════
@@ -213,14 +241,20 @@ const projectDraftSchema = z.object({
 }).default({});
 
 const assetsDraftSchema = z.object({
-  qualification: z.enum(["provided", "ready", "incomplete", "no-assets"]).optional().nullable(),
+  qualification: z.union([
+    z.enum(["provided", "ready", "incomplete", "no-assets"]),
+    z.literal(""),
+  ]).optional().nullable(),
   statuses: z.record(z.string()).default({}),
   requestedServices: z.array(z.string()).default([]),
 }).default({});
 
 const templateDraftSchema = z.object({
   templateId: z.string().default(""),
-  projectVersion: z.enum(["desktop", "mobile", "both"]).optional().nullable(),
+  projectVersion: z.union([
+    z.enum(["desktop", "mobile", "both"]),
+    z.literal(""),
+  ]).optional().nullable(),
   colorPreset: z.string().default(""),
 }).optional().nullable();
 
@@ -279,7 +313,10 @@ const intakeDraftSchema = z.object({
   client: clientDraftSchema,
   project: projectDraftSchema,
   assets: assetsDraftSchema,
-  tier: z.enum(["custom", "enterprise"]).optional().nullable(),
+  tier: z.union([
+    z.enum(["custom", "enterprise"]),
+    z.literal(""),
+  ]).optional().nullable(),
   template: templateDraftSchema,
   enterprise: enterpriseDraftSchema,
   content: contentDraftSchema,

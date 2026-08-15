@@ -1,4 +1,4 @@
-import { useState, useEffect, type CSSProperties, type ReactNode } from 'react'
+import { useState, useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
 import type {
   FormData,
   Tier,
@@ -1025,7 +1025,11 @@ export default function App() {
   const [buildRef, setBuildRef] = useState('')
   const [clientVoucher, setClientVoucher] = useState('')
   const [submissionError, setSubmissionError] = useState('')
-  const [idempotencyKey, setIdempotencyKey] = useState('')
+  const lifecycleKeys = useRef<Record<'draft' | 'submit' | 'discard', string>>({
+    draft: '',
+    submit: '',
+    discard: '',
+  })
   const [showTierWarning, setShowTierWarning] = useState(false)
   const [pendingTier, setPendingTier] = useState<Tier>('')
   const [templateCatFilter, setTemplateCatFilter] = useState('All')
@@ -1052,10 +1056,13 @@ export default function App() {
   const [outcomeFinalized, setOutcomeFinalized] = useState<IntakeOutcome | null>(null)
   const [submitAttempted, setSubmitAttempted] = useState(false)
 
-  // Initialize idempotency key on mount
-  useEffect(() => {
-    setIdempotencyKey(generateIdempotencyKey())
-  }, [])
+  const getLifecycleKey = (operation: 'draft' | 'submit' | 'discard') => {
+    const existing = lifecycleKeys.current[operation]
+    if (existing) return existing
+    const next = generateIdempotencyKey()
+    lifecycleKeys.current[operation] = next
+    return next
+  }
 
   const flow = getFlow(form.tier)
   const currentStep: StepId = (flow[stepIndex] ?? 'intro') as StepId
@@ -1182,9 +1189,12 @@ export default function App() {
     setSubmissionError('')
     try {
       const payload = toSubmissionPayload(form, pageContents, 'draft')
-      const response = await saveDraft(payload, idempotencyKey)
+      const response = await saveDraft(payload, getLifecycleKey('draft'))
 
       if (response.success) {
+        // A later save may contain changed fields. Reserve the current key for
+        // retries of this request and use a fresh key for the next payload.
+        lifecycleKeys.current.draft = generateIdempotencyKey()
         setForm(prev => ({
           ...prev,
           outcome: 'draft',
@@ -1216,9 +1226,10 @@ export default function App() {
     setSubmissionError('')
     try {
       const payload = toSubmissionPayload(form, pageContents, 'submitted')
-      const response = await submitIntake(payload, idempotencyKey)
+      const response = await submitIntake(payload, getLifecycleKey('submit'))
 
       if (response.success && response.buildReferenceNumber) {
+        lifecycleKeys.current.submit = generateIdempotencyKey()
         setBuildRef(response.buildReferenceNumber)
         setClientVoucher(response.clientId || `REF-${Math.random().toString(36).substring(2, 8).toUpperCase()}`)
         setSubmitted(true)
@@ -1247,7 +1258,13 @@ export default function App() {
     setSubmissionError('')
     try {
       const payload = toSubmissionPayload(form, pageContents, 'discarded')
-      await discardIntake(payload, reason, idempotencyKey)
+      const response = await discardIntake(payload, reason, getLifecycleKey('discard'))
+
+      if (!response.success) {
+        setSubmissionError(response.error || 'Discard failed. Please try again.')
+        return
+      }
+      lifecycleKeys.current.discard = generateIdempotencyKey()
 
       setForm(prev => ({
         ...prev,
@@ -1274,6 +1291,7 @@ export default function App() {
 
   const resetAll = () => {
     setForm(EMPTY_FORM); setStepIndex(0); setSubmitting(false); setSubmitted(false)
+    lifecycleKeys.current = { draft: generateIdempotencyKey(), submit: generateIdempotencyKey(), discard: generateIdempotencyKey() }
     setBuildRef(''); setClientVoucher(''); setPageContents({}); setUploads({})
     setCurrentPageIndex(0); setTemplateCatFilter('All')
     setCopiedRef(false); setCopiedVoucher(false)

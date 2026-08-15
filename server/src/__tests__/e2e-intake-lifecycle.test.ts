@@ -240,7 +240,9 @@ describe("Work Stream 3 — Draft recovery verification", () => {
   });
   describe("Test 18 — submit-blocking errors save as draft", () => {
     it("invalid submit returns 422, then save_draft of same payload succeeds", async () => {
-      const bad = makePayload({ confirmations: { ...makePayload().confirmations, accurate: false } });
+      // Phase 2 intentionally relaxed confirmations (boolean, not literal true).
+      // Use an invalid email address, which still fails clientSubmitSchema → 422.
+      const bad = makePayload({ client: { ...makePayload().client, email: "not-an-email" } });
       const submit = await request(app).post("/api/intakes").send({ idempotencyKey: "blocked-submit", command: "submit", intake: bad });
       expect(submit.status).toBe(422);
       const draft = await request(app).post("/api/intakes").send({ idempotencyKey: "blocked-draft", command: "save_draft", intake: bad });

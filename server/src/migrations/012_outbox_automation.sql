@@ -94,12 +94,12 @@ SELECT
   o.delivered_at,
   o.last_attempt_at,
   a.id AS audit_event_id,
-  a.action AS audit_action,
+  a.event_type AS audit_action,
   a.created_at AS audit_timestamp
 FROM public.notification_outbox o
 LEFT JOIN public.audit_events a
   ON a.intake_id = o.intake_id
-  AND a.action = 'notification_' || o.event_type
+  AND a.event_type = 'notification_' || o.event_type
   AND a.created_at >= o.created_at
 ORDER BY o.created_at DESC;
 

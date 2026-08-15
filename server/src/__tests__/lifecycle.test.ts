@@ -28,7 +28,23 @@ const fromMock = vi.fn().mockReturnValue({
     eq: mockEq,
     maybeSingle: vi.fn(() => Promise.resolve({ data: mockMaybeSingleResult, error: null })),
   }),
-  insert: vi.fn(() => Promise.resolve({ data: null, error: null })),
+  // insert() must be both directly awaitable AND chainable with .select().single()
+  // because the route calls insert({...}).select("id").single() for intake_clients
+  // and also plain `await insert({...})` for idempotency_keys and audit_events.
+  insert: vi.fn(() => {
+    const resolved = { data: { id: "mock-client-id" }, error: null };
+    return {
+      select: vi.fn().mockReturnValue({
+        single: vi.fn().mockResolvedValue(resolved),
+      }),
+      then: (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
+        Promise.resolve({ data: null, error: null }).then(resolve, reject),
+      catch: (fn: (e: unknown) => unknown) =>
+        Promise.resolve({ data: null, error: null }).catch(fn),
+      finally: (fn: () => void) =>
+        Promise.resolve({ data: null, error: null }).finally(fn),
+    };
+  }),
 });
 
 vi.mock("../lib/reference.js", () => ({

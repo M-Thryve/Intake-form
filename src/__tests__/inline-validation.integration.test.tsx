@@ -1,10 +1,26 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import App from '../App'
 
+// Mock network calls so draft/submit tests don't depend on a live API server.
+vi.mock('../api/intake', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../api/intake')>()
+  return {
+    ...actual,
+    saveDraft: vi.fn().mockResolvedValue({ success: true, clientId: 'mock-client-id', status: 'draft' }),
+    submitIntake: vi.fn().mockResolvedValue({ success: true, buildReferenceNumber: 'MTH-TEST-001', clientId: 'mock-client-id' }),
+  }
+})
+
+// v2.0 flow: intro → build-approach → client-details → company-assets → template-select → …
+// Clicking "Start Project Intake" lands on build-approach (index 1), not client-details.
+// startAtClientDetails selects Custom Build and continues to reach client-details.
 function startAtClientDetails() {
   render(<App />)
   fireEvent.click(screen.getByRole('button', { name: /Start Project Intake/ }))
+  // Now on build-approach — navigate to client-details
+  fireEvent.click(screen.getByRole('button', { name: /Custom Build/ }))
+  fireEvent.click(screen.getByRole('button', { name: /Continue/ }))
 }
 
 function fillClientBasics() {
@@ -86,17 +102,17 @@ describe('inline validation — client details', () => {
     expect(screen.getByText('Phone number appears incomplete')).toBeInTheDocument()
 
     clickContinue()
-    expect(screen.getByText('How would you like to build?')).toBeInTheDocument()
+    // Navigated to company-assets despite active warning
+    expect(screen.getByText("What's ready, what's missing?")).toBeInTheDocument()
   })
 })
 
 describe('inline validation — build approach', () => {
+  // After "Start Project Intake" the flow lands directly on build-approach.
   it('warns when the section is blurred without a selection', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /Start Project Intake/ }))
-    fillClientBasics()
-    clickContinue()
-
+    // Already on build-approach
     const tierGroup = document.getElementById('field-tier')
     expect(tierGroup).not.toBeNull()
     fireEvent.blur(tierGroup!)
@@ -106,9 +122,7 @@ describe('inline validation — build approach', () => {
   it('clears the warning once a build approach is selected', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /Start Project Intake/ }))
-    fillClientBasics()
-    clickContinue()
-
+    // Already on build-approach
     fireEvent.blur(document.getElementById('field-tier')!)
     expect(screen.getByText('Please select a build approach')).toBeInTheDocument()
 
@@ -118,51 +132,53 @@ describe('inline validation — build approach', () => {
 })
 
 describe('inline validation — draft save with active warnings', () => {
-  it('draft save succeeds even with active inline warnings', () => {
+  it('draft save succeeds even with active inline warnings', async () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /Start Project Intake/ }))
+    // On build-approach
+    fireEvent.click(screen.getByRole('button', { name: /Custom Build/ }))
+    clickContinue() // → client-details
+
     fillClientBasics()
 
     // Leave a partial-phone warning active, then navigate onward.
     fireEvent.change(screen.getByPlaceholderText('+63 917 000 0000'), { target: { value: '123' } })
     fireEvent.blur(screen.getByPlaceholderText('+63 917 000 0000'))
     expect(screen.getByText('Phone number appears incomplete')).toBeInTheDocument()
-    clickContinue()
-
-    fireEvent.click(screen.getByRole('button', { name: /Custom Build/ }))
-    clickContinue()
+    clickContinue() // → company-assets
 
     fireEvent.click(screen.getByRole('button', { name: /full deck available/ }))
-    clickContinue()
+    clickContinue() // → template-select
 
     fireEvent.click(screen.getByRole('button', { name: /Apex Business/ }))
     fireEvent.click(screen.getByRole('button', { name: 'Website' }))
-    clickContinue()
+    clickContinue() // → pages-features
 
     // Add a feature without a priority — an inline warning appears but does
     // not block navigation to review or the outcome step.
     fireEvent.click(screen.getByRole('button', { name: /Authentication/ }))
     expect(screen.getByText("Feature 'Authentication' needs a priority")).toBeInTheDocument()
-    clickContinue()
+    clickContinue() // → review
 
-    clickContinue()
+    clickContinue() // → outcome
 
     fireEvent.click(screen.getByRole('button', { name: 'Save as draft' }))
-    expect(screen.getByText('Draft saved. Review warnings before submit.')).toBeInTheDocument()
+    expect(await screen.findByText('Draft saved. Review warnings before submit.')).toBeInTheDocument()
   })
 
   it('warns on required features when none are selected after interaction', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /Start Project Intake/ }))
-    fillClientBasics()
-    clickContinue()
+    // On build-approach
     fireEvent.click(screen.getByRole('button', { name: /Custom Build/ }))
-    clickContinue()
+    clickContinue() // → client-details
+    fillClientBasics()
+    clickContinue() // → company-assets
     fireEvent.click(screen.getByRole('button', { name: /full deck available/ }))
-    clickContinue()
+    clickContinue() // → template-select
     fireEvent.click(screen.getByRole('button', { name: /Apex Business/ }))
     fireEvent.click(screen.getByRole('button', { name: 'Website' }))
-    clickContinue()
+    clickContinue() // → pages-features
 
     const chips = document.getElementById('field-features')
     expect(chips).not.toBeNull()
@@ -174,19 +190,24 @@ describe('inline validation — draft save with active warnings', () => {
 
 // ── REV-03: industry template filter ─────────────────────────────────────
 
+// v2.0 flow: build-approach → client-details → company-assets → template-select
 function navigateToTemplateSelect(industry: string) {
   render(<App />)
   fireEvent.click(screen.getByRole('button', { name: /Start Project Intake/ }))
-  fillClientBasics()
-
-  // Set the industry for this test run.
-  fireEvent.change(screen.getByRole('combobox'), { target: { value: industry } })
-
-  fireEvent.click(screen.getByRole('button', { name: /Continue →/ }))
+  // On build-approach
   fireEvent.click(screen.getByRole('button', { name: /Custom Build/ }))
   fireEvent.click(screen.getByRole('button', { name: /Continue →/ }))
+  // On client-details — fill basics with the target industry
+  fireEvent.change(screen.getByPlaceholderText('Alex Johnson'), { target: { value: 'Alex Johnson' } })
+  fireEvent.change(screen.getByPlaceholderText('alex@acmecorp.com'), { target: { value: 'alex@acmecorp.com' } })
+  fireEvent.change(screen.getByPlaceholderText('e.g. Acme Client Portal'), { target: { value: 'Client Portal' } })
+  fireEvent.change(screen.getByRole('combobox'), { target: { value: industry } })
+  fireEvent.click(screen.getByRole('button', { name: /Website/ }))
+  fireEvent.click(screen.getByRole('button', { name: /Continue →/ }))
+  // On company-assets
   fireEvent.click(screen.getByRole('button', { name: /full deck available/ }))
   fireEvent.click(screen.getByRole('button', { name: /Continue →/ }))
+  // Now on template-select
 }
 
 describe('REV-03 — industry template filter', () => {
@@ -245,9 +266,9 @@ describe('REV-03 — industry template filter', () => {
     expect(screen.getByText('Showing all starting points')).toBeInTheDocument()
 
     // Navigate back to client-details.
+    // v2.0 flow from template-select: back → company-assets → back → client-details
     const goBack = () => screen.getByRole('button', { name: /← Back/ })
     fireEvent.click(goBack()) // → company-assets
-    fireEvent.click(goBack()) // → build-approach
     fireEvent.click(goBack()) // → client-details
 
     // Change the industry.
@@ -255,11 +276,10 @@ describe('REV-03 — industry template filter', () => {
 
     // Resume forward.
     const goNext = () => screen.getByRole('button', { name: /Continue/ })
-    fireEvent.click(goNext()) // → build-approach
-    fireEvent.click(goNext()) // → companies
+    fireEvent.click(goNext()) // → company-assets
     fireEvent.click(goNext()) // → template-select
 
-    // The filter should have reset to the new ー Restaurant industry.
+    // The filter should have reset to the new — Restaurant industry.
     expect(screen.getByText(/Showing starting points for: Restaurant & Food/)).toBeInTheDocument()
     expect(screen.queryByText('Showing all starting points')).not.toBeInTheDocument()
     // Primary restaurant-level templates: Dine and Saveur.
@@ -270,18 +290,20 @@ describe('REV-03 — industry template filter', () => {
   it('shows all templates without filtering when no industry is selected', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /Start Project Intake/ }))
-    // Fill required fields but leave industry as the default empty selection.
+    // On build-approach
+    fireEvent.click(screen.getByRole('button', { name: /Custom Build/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Continue/ }))
+    // On client-details — fill required fields but use 'Other' industry
     fireEvent.change(screen.getByPlaceholderText('Alex Johnson'), { target: { value: 'Alex Johnson' } })
     fireEvent.change(screen.getByPlaceholderText('alex@acmecorp.com'), { target: { value: 'alex@acmecorp.com' } })
     fireEvent.change(screen.getByPlaceholderText('e.g. Acme Client Portal'), { target: { value: 'Client Portal' } })
     fireEvent.click(screen.getByRole('button', { name: /Website/ }))
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Other' } })
-
     fireEvent.click(screen.getByRole('button', { name: /Continue/ }))
-    fireEvent.click(screen.getByRole('button', { name: /Custom Build/ }))
-    fireEvent.click(screen.getByRole('button', { name: /Continue/ }))
+    // On company-assets
     fireEvent.click(screen.getByRole('button', { name: /full deck available/ }))
     fireEvent.click(screen.getByRole('button', { name: /Continue/ }))
+    // On template-select
 
     // "Other" has empty compatibleTags — no filter indicator, all templates visible.
     expect(screen.queryByText(/Showing starting points/)).not.toBeInTheDocument()
