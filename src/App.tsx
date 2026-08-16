@@ -7,12 +7,23 @@ import type {
   DiscardReasonCode,
   MissingRequirement,
   OperatorNote,
+  UploadedAssetRef,
 } from './types/intake'
 import { getFlow } from './data/flow'
 import { validateStep, collectMissingRequirements, canSubmit } from './data/validation'
-import { getInlineWarnings, slugify, type ValidationState } from './data/field-validators'
+import { getInlineWarnings, isValidEmail, slugify, type ValidationState } from './data/field-validators'
 import InlineWarning from './components/InlineWarning'
-import { submitIntake, saveDraft, discardIntake, toSubmissionPayload, generateIdempotencyKey } from './api/intake'
+import AssetUploader from './components/AssetUploader'
+import {
+  submitIntakeForReview,
+  saveDraft,
+  discardIntake,
+  toSubmissionPayload,
+  generateIdempotencyKey,
+  getIntakeDraft,
+  rehydrateDraftState,
+} from './api/intake'
+import type { AssetBinding } from './api/assets'
 import { TEMPLATES, type TemplateDefinition } from './data/templates'
 import { filterTemplatesByIndustry } from './data/template-filter'
 import { getMappingForIndustry } from './data/industry-template-map'
@@ -34,12 +45,13 @@ import {
   QUESTIONNAIRE_GROUP_LABELS,
   type QuestionnaireFieldDef,
 } from './data/questionnaire'
+import { CORE_FEATURES, EXTENSIONS, FEATURE_CATEGORIES } from './data/features'
 import type { WebsiteQuestionnaire } from './types/intake'
 
 const EMPTY_FORM: FormData = {
   fullName: '', company: '', email: '', phone: '', projectName: '',
   industry: '', projectType: '', businessDesc: '',
-  assetQualification: '', assetStatuses: {}, selectedAssetServices: [],
+  assetQualification: '', assetStatuses: {}, selectedAssetServices: [], uploadedAssets: [],
   deckExists: '',
   deckSectionStatuses: {},
   deckSectionNotes: {},
@@ -145,15 +157,6 @@ const ASSET_SERVICES = [
   { id: 'photo-coord', name: 'Photography Coordination', desc: 'Professional photography session coordination.' },
   { id: 'product-content', name: 'Product Content Preparation', desc: 'Product descriptions, images, and catalog organization.' },
 ]
-
-const FEATURE_CHIPS = [
-  'Authentication', 'Dashboard', 'Payments', 'AI Chatbot', 'Admin Panel',
-  'CMS', 'Booking System', 'Analytics', 'API Integration', 'Notifications',
-  'Multi-tenant', 'Real-time Updates', 'Search', 'File Storage', 'Reporting',
-  'Workflow Automation', 'User Roles', 'Audit Logs',
-]
-
-const FEATURE_PRIORITY_OPTIONS = ['Required', 'Nice to Have', 'Future Phase', 'Need Help Deciding']
 
 // ── Page content definitions ───────────────────────────────────────────────────
 
@@ -439,24 +442,6 @@ function ReviewRow({ label, value, bold }: { label: string; value: string; bold?
   )
 }
 
-function UploadZone({ spec, done, onToggle }: { spec: UploadSpec; done: boolean; onToggle: () => void }) {
-  return (
-    <div style={{ marginBottom: '12px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px' }}>
-        <span style={{ fontSize: '12px', fontWeight: 500, color: '#D4E4F0' }}>{spec.label}</span>
-        {spec.required && <span style={{ fontSize: '10px', padding: '1px 7px', borderRadius: '100px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontFamily: "'JetBrains Mono', monospace" }}>Required</span>}
-      </div>
-      <div style={{ fontSize: '11px', color: '#3D5468', marginBottom: '7px', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.04em' }}>
-        {spec.count}{spec.dimensions ? ` · ${spec.dimensions}` : ''} · {spec.formats}
-      </div>
-      <div onClick={onToggle} style={{ border: `1.5px dashed ${done ? '#39D6C7' : '#2A3441'}`, borderRadius: '8px', padding: '12px', cursor: 'pointer', background: done ? 'rgba(57,214,199,0.05)' : 'transparent', display: 'flex', alignItems: 'center', gap: '10px', transition: 'all 0.15s' }}>
-        <div style={{ width: '26px', height: '26px', borderRadius: '6px', background: done ? 'rgba(57,214,199,0.15)' : '#0D1620', display: 'flex', alignItems: 'center', justifyContent: 'center', color: done ? '#39D6C7' : '#4B6278', fontSize: '13px', flexShrink: 0 }}>{done ? '✓' : '↑'}</div>
-        <span style={{ fontSize: '12px', color: done ? '#39D6C7' : '#4B6278' }}>{done ? 'File uploaded — click to replace' : 'Click to upload or drag and drop'}</span>
-      </div>
-    </div>
-  )
-}
-
 // Robot Concierge SVG
 function RobotIcon({ size = 32 }: { size?: number }) {
   return (
@@ -643,11 +628,15 @@ function CompanyAssetsStep({
   setForm,
   getWarning,
   touchField,
+  assetBinding,
+  ensureAssetBinding,
 }: {
   form: FormData
   setForm: (updater: (prev: FormData) => FormData) => void
   getWarning: (fieldId: string) => string | null
   touchField: (fieldId: string) => void
+  assetBinding?: AssetBinding
+  ensureAssetBinding: () => Promise<AssetBinding>
 }) {
   const ctx: RequirementContext = {
     buildPath: form.tier === 'enterprise' ? 'enterprise' : form.tier ? 'custom' : '',
@@ -682,7 +671,13 @@ function CompanyAssetsStep({
       deckSectionNotes: { ...prev.deckSectionNotes, [key]: next },
     }))
   const setDeckExists = (v: string) =>
-    setForm(prev => ({ ...prev, deckExists: v }))
+    setForm(prev => ({
+      ...prev,
+      deckExists: v,
+      // The active v3 discovery step supersedes the legacy qualification
+      // cards, but the canonical API still requires this summary value.
+      assetQualification: v === 'yes' ? 'provided' : 'incomplete',
+    }))
 
   return (
     <div>
@@ -815,8 +810,17 @@ function CompanyAssetsStep({
         </div>
       </div>
 
+      <AssetUploader
+        assets={form.uploadedAssets}
+        binding={assetBinding}
+        ensureBinding={ensureAssetBinding}
+        onAssetsChange={(uploadedAssets: UploadedAssetRef[]) => setForm(prev => ({ ...prev, uploadedAssets }))}
+        label="Company assets"
+        hint="Upload brand, deck, content, and reference files. The first file automatically saves this intake as a draft."
+      />
+
       <div style={{ padding: '10px 14px', background: '#0D1620', border: '1px solid #1E2E3D', borderRadius: '8px', fontSize: '11px', color: '#3D5468', lineHeight: 1.6 }}>
-        Secure file upload, malware scanning, and credential handling are out of scope for the intake and are prepared in a separate secure follow-up workflow. Do not paste credentials or API keys into operator notes.
+        Files upload directly to secure storage and are scanned separately. Intake JSON stores metadata references only. Do not upload credentials, secrets, or private keys.
       </div>
     </div>
   )
@@ -1031,6 +1035,9 @@ export default function App() {
   const [submitted, setSubmitted] = useState(false)
   const [buildRef, setBuildRef] = useState('')
   const [clientVoucher, setClientVoucher] = useState('')
+  const [savedIntakeId, setSavedIntakeId] = useState('')
+  const [savedClientId, setSavedClientId] = useState('')
+  const [savedReferenceNumber, setSavedReferenceNumber] = useState('')
   const [submissionError, setSubmissionError] = useState('')
   const lifecycleKeys = useRef<Record<'draft' | 'submit' | 'discard', string>>({
     draft: '',
@@ -1039,10 +1046,10 @@ export default function App() {
   })
   const [showTierWarning, setShowTierWarning] = useState(false)
   const [pendingTier, setPendingTier] = useState<Tier>('')
+  const [extensionCategoryFilter, setExtensionCategoryFilter] = useState<string>('all')
   const [templateCatFilter, setTemplateCatFilter] = useState('All')
   const [currentPageIndex, setCurrentPageIndex] = useState(0)
   const [pageContents, setPageContents] = useState<Record<string, Record<string, string>>>({})
-  const [uploads, setUploads] = useState<Record<string, boolean>>({})
   const [previewVersion, setPreviewVersion] = useState<'desktop' | 'mobile'>('desktop')
   const [copiedRef, setCopiedRef] = useState(false)
   const [copiedVoucher, setCopiedVoucher] = useState(false)
@@ -1062,6 +1069,12 @@ export default function App() {
   const [discardNote, setDiscardNote] = useState('')
   const [outcomeFinalized, setOutcomeFinalized] = useState<IntakeOutcome | null>(null)
   const [submitAttempted, setSubmitAttempted] = useState(false)
+  const [resumeState, setResumeState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
+  const [resumeError, setResumeError] = useState('')
+  const [resumeAttempt, setResumeAttempt] = useState(0)
+  const [resumeEditingStep, setResumeEditingStep] = useState<StepId>('review')
+  const lastEditedStep = useRef<StepId>('client-details')
+  const assetBindingPromise = useRef<Promise<AssetBinding> | null>(null)
 
   const getLifecycleKey = (operation: 'draft' | 'submit' | 'discard') => {
     const existing = lifecycleKeys.current[operation]
@@ -1078,6 +1091,72 @@ export default function App() {
 
   const set = (field: keyof FormData, value: unknown) =>
     setForm(prev => ({ ...prev, [field]: value }))
+
+  useEffect(() => {
+    if (!['intro', 'draft-saved', 'build-card', 'outcome'].includes(currentStep)) {
+      lastEditedStep.current = currentStep
+    }
+  }, [currentStep])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const pathMatch = window.location.pathname.match(/^\/resume\/([0-9a-f-]{36})$/i)
+    const intakeId = params.get('resume') || params.get('intakeId') || pathMatch?.[1]
+    if (!intakeId) return
+
+    let cancelled = false
+    setResumeState('loading')
+    setResumeError('')
+    void getIntakeDraft(intakeId).then(response => {
+      if (cancelled) return
+      const record = response.intake
+      if (!response.success || !record) {
+        setResumeState('error')
+        setResumeError(response.error || 'The intake could not be reopened. Your current form was not changed.')
+        return
+      }
+      if (!record.intakeId || !record.clientId || !record.referenceNumber) {
+        setResumeState('error')
+        setResumeError('The intake was returned without stable identifiers. Your current form was not changed.')
+        return
+      }
+      if (record.outcome === 'submitted' && !record.hasBuildCard) {
+        setResumeState('error')
+        setResumeError('The submitted intake has no Build Card. Your current form was not changed; contact an administrator.')
+        return
+      }
+
+      const restored = rehydrateDraftState(record)
+      const nextForm = { ...EMPTY_FORM, ...restored.form }
+      const restoredFlow = getFlow(nextForm.tier, nextForm.projectType)
+      const requestedStep = restored.lastEditedStep && restoredFlow.includes(restored.lastEditedStep)
+        ? restored.lastEditedStep
+        : 'review'
+
+      setForm(nextForm)
+      setPageContents(restored.pageContents)
+      setSavedIntakeId(record.intakeId)
+      setSavedClientId(record.clientId)
+      setClientVoucher(record.clientId)
+      setSavedReferenceNumber(record.referenceNumber)
+      setBuildRef(record.referenceNumber)
+      setResumeEditingStep(requestedStep)
+      lastEditedStep.current = requestedStep
+      setOutcomeFinalized(record.outcome)
+      setSubmitted(record.outcome === 'submitted')
+      if (record.outcome === 'draft') {
+        setStepIndex(Math.max(0, restoredFlow.indexOf('draft-saved')))
+      } else if (record.outcome === 'submitted') {
+        setStepIndex(Math.max(0, restoredFlow.indexOf('build-card')))
+      } else {
+        setStepIndex(Math.max(0, restoredFlow.indexOf('outcome')))
+      }
+      setResumeState('ready')
+    })
+
+    return () => { cancelled = true }
+  }, [resumeAttempt])
 
   const toggleArr = (field: 'features', val: string) =>
     setForm(prev => ({
@@ -1117,8 +1196,6 @@ export default function App() {
   const setPageField = (page: string, fieldId: string, val: string) =>
     setPageContents(prev => ({ ...prev, [page]: { ...(prev[page] ?? {}), [fieldId]: val } }))
   const getPageField = (page: string, fieldId: string) => pageContents[page]?.[fieldId] ?? ''
-  const toggleUpload = (key: string) => setUploads(prev => ({ ...prev, [key]: !prev[key] }))
-
   const assetsBlocked = (form.assetQualification === 'incomplete' || form.assetQualification === 'no-assets')
 
   const hasTierData = () => !!(form.templateId || form.projectVision || form.features.length > 0)
@@ -1145,7 +1222,7 @@ export default function App() {
       targetUsers: '', userRoles: '', businessWorkflows: '', integrations: '',
       existingSystems: '', dataSecurityReqs: '', scalabilityReqs: '',
     }))
-    setPageContents({}); setUploads({}); setCurrentPageIndex(0)
+    setPageContents({}); setCurrentPageIndex(0)
     setShowTierWarning(false); setPendingTier('')
   }
 
@@ -1218,33 +1295,82 @@ export default function App() {
     setStepIndex(i => Math.min(i + 1, flow.length - 1))
   }
 
-  const handleSaveDraft = async () => {
+  const persistDraft = async (navigateToConfirmation: boolean): Promise<AssetBinding | null> => {
     setSubmitting(true)
     setSubmissionError('')
     try {
-      const payload = toSubmissionPayload(form, pageContents, 'draft')
-      const response = await saveDraft(payload, getLifecycleKey('draft'))
+      const payload = toSubmissionPayload(
+        { ...form, missingRequirements: missingReqSnapshot },
+        pageContents,
+        'draft',
+        lastEditedStep.current,
+      )
+      const response = await saveDraft(payload, getLifecycleKey('draft'), savedIntakeId || undefined)
 
-      if (response.success) {
-        // A later save may contain changed fields. Reserve the current key for
-        // retries of this request and use a fresh key for the next payload.
+      const referenceNumber = response.buildReferenceNumber ?? response.referenceNumber
+      if (response.success && response.intakeId && response.clientId && referenceNumber) {
+        // A completed save gets a fresh key; uncertain/failed requests retain
+        // their key so a retry receives the original idempotent result.
         lifecycleKeys.current.draft = generateIdempotencyKey()
+        setSavedIntakeId(response.intakeId)
+        setClientVoucher(response.clientId)
+        setSavedClientId(response.clientId)
+        setSavedReferenceNumber(referenceNumber)
+
         setForm(prev => ({
           ...prev,
           outcome: 'draft',
-          missingRequirements: missingReqSnapshot,
+          missingRequirements: response.missingRequirements ?? missingReqSnapshot,
+          intakeId: response.intakeId,
+          clientId: response.clientId,
+          referenceNumber,
         }))
         setOutcomeFinalized('draft')
-        if (response.clientId) setClientVoucher(response.clientId)
+        setResumeEditingStep(lastEditedStep.current)
+        if (navigateToConfirmation) setStepIndex(flow.indexOf('draft-saved'))
+        return {
+          intakeId: response.intakeId,
+          clientId: response.clientId,
+          referenceNumber,
+        }
       } else {
-        setSubmissionError(response.error || 'Draft save failed. Please try again.')
+        setSubmissionError(response.error || (response.success
+          ? 'Draft saved without stable server identifiers. Please retry; no navigation was performed.'
+          : 'Draft save failed. Please try again.'))
       }
     } catch (error) {
       setSubmissionError(error instanceof Error ? error.message : 'An unexpected error occurred')
     } finally {
       setSubmitting(false)
     }
+    return null
   }
+
+  const handleSaveDraft = async () => {
+    await persistDraft(true)
+  }
+
+  const ensureAssetBinding = async (): Promise<AssetBinding> => {
+    if (savedIntakeId && savedClientId && savedReferenceNumber) {
+      return { intakeId: savedIntakeId, clientId: savedClientId, referenceNumber: savedReferenceNumber }
+    }
+    if (!isValidEmail(form.email)) {
+      throw new Error('Save the draft first — this attaches your files to the intake reference.')
+    }
+    if (!assetBindingPromise.current) {
+      assetBindingPromise.current = persistDraft(false).then(binding => {
+        if (!binding) throw new Error('The draft could not be saved, so the file was not uploaded.')
+        return binding
+      }).finally(() => {
+        assetBindingPromise.current = null
+      })
+    }
+    return assetBindingPromise.current
+  }
+
+  const assetBinding: AssetBinding | undefined = savedIntakeId && savedClientId && savedReferenceNumber
+    ? { intakeId: savedIntakeId, clientId: savedClientId, referenceNumber: savedReferenceNumber }
+    : undefined
 
   const handleSubmitIntake = async () => {
     setSubmitAttempted(true)
@@ -1259,19 +1385,24 @@ export default function App() {
     setSubmitting(true)
     setSubmissionError('')
     try {
-      const payload = toSubmissionPayload(form, pageContents, 'submitted')
-      const response = await submitIntake(payload, getLifecycleKey('submit'))
+      const payload = toSubmissionPayload(form, pageContents, 'submitted', lastEditedStep.current)
+      const response = await submitIntakeForReview(payload, getLifecycleKey('submit'), savedIntakeId || undefined)
 
-      if (response.success && response.buildReferenceNumber) {
+      const referenceNumber = response.buildReferenceNumber ?? response.referenceNumber
+      if (response.success && response.intakeId && response.clientId && referenceNumber) {
         lifecycleKeys.current.submit = generateIdempotencyKey()
-        setBuildRef(response.buildReferenceNumber)
-        setClientVoucher(response.clientId || `REF-${Math.random().toString(36).substring(2, 8).toUpperCase()}`)
+        setBuildRef(referenceNumber)
+        if (response.clientId) setClientVoucher(response.clientId)
+        setSavedClientId(response.clientId)
+        if (response.intakeId) setSavedIntakeId(response.intakeId)
         setSubmitted(true)
         setForm(prev => ({ ...prev, outcome: 'submitted', missingRequirements: [] }))
         setOutcomeFinalized('submitted')
         setStepIndex(flow.indexOf('build-card'))
       } else {
-        setSubmissionError(response.error || 'Submission failed. Please try again.')
+        setSubmissionError(response.error || (response.success
+          ? 'Submission returned incomplete server identifiers. Please retry; the current page was preserved.'
+          : 'Submission failed. Please try again.'))
       }
     } catch (error) {
       setSubmissionError(error instanceof Error ? error.message : 'An unexpected error occurred')
@@ -1291,8 +1422,8 @@ export default function App() {
     setSubmitting(true)
     setSubmissionError('')
     try {
-      const payload = toSubmissionPayload(form, pageContents, 'discarded')
-      const response = await discardIntake(payload, reason, getLifecycleKey('discard'))
+      const payload = toSubmissionPayload(form, pageContents, 'discarded', lastEditedStep.current)
+      const response = await discardIntake(payload, reason, getLifecycleKey('discard'), savedIntakeId || undefined)
 
       if (!response.success) {
         setSubmissionError(response.error || 'Discard failed. Please try again.')
@@ -1326,13 +1457,18 @@ export default function App() {
   const resetAll = () => {
     setForm(EMPTY_FORM); setStepIndex(0); setSubmitting(false); setSubmitted(false)
     lifecycleKeys.current = { draft: generateIdempotencyKey(), submit: generateIdempotencyKey(), discard: generateIdempotencyKey() }
-    setBuildRef(''); setClientVoucher(''); setPageContents({}); setUploads({})
+    setBuildRef(''); setClientVoucher(''); setSavedIntakeId(''); setSavedClientId(''); setSavedReferenceNumber(''); setPageContents({})
     setCurrentPageIndex(0); setTemplateCatFilter('All')
     setCopiedRef(false); setCopiedVoucher(false)
     setOutcomeFinalized(null); setSubmitAttempted(false)
     setShowDiscardModal(false); setDiscardNote(''); setDiscardReasonCode('not_proceeding')
     setValidationState({})
     setTemplateFilterOverride(false)
+    setResumeState('idle'); setResumeError(''); setResumeEditingStep('review')
+    lastEditedStep.current = 'client-details'; assetBindingPromise.current = null
+    if (typeof window !== 'undefined' && (window.location.search || window.location.pathname.startsWith('/resume/'))) {
+      window.history.replaceState({}, '', window.location.pathname)
+    }
   }
 
   const copyToClipboard = (text: string, which: 'ref' | 'voucher') => {
@@ -1344,7 +1480,7 @@ export default function App() {
   const selectedTemplate = TEMPLATES.find(t => t.id === form.templateId)
   const pricing = calcPrice(selectedTemplate, form.projectVersion)
   const allFeatures = [...form.features, ...form.customFeatures]
-  const complexity = getComplexity(form.features, form.projectType, form.tier)
+  const complexity = getComplexity(form.selectedExtensions, form.projectType, form.tier)
   const techStack = form.tier !== 'enterprise'
     ? (form.tier === 'custom' ? ['Next.js', 'TypeScript', 'M-THRYVE CMS', 'Vercel'] : ['HTML/CSS', 'M-THRYVE CMS', 'Image CDN', 'Netlify'])
     : getTechStack(form.projectType, form.features)
@@ -1479,6 +1615,21 @@ export default function App() {
       {/* ── Main content ── */}
       <div data-testid={`wizard-step-${currentStep}`} style={{ maxWidth: currentStep === 'build-card' ? '860px' : '680px', margin: '0 auto', padding: '52px 28px 160px', transition: 'max-width 0.3s' }}>
 
+        {resumeState === 'loading' && (
+          <div role="status" aria-live="polite" style={{ ...cardStyle, border: '1px solid rgba(57,214,199,0.25)', marginBottom: '20px', color: '#39D6C7', fontSize: '13px' }}>
+            Reopening the saved intakeâ€¦ The current form will change only after the complete draft is loaded.
+          </div>
+        )}
+        {resumeState === 'error' && (
+          <div role="alert" style={{ ...cardStyle, border: '1px solid rgba(239,68,68,0.35)', marginBottom: '20px' }}>
+            <div style={{ color: '#EF4444', fontWeight: 700, marginBottom: '6px' }}>Draft could not be reopened</div>
+            <div style={{ color: '#C4D8EA', fontSize: '13px', lineHeight: 1.55 }}>{resumeError}</div>
+            <button type="button" onClick={() => setResumeAttempt(value => value + 1)} style={{ marginTop: '10px', padding: '7px 12px', borderRadius: '7px', border: '1px solid rgba(239,68,68,0.35)', background: 'transparent', color: '#EF4444', cursor: 'pointer' }}>
+              Retry reopen
+            </button>
+          </div>
+        )}
+
         {/* ══ INTRO ══ */}
         {currentStep === 'intro' && (
           <div>
@@ -1579,7 +1730,14 @@ export default function App() {
 
         {/* ══ COMPANY ASSETS QUESTIONNAIRE (v2.0 structured) ══ */}
         {currentStep === 'company-assets' && (
-          <CompanyAssetsStep form={form} setForm={setForm} getWarning={getWarning} touchField={touchField} />
+          <CompanyAssetsStep
+            form={form}
+            setForm={setForm}
+            getWarning={getWarning}
+            touchField={touchField}
+            assetBinding={assetBinding}
+            ensureAssetBinding={ensureAssetBinding}
+          />
         )}
 
         {/* Legacy assetQualification renderer — kept out of flow, deprecated in v2. */}
@@ -1753,6 +1911,25 @@ export default function App() {
         {/* ══ TEMPLATE SELECTION / AI QUESTIONNAIRE ══ */}
         {currentStep === 'template-select' && (
           <div>
+            {/* ── Factory Core Features panel (both Custom Build types) ── */}
+            {(form.projectType === 'templated-website' || form.projectType === 'ai-assisted-website') && (
+              <div style={{ padding: '16px 18px', background: 'rgba(57,214,199,0.03)', border: '1px solid rgba(57,214,199,0.18)', borderRadius: '10px', marginBottom: '24px' }}>
+                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#39D6C7', marginBottom: '6px' }}>Factory Core Features</div>
+                <div style={{ fontSize: '13px', color: '#4B6278', marginBottom: '12px' }}>Every M-THRYVE website includes these — no selection needed.</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {CORE_FEATURES.map(cf => (
+                    <div key={cf.code} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', color: '#39D6C7', paddingTop: '3px', minWidth: '52px' }}>{cf.code}</span>
+                      <div>
+                        <div style={{ fontSize: '12px', fontWeight: 500, color: '#D4E4F0' }}>{cf.name}</div>
+                        <div style={{ fontSize: '11px', color: '#3D5468', lineHeight: 1.5 }}>{cf.operatorExplanation}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {form.projectType === 'ai-assisted-website' ? (() => {
               const q: Partial<WebsiteQuestionnaire> = form.websiteQuestionnaire ?? {}
               const isVisible = (f: QuestionnaireFieldDef): boolean => {
@@ -2122,7 +2299,19 @@ export default function App() {
                     ))}
                   </div>
                   <div style={{ ...monoLabel, marginBottom: '10px' }}>Required Uploads</div>
-                  {pageDef.uploads.map(u => <UploadZone key={`${currentPageName}-${u.id}`} spec={u} done={!!uploads[`${currentPageName}-${u.id}`]} onToggle={() => toggleUpload(`${currentPageName}-${u.id}`)} />)}
+                  {pageDef.uploads.map(u => (
+                    <AssetUploader
+                      key={`${currentPageName}-${u.id}`}
+                      assets={form.uploadedAssets}
+                      binding={assetBinding}
+                      ensureBinding={ensureAssetBinding}
+                      onAssetsChange={(uploadedAssets: UploadedAssetRef[]) => setForm(prev => ({ ...prev, uploadedAssets }))}
+                      requirementKey={`page.${slugify(currentPageName)}.${u.id}`}
+                      label={`${u.label}${u.required ? ' · Required' : ''}`}
+                      hint={`${u.count}${u.dimensions ? ` · ${u.dimensions}` : ''} · ${u.formats}`}
+                      compact
+                    />
+                  ))}
                   <div style={{ marginTop: '14px' }}>
                     <div style={labelStyle}>Additional Notes for this Page</div>
                     <textarea value={getPageField(currentPageName, '_notes')} onChange={e => setPageField(currentPageName, '_notes', e.target.value)} placeholder="Any additional context or instructions for this page..." rows={2} style={{ ...inputStyle, background: '#111827', resize: 'vertical', lineHeight: 1.7 }} />
@@ -2213,79 +2402,83 @@ export default function App() {
         )}
 
         {/* ══ PAGES, FEATURES & CONTENT ══ */}
-        {currentStep === 'pages-features' && (
+        {currentStep === 'pages-features' && form.tier === 'custom' && (
           <div>
             <StepHeader
-              tag="Step 5 — Features & Requirements"
-              title="What should your software do?"
-              desc="Select the features and capabilities your project needs. Mark each by priority so we know what matters most at launch."
+              tag="Step 5 — Optional Extensions"
+              title="Add optional extensions."
+              desc="Every M-THRYVE website includes all 8 core features. Select any optional extensions below — or continue without adding any."
             />
-            {form.tier === 'custom' && (
-              <div style={{ padding: '12px 16px', background: 'rgba(57,214,199,0.04)', border: '1px solid rgba(57,214,199,0.15)', borderRadius: '8px', marginBottom: '20px', fontSize: '12px', color: '#39D6C7' }}>
-                Custom Build supports features and add-ons documented for the selected template. Requests outside the supported catalog will be flagged as unconfirmed and routed for owner review.
-              </div>
-            )}
 
-            <div style={{ ...monoLabel, marginBottom: '12px' }}>Select Features</div>
-            <div id="field-features" aria-describedby="field-features-warning" onBlur={() => touchField('field-features')} style={{ display: 'flex', flexWrap: 'wrap', gap: '7px', marginBottom: '20px', ...groupWarningStyle('field-features') }}>
-              {FEATURE_CHIPS.map(f => {
-                const sel = form.features.includes(f)
-                return (
-                  <button key={f} onClick={() => { toggleArr('features', f); touchField('field-features') }} style={{ padding: '7px 13px', borderRadius: '100px', border: `1px solid ${sel ? '#39D6C7' : '#2A3441'}`, background: sel ? 'rgba(57,214,199,0.09)' : '#111827', cursor: 'pointer', color: sel ? '#39D6C7' : '#4B6278', fontSize: '13px', fontWeight: sel ? 500 : 400, transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Inter', system-ui, sans-serif" }}>
-                    {sel && <span style={{ fontSize: '9px', fontWeight: 700 }}>✓</span>}{f}
-                  </button>
-                )
-              })}
+            {/* ── Category filter ── */}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ ...monoLabel, marginBottom: '8px' }}>Browse by category</div>
+              <select
+                value={extensionCategoryFilter}
+                onChange={e => setExtensionCategoryFilter(e.target.value)}
+                style={{ width: '100%', background: '#111827', border: '1px solid #2A3441', borderRadius: '8px', padding: '10px 12px', color: '#D4E4F0', fontSize: '13px', fontFamily: "'Inter', system-ui, sans-serif", cursor: 'pointer' }}
+              >
+                <option value="all">All categories</option>
+                {FEATURE_CATEGORIES.map(cat => (
+                  <option key={cat.value} value={cat.value}>{cat.label}</option>
+                ))}
+              </select>
             </div>
-            <InlineWarning fieldId="field-features" message={getWarning('field-features')} />
 
-            {form.features.length > 0 && (
-              <div style={{ marginBottom: '20px' }}>
-                <div style={{ ...monoLabel, marginBottom: '12px' }}>Set Priorities</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {form.features.map(f => {
-                    const priority = form.featurePriorities[f] || ''
-                    const priorityFieldId = `field-priority-${slugify(f)}`
+            {/* ── Extension cards ── */}
+            {(() => {
+              const filtered = EXTENSIONS.filter(e => extensionCategoryFilter === 'all' || e.category === extensionCategoryFilter)
+              if (filtered.length === 0) {
+                return (
+                  <div style={{ padding: '20px', background: '#111827', border: '1px solid #2A3441', borderRadius: '10px', marginBottom: '20px', textAlign: 'center', fontSize: '13px', color: '#4B6278' }}>
+                    No extensions available for this category.
+                  </div>
+                )
+              }
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
+                  {filtered.map(ext => {
+                    const sel = form.selectedExtensions.includes(ext.code)
                     return (
-                      <div key={f} style={{ padding: '12px 14px', background: '#111827', border: `1px solid ${getWarning(priorityFieldId) ? '#F59E0B' : '#2A3441'}`, borderRadius: '8px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
-                          <span style={{ fontSize: '13px', fontWeight: 500, color: '#D4E4F0' }}>{f}</span>
-                          <div id={priorityFieldId} aria-describedby={`${priorityFieldId}-warning`} onBlur={() => touchField(priorityFieldId)} style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                            {FEATURE_PRIORITY_OPTIONS.map(opt => (
-                              <button key={opt} onClick={() => { set('featurePriorities', { ...form.featurePriorities, [f]: opt }); touchField(priorityFieldId) }} style={{ padding: '3px 9px', borderRadius: '100px', border: `1px solid ${priority === opt ? '#39D6C7' : '#2A3441'}`, background: priority === opt ? 'rgba(57,214,199,0.1)' : 'transparent', color: priority === opt ? '#39D6C7' : '#4B6278', fontSize: '11px', cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif", transition: 'all 0.12s', whiteSpace: 'nowrap' }}>{opt}</button>
-                            ))}
+                      <div key={ext.code} onClick={() => setForm(prev => ({ ...prev, selectedExtensions: sel ? prev.selectedExtensions.filter(c => c !== ext.code) : [...prev.selectedExtensions, ext.code] }))} style={{ padding: '14px 16px', background: sel ? 'rgba(57,214,199,0.04)' : '#111827', border: `1px solid ${sel ? 'rgba(57,214,199,0.35)' : '#2A3441'}`, borderRadius: '10px', cursor: 'pointer', transition: 'all 0.15s' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', marginBottom: '4px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ width: '16px', height: '16px', borderRadius: '4px', border: `1px solid ${sel ? '#39D6C7' : '#2A3441'}`, background: sel ? '#39D6C7' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '10px', color: '#0D1620' }}>{sel ? '✓' : ''}</div>
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: sel ? '#39D6C7' : '#D4E4F0' }}>{ext.name}</span>
                           </div>
+                          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', letterSpacing: '0.06em', color: '#3D5468', whiteSpace: 'nowrap', paddingTop: '2px' }}>{ext.code}</span>
                         </div>
-                        <InlineWarning fieldId={priorityFieldId} message={getWarning(priorityFieldId)} />
+                        <div style={{ fontSize: '12px', color: '#4B6278', lineHeight: 1.55, marginLeft: '26px', marginBottom: '4px' }}>{ext.description}</div>
+                        <div style={{ fontSize: '11px', color: '#3D5468', fontFamily: "'JetBrains Mono', monospace", marginLeft: '26px' }}>{ext.includedCapabilities}</div>
                       </div>
                     )
                   })}
                 </div>
-              </div>
-            )}
+              )
+            })()}
 
-            {form.tier === 'enterprise' && (
-              <div style={{ marginBottom: '20px' }}>
-                <div style={{ ...monoLabel, marginBottom: '10px' }}>Custom Features</div>
-                {form.customFeatures.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px', marginBottom: '12px' }}>
-                    {form.customFeatures.map((f, i) => (
-                      <div key={i} style={{ padding: '7px 13px', borderRadius: '100px', border: '1px solid #39D6C7', background: 'rgba(57,214,199,0.09)', color: '#39D6C7', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        {f}<button onClick={() => setForm(prev => ({ ...prev, customFeatures: prev.customFeatures.filter((_, idx) => idx !== i) }))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#39D6C7', padding: 0, fontSize: '16px', lineHeight: 1 }}>×</button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input value={customInput} onChange={e => setCustomInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && customInput.trim()) { setForm(prev => ({ ...prev, customFeatures: [...prev.customFeatures, customInput.trim()] })); setCustomInput('') } }} placeholder="Describe a custom feature..." style={{ ...inputStyle, flex: 1 }} />
-                  <button onClick={() => { if (customInput.trim()) { setForm(prev => ({ ...prev, customFeatures: [...prev.customFeatures, customInput.trim()] })); setCustomInput('') } }} style={{ padding: '0 18px', borderRadius: '8px', border: '1px solid #2A3441', background: '#111827', cursor: 'pointer', color: '#E2E8F0', fontSize: '13px', fontFamily: "'Inter', system-ui, sans-serif" }}>Add</button>
+            {/* ── Custom requests (always visible for Custom Build) ── */}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ ...monoLabel, marginBottom: '6px' }}>Custom Requests</div>
+              <div style={{ fontSize: '12px', color: '#4B6278', marginBottom: '10px' }}>Describe any requests not covered by the extension catalog. These are <span style={{ color: '#F59E0B' }}>unconfirmed</span> — routed to owner review before scope is finalized.</div>
+              {form.customFeatures.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px', marginBottom: '12px' }}>
+                  {form.customFeatures.map((f, i) => (
+                    <div key={i} style={{ padding: '7px 13px', borderRadius: '100px', border: '1px solid rgba(245,158,11,0.4)', background: 'rgba(245,158,11,0.06)', color: '#F59E0B', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {f}<button onClick={() => setForm(prev => ({ ...prev, customFeatures: prev.customFeatures.filter((_, idx) => idx !== i) }))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#F59E0B', padding: 0, fontSize: '16px', lineHeight: 1 }}>×</button>
+                    </div>
+                  ))}
                 </div>
+              )}
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input value={customInput} onChange={e => setCustomInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && customInput.trim()) { setForm(prev => ({ ...prev, customFeatures: [...prev.customFeatures, customInput.trim()] })); setCustomInput('') } }} placeholder="Describe a custom request..." style={{ ...inputStyle, flex: 1 }} />
+                <button onClick={() => { if (customInput.trim()) { setForm(prev => ({ ...prev, customFeatures: [...prev.customFeatures, customInput.trim()] })); setCustomInput('') } }} style={{ padding: '0 18px', borderRadius: '8px', border: '1px solid #2A3441', background: '#111827', cursor: 'pointer', color: '#E2E8F0', fontSize: '13px', fontFamily: "'Inter', system-ui, sans-serif" }}>Add</button>
               </div>
-            )}
+            </div>
 
-            {allFeatures.length > 0 && (
+            {form.selectedExtensions.length > 0 && (
               <div style={{ padding: '10px 16px', background: 'rgba(57,214,199,0.05)', border: '1px solid rgba(57,214,199,0.18)', borderRadius: '8px', fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', color: '#39D6C7' }}>
-                {allFeatures.length} feature{allFeatures.length !== 1 ? 's' : ''} selected — these will appear in your preliminary Build Card
+                {form.selectedExtensions.length} extension{form.selectedExtensions.length !== 1 ? 's' : ''} selected — included in your preliminary Build Card
               </div>
             )}
           </div>
@@ -2312,9 +2505,101 @@ export default function App() {
                 {form.projectType === 'templated-website' && selectedTemplate && <ReviewRow label="Template" value={selectedTemplate.name} />}
                 {form.projectType === 'templated-website' && form.projectVersion && <ReviewRow label="Platform" value={pricing.versionLabel} />}
                 {form.projectType === 'templated-website' && form.colorPreset && <ReviewRow label="Color Style" value={COLOR_OPTIONS.find(c => c.id === form.colorPreset)?.name || '—'} />}
-                {form.projectType === 'ai-assisted-website' && form.websiteQuestionnaire?.primaryGoal && <ReviewRow label="Primary Goal" value={form.websiteQuestionnaire.primaryGoal} />}
-                {form.projectType === 'ai-assisted-website' && form.websiteQuestionnaire?.visitorAction && <ReviewRow label="Visitor Action" value={form.websiteQuestionnaire.visitorAction} />}
               </ReviewBlock>
+
+              {/* ── AI-Assisted Website questionnaire review (all 7 groups) ── */}
+              {form.projectType === 'ai-assisted-website' && form.websiteQuestionnaire && (() => {
+                const q = form.websiteQuestionnaire
+                const isVisible = (f: QuestionnaireFieldDef): boolean => {
+                  if (!f.conditionalOn) return true
+                  const depVal = q[f.conditionalOn.field as keyof WebsiteQuestionnaire]
+                  if (f.conditionalOn.value !== undefined) {
+                    return Array.isArray(depVal)
+                      ? depVal.includes(f.conditionalOn.value)
+                      : depVal === f.conditionalOn.value
+                  }
+                  if (f.conditionalOn.notValue !== undefined) {
+                    return Array.isArray(depVal)
+                      ? !depVal.includes(f.conditionalOn.notValue)
+                      : depVal !== f.conditionalOn.notValue
+                  }
+                  return true
+                }
+                const displayValue = (field: QuestionnaireFieldDef, value: unknown): string => {
+                  const values = Array.isArray(value) ? value : [value]
+                  return values
+                    .map(item => field.options?.find(option => option.value === item)?.label ?? String(item))
+                    .join(', ')
+                }
+                const hasAnyAnswer = QUESTIONNAIRE_FIELDS.some(f => {
+                  const v = q[f.key as keyof WebsiteQuestionnaire]
+                  return isVisible(f) && (Array.isArray(v) ? v.length > 0 : Boolean(v))
+                })
+                if (!hasAnyAnswer) return null
+                return (
+                  <ReviewBlock title="Website Questionnaire" onEdit={() => goToStep('template-select')}>
+                    {QUESTIONNAIRE_GROUP_ORDER.map(group => {
+                      const groupFields = QUESTIONNAIRE_FIELDS.filter(f => f.group === group && isVisible(f))
+                      const answeredFields = groupFields.filter(f => {
+                        const v = q[f.key as keyof WebsiteQuestionnaire]
+                        return Array.isArray(v) ? v.length > 0 : Boolean(v)
+                      })
+                      if (answeredFields.length === 0) return null
+                      return (
+                        <div key={group} style={{ marginBottom: '10px' }}>
+                          <div style={{ fontSize: '10px', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.08em', textTransform: 'uppercase', color: '#39D6C7', marginBottom: '6px' }}>{QUESTIONNAIRE_GROUP_LABELS[group]}</div>
+                          {answeredFields.map(f => {
+                            const v = q[f.key as keyof WebsiteQuestionnaire]
+                             const display = displayValue(f, v)
+                            return <ReviewRow key={f.key} label={f.question} value={display} />
+                          })}
+                        </div>
+                      )
+                    })}
+                  </ReviewBlock>
+                )
+              })()}
+
+              {/* ── Core Features (always included for Custom Build) ── */}
+              {(form.projectType === 'templated-website' || form.projectType === 'ai-assisted-website') && (
+                <ReviewBlock title="Factory Core Features · 8 Included" onEdit={() => goToStep('template-select')}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {CORE_FEATURES.map(cf => (
+                      <div key={cf.code} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', color: '#39D6C7', minWidth: '52px' }}>{cf.code}</span>
+                        <span style={{ fontSize: '12px', color: '#D4E4F0' }}>{cf.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </ReviewBlock>
+              )}
+
+              {/* ── Optional extensions ── */}
+              {(form.projectType === 'templated-website' || form.projectType === 'ai-assisted-website') && form.selectedExtensions.length > 0 && (
+                <ReviewBlock title={`Optional Extensions · ${form.selectedExtensions.length}`} onEdit={() => goToStep('pages-features')}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {form.selectedExtensions.map(code => {
+                      const ext = EXTENSIONS.find(e => e.code === code)
+                      return (
+                        <div key={code} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', color: '#39D6C7', minWidth: '52px' }}>{code}</span>
+                          <span style={{ fontSize: '12px', color: '#D4E4F0' }}>{ext?.name || code}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </ReviewBlock>
+              )}
+
+              {/* ── Custom requests ── */}
+              {(form.projectType === 'templated-website' || form.projectType === 'ai-assisted-website') && form.customFeatures.length > 0 && (
+                <ReviewBlock title={`Custom Requests · ${form.customFeatures.length} Unconfirmed`} onEdit={() => goToStep('pages-features')}>
+                  <div style={{ fontSize: '11px', color: '#F59E0B', marginBottom: '8px' }}>Routed to owner review — not confirmed scope</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                    {form.customFeatures.map((f, i) => <span key={i} style={{ padding: '3px 9px', borderRadius: '100px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.28)', fontSize: '11px', color: '#F59E0B' }}>{f}</span>)}
+                  </div>
+                </ReviewBlock>
+              )}
 
               {missingReqSnapshot.length > 0 && (
                 <div style={{ ...cardStyle, border: '1px solid rgba(245,158,11,0.28)' }}>
@@ -2331,14 +2616,6 @@ export default function App() {
                     ))}
                   </div>
                 </div>
-              )}
-
-              {allFeatures.length > 0 && (
-                <ReviewBlock title={`Features · ${allFeatures.length}`} onEdit={() => goToStep('pages-features')}>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-                    {allFeatures.map(f => <span key={f} style={{ padding: '3px 9px', borderRadius: '100px', background: 'rgba(57,214,199,0.06)', border: '1px solid rgba(57,214,199,0.2)', fontSize: '11px', color: '#39D6C7' }}>{f}</span>)}
-                  </div>
-                </ReviewBlock>
               )}
 
               {form.projectType === 'templated-website' && selectedTemplate && form.projectVersion && (
@@ -2489,6 +2766,114 @@ export default function App() {
           </div>
         )}
 
+        {/* ══ DRAFT SAVED CONFIRMATION ══ */}
+        {currentStep === 'draft-saved' && outcomeFinalized === 'draft' && (
+          <div>
+            <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 16px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '100px', marginBottom: '20px' }}>
+                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#F59E0B' }} />
+                <span style={{ fontSize: '12px', fontWeight: 600, color: '#F59E0B', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.06em' }}>Draft Saved</span>
+              </div>
+              <h1 style={{ fontSize: '32px', fontWeight: 700, letterSpacing: '-0.025em', color: '#F0F6FF', margin: '0 0 10px' }}>Intake Saved as Draft</h1>
+              <p style={{ fontSize: '15px', color: '#4B6278', lineHeight: 1.65 }}>Your discovery information has been preserved. No Build Card was generated and this intake is not yet in the owner-review queue.</p>
+            </div>
+
+            {/* Client ID */}
+            {(savedIntakeId || savedReferenceNumber) && (
+              <div style={{ ...cardStyle, border: '1px solid rgba(245,158,11,0.3)', marginBottom: '12px' }}>
+                <div style={{ ...monoLabel, color: '#F59E0B', marginBottom: '12px' }}>Draft Identifiers</div>
+                {savedReferenceNumber && (
+                  <div style={{ marginBottom: '10px' }}>
+                    <div style={{ fontSize: '11px', color: '#3D5468', letterSpacing: '0.06em', fontFamily: "'JetBrains Mono', monospace", marginBottom: '4px' }}>REFERENCE NUMBER</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '20px', fontWeight: 700, color: '#F59E0B', letterSpacing: '0.08em' }}>{savedReferenceNumber}</div>
+                      <button onClick={() => copyToClipboard(savedReferenceNumber, 'ref')} style={{ padding: '6px 12px', borderRadius: '7px', border: '1px solid rgba(245,158,11,0.3)', background: copiedRef ? 'rgba(245,158,11,0.15)' : 'transparent', cursor: 'pointer', color: copiedRef ? '#F59E0B' : '#4B6278', fontSize: '12px', fontWeight: 600, fontFamily: "'Inter', system-ui, sans-serif" }}>
+                        {copiedRef ? '✓ Copied' : 'Copy'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {savedClientId && (
+                  <div style={{ marginBottom: '10px' }}>
+                    <div style={{ fontSize: '11px', color: '#3D5468', letterSpacing: '0.06em', fontFamily: "'JetBrains Mono', monospace", marginBottom: '4px' }}>CLIENT ID</div>
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '13px', color: '#C4D8EA', wordBreak: 'break-all' }}>{savedClientId}</div>
+                  </div>
+                )}
+                {savedIntakeId && (
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#3D5468', letterSpacing: '0.06em', fontFamily: "'JetBrains Mono', monospace", marginBottom: '4px' }}>INTAKE ID</div>
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '13px', color: '#4B6278', wordBreak: 'break-all' }}>{savedIntakeId}</div>
+                  </div>
+                )}
+                <div style={{ fontSize: '12px', color: '#3D5468', marginTop: '12px', lineHeight: 1.5 }}>Use this reference when contacting M-THRYVE about this draft. No Build Card has been generated yet.</div>
+              </div>
+            )}
+
+            <div style={{ ...cardStyle, marginBottom: '12px' }}>
+              <div style={{ ...monoLabel, color: '#39D6C7', marginBottom: '10px' }}>Captured Data & Assets</div>
+              <div style={{ fontSize: '13px', color: '#C4D8EA', lineHeight: 1.6 }}>
+                Client, project, path, scope, questionnaire/template details, resource notes, and page contents were captured with this draft.
+              </div>
+              <div role="status" style={{ fontSize: '12px', color: '#7F95A8', marginTop: '8px' }}>
+                {form.uploadedAssets.length} uploaded asset{form.uploadedAssets.length === 1 ? '' : 's'} ·{' '}
+                {form.uploadedAssets.filter(asset => asset.assetStatus === 'ready').length} ready ·{' '}
+                {form.uploadedAssets.filter(asset => ['pending', 'uploaded', 'scanning'].includes(asset.assetStatus)).length} processing ·{' '}
+                {form.uploadedAssets.filter(asset => ['rejected', 'failed'].includes(asset.assetStatus)).length} need attention
+              </div>
+            </div>
+
+            {/* Missing requirements */}
+            {missingReqSnapshot.length > 0 && (
+              <div style={{ ...cardStyle, border: '1px solid rgba(245,158,11,0.2)', marginBottom: '12px' }}>
+                <div style={{ ...monoLabel, color: '#F59E0B', marginBottom: '10px' }}>{missingReqSnapshot.length} Item{missingReqSnapshot.length === 1 ? '' : 's'} Required Before Submission</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {missingReqSnapshot.slice(0, 8).map((req, i) => (
+                    <div key={i} style={{ fontSize: '13px', color: '#C4D8EA', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                      <span style={{ color: '#F59E0B', flexShrink: 0, marginTop: '1px' }}>◦</span>
+                      <span>{req.label}</span>
+                    </div>
+                  ))}
+                  {missingReqSnapshot.length > 8 && (
+                    <div style={{ fontSize: '12px', color: '#3D5468' }}>+{missingReqSnapshot.length - 8} more items</div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
+              <button
+                onClick={() => {
+                  const resumeIndex = flow.indexOf(resumeEditingStep)
+                  setOutcomeFinalized(null)
+                  setStepIndex(resumeIndex >= 0 ? resumeIndex : flow.indexOf('review'))
+                }}
+                style={{ flex: 1, padding: '14px', borderRadius: '10px', border: '1px solid rgba(57,214,199,0.3)', background: 'rgba(57,214,199,0.06)', cursor: 'pointer', color: '#39D6C7', fontSize: '14px', fontWeight: 600 }}
+              >
+                Continue Editing
+              </button>
+              <button
+                onClick={handleSubmitIntake}
+                disabled={submitting || missingReqSnapshot.length > 0}
+                style={{ flex: 1, padding: '14px', borderRadius: '10px', border: 'none', background: missingReqSnapshot.length > 0 ? '#1A2535' : '#39D6C7', cursor: missingReqSnapshot.length > 0 ? 'not-allowed' : 'pointer', color: missingReqSnapshot.length > 0 ? '#3D5468' : '#060E18', fontSize: '14px', fontWeight: 700 }}
+              >
+                {submitting ? 'Submitting…' : 'Submit for Review'}
+              </button>
+            </div>
+            <button
+              onClick={resetAll}
+              style={{ width: '100%', marginTop: '10px', padding: '11px', borderRadius: '10px', border: '1px solid #2A3441', background: 'transparent', cursor: 'pointer', color: '#7F95A8', fontSize: '13px', fontWeight: 600 }}
+            >
+              Return to intake list / start a new intake
+            </button>
+            {submissionError && (
+              <div style={{ marginTop: '12px', padding: '14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '10px', fontSize: '13px', color: '#EF4444' }}>
+                {submissionError}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ══ SUBMITTED BUILD CARD (only for submitted outcome) ══ */}
         {currentStep === 'build-card' && submitted && outcomeFinalized === 'submitted' && (
           <div>
@@ -2551,11 +2936,41 @@ export default function App() {
                 </div>
               </div>
 
-              {allFeatures.length > 0 && (
+              {(form.projectType === 'templated-website' || form.projectType === 'ai-assisted-website') && (
                 <div style={{ padding: '14px', background: '#0D1620', borderRadius: '8px', border: '1px solid #1E2E3D', marginBottom: '10px' }}>
-                  <div style={{ ...monoLabel, marginBottom: '8px', fontSize: '9px' }}>Identified Features · {allFeatures.length}</div>
+                  <div style={{ ...monoLabel, marginBottom: '8px', fontSize: '9px' }}>Factory Core Features · 8 Included</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {CORE_FEATURES.map(cf => (
+                      <div key={cf.code} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', color: '#39D6C7', minWidth: '52px' }}>{cf.code}</span>
+                        <span style={{ fontSize: '11px', color: '#D4E4F0' }}>{cf.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {(form.projectType === 'templated-website' || form.projectType === 'ai-assisted-website') && form.selectedExtensions.length > 0 && (
+                <div style={{ padding: '14px', background: '#0D1620', borderRadius: '8px', border: '1px solid #1E2E3D', marginBottom: '10px' }}>
+                  <div style={{ ...monoLabel, marginBottom: '8px', fontSize: '9px' }}>Optional Extensions · {form.selectedExtensions.length}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {form.selectedExtensions.map(code => {
+                      const ext = EXTENSIONS.find(e => e.code === code)
+                      return (
+                        <div key={code} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', color: '#39D6C7', minWidth: '52px' }}>{code}</span>
+                          <span style={{ fontSize: '11px', color: '#D4E4F0' }}>{ext?.name || code}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+              {(form.projectType === 'templated-website' || form.projectType === 'ai-assisted-website') && form.customFeatures.length > 0 && (
+                <div style={{ padding: '14px', background: '#0D1620', borderRadius: '8px', border: '1px solid rgba(245,158,11,0.18)', marginBottom: '10px' }}>
+                  <div style={{ ...monoLabel, marginBottom: '4px', fontSize: '9px', color: '#F59E0B' }}>Custom Requests · Unconfirmed Assumptions</div>
+                  <div style={{ fontSize: '11px', color: '#4B6278', marginBottom: '8px' }}>Pending owner review — not confirmed scope</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-                    {allFeatures.map(f => <span key={f} style={{ padding: '3px 9px', borderRadius: '100px', background: 'rgba(57,214,199,0.06)', border: '1px solid rgba(57,214,199,0.18)', fontSize: '11px', color: '#39D6C7' }}>{f}</span>)}
+                    {form.customFeatures.map((f, i) => <span key={i} style={{ padding: '3px 9px', borderRadius: '100px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.25)', fontSize: '11px', color: '#F59E0B' }}>{f}</span>)}
                   </div>
                 </div>
               )}

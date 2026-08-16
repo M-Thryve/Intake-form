@@ -39,7 +39,7 @@ const app = express()
 app.use(
   cors({
     origin: parseOrigins(config.ALLOWED_ORIGINS),
-    methods: ["GET", "POST", "PATCH", "OPTIONS"],
+    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: [
       "Content-Type",
       "Authorization",
@@ -57,10 +57,9 @@ app.get("/api/health", (_req, res) => {
 })
 
 app.use("/api/portal", requireClientAuth, portalRouter)
-// Phase 2 submission intentionally has no authentication dependency. The
-// endpoint validates the complete payload and protects retries with the
-// idempotency key; authentication/RBAC belongs to later internal workflows.
-app.use("/api/intakes", intakeRouter)
+// Intake creation, draft resume, and lifecycle mutations are protected inside
+// the router so the internal SPA cannot fall back to an anonymous save path.
+app.use("/api/intakes", requireAuth, intakeRouter)
 app.use("/api/assets", requireAuth, assetRouter)
 app.use("/api/analysis", requireAuth, analysisRouter)
 app.use("/api/console", requireAuth, consoleRouter)

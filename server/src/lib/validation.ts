@@ -10,6 +10,7 @@ const MAX_SHORT = 500;
 const MAX_LONG = 5000;
 const MAX_FEATURES = 100;
 const MAX_PAGES = 50;
+const MAX_UPLOADS = 100;
 
 // ═══════════════════════════════════════════════════════════
 // Shared field shapes — single source of truth for field
@@ -57,12 +58,33 @@ const projectSubmitSchema = z.object({
   businessDescription: z.string().max(MAX_LONG).default(""),
 });
 
+const uploadedAssetMetadataSchema = z.object({
+  assetId: z.string().uuid(),
+  filename: z.string().min(1).max(255),
+  mimeType: z.string().min(1).max(MAX_SHORT),
+  sizeBytes: z.number().int().nonnegative(),
+  assetStatus: z.enum(["pending", "uploaded", "scanning", "ready", "rejected", "failed"]),
+  scanStatus: z.enum(["pending", "clean", "blocked", "failed"]),
+  rejectionReason: z.string().max(MAX_LONG).optional(),
+  requirementKey: z.string().max(MAX_SHORT).optional(),
+  uploadedAt: z.string().max(MAX_SHORT).optional(),
+});
+
+const assetMetadataFields = {
+  uploads: z.array(uploadedAssetMetadataSchema).max(MAX_UPLOADS).default([]),
+  deckExists: z.string().max(MAX_SHORT).optional(),
+  deckSectionNotes: z.record(z.string().max(MAX_LONG)).default({}),
+  resourceNotes: z.record(z.string().max(MAX_LONG)).default({}),
+  resourceAddOnCosts: z.record(z.number().nonnegative()).default({}),
+};
+
 const assetsSubmitSchema = z.object({
   qualification: z.enum(["provided", "ready", "incomplete", "no-assets"], {
     errorMap: () => ({ message: "Invalid asset qualification" }),
   }),
   statuses: z.record(z.string()).default({}),
   requestedServices: z.array(z.string()).default([]),
+  ...assetMetadataFields,
 });
 
 const templateSubmitSchema = z.object({
@@ -111,6 +133,7 @@ const scopeSubmitSchema = z
   .object({
     coreFeatures: z.array(z.string()).default([]),
     extensions: z.array(z.string()).default([]),
+    customFeatures: z.array(z.string()).default([]),
     pages: z.array(pageSubmitSchema).max(MAX_PAGES).default([]),
     features: z.array(featureSubmitSchema).max(MAX_FEATURES).default([]),
   })
@@ -143,6 +166,39 @@ const confirmationsSubmitSchema = z.object({
   buildCard: z.literal(true, { errorMap: () => ({ message: "Must confirm build card" }) }),
   submission: z.literal(true, { errorMap: () => ({ message: "Must confirm submission" }) }),
 });
+
+const discardReasonSchema = z.object({
+  code: z.enum(["not_proceeding", "out_of_scope", "budget", "timing", "duplicate", "other"]),
+  note: z.string().max(MAX_LONG).optional(),
+});
+
+const missingRequirementSchema = z.object({
+  key: z.string().max(MAX_SHORT),
+  label: z.string().max(MAX_LONG),
+  category: z.string().max(MAX_SHORT),
+  section: z.string().max(MAX_SHORT),
+  severity: z.string().max(MAX_SHORT),
+  status: z.string().max(MAX_SHORT),
+  owner: z.string().max(MAX_SHORT).optional(),
+  nextAction: z.string().max(MAX_LONG).optional(),
+  note: z.string().max(MAX_LONG).optional(),
+  preliminaryCost: z.number().nonnegative().optional(),
+});
+
+const operatorNoteSchema = z.object({
+  kind: z.enum(["discovery", "follow_up", "assumption", "disposition"]),
+  section: z.string().max(MAX_SHORT).optional(),
+  note: z.string().max(MAX_LONG),
+  createdAt: z.string().max(MAX_SHORT).optional(),
+});
+
+const sourceMetadataSchema = z.object({
+  operator: z.string().max(MAX_SHORT).optional(),
+  appointmentId: z.string().max(MAX_SHORT).optional(),
+  submittedAt: z.string().max(MAX_SHORT).optional(),
+  importedFrom: z.string().max(MAX_SHORT).optional(),
+  lastEditedStep: z.string().max(MAX_SHORT).optional(),
+}).default({});
 
 // Legacy strict schema — used by validateIntakePayload (historical path only).
 const intakeSubmitSchema = z.object({
@@ -200,6 +256,11 @@ const phase2IntakeSubmitSchema = z.object({
   // Questionnaire: sent for ai-assisted-website builds only
   websiteQuestionnaire: websiteQuestionnaireSubmitSchema,
   buildPath: z.enum(["custom", "enterprise"]).optional().nullable(),
+  discardReason: discardReasonSchema.optional().nullable(),
+  outcome: z.enum(["draft", "submitted", "discarded"]).optional(),
+  missingRequirements: z.array(missingRequirementSchema).max(200).default([]),
+  operatorNotes: z.array(operatorNoteSchema).max(200).default([]),
+  sourceMetadata: sourceMetadataSchema,
 });
 
 // ═══════════════════════════════════════════════════════════
@@ -241,6 +302,7 @@ const assetsDraftSchema = z
       .nullable(),
     statuses: z.record(z.string()).default({}),
     requestedServices: z.array(z.string()).default([]),
+    ...assetMetadataFields,
   })
   .default({});
 
@@ -299,6 +361,7 @@ const scopeDraftSchema = z
   .object({
     coreFeatures: z.array(z.string()).default([]),
     extensions: z.array(z.string()).default([]),
+    customFeatures: z.array(z.string()).default([]),
     pages: z.array(pageDraftSchema).max(MAX_PAGES).default([]),
     features: z.array(featureDraftSchema).max(MAX_FEATURES).default([]),
   })
@@ -356,6 +419,11 @@ const intakeDraftSchema = z.object({
   confirmations: confirmationsDraftSchema,
   websiteQuestionnaire: websiteQuestionnaireDraftSchema,
   buildPath: z.enum(["custom", "enterprise"]).optional().nullable(),
+  discardReason: discardReasonSchema.optional().nullable(),
+  outcome: z.enum(["draft", "submitted", "discarded"]).optional(),
+  missingRequirements: z.array(missingRequirementSchema).max(200).default([]),
+  operatorNotes: z.array(operatorNoteSchema).max(200).default([]),
+  sourceMetadata: sourceMetadataSchema,
 });
 
 // ═══════════════════════════════════════════════════════════
@@ -480,6 +548,18 @@ export function validatePhase2Payload(payload: unknown): ValidationResult {
       field: "project.projectType",
       message: `${data.tier === "enterprise" ? "Enterprise" : "Custom Build"} tier does not support project type "${data.project.projectType}"`,
     });
+  }
+
+  // Active submissions may only reference canonical v3.0 extension codes.
+  // Drafts use collectDraftMissingRequirements below so incomplete drafts can
+  // still be saved with an actionable missing-requirement entry.
+  for (const code of data.scope?.extensions ?? []) {
+    if (!EXTENSION_CODES.has(code)) {
+      tierErrors.push({
+        field: "scope.extensions",
+        message: `Unknown extension code: ${code}`,
+      });
+    }
   }
 
   // Questionnaire required fields for AI-Assisted Website submissions only.

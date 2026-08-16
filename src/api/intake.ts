@@ -8,8 +8,12 @@ import type {
   AssetReadiness,
   DiscardReason,
   BuildPath,
+  IntakeDraftRecord,
+  IntakeDraftResponse,
+  StepId,
 } from '../types/intake'
 import { CORE_FEATURE_CODES } from '../data/features'
+import { getApiAuthHeaders } from './auth'
 
 // Keep local development same-origin so Vite can proxy /api to localhost:3200.
 // Deployments can point the static frontend at the separately hosted API by
@@ -26,6 +30,7 @@ export function toSubmissionPayload(
   formData: FormData,
   pageContents: Record<string, Record<string, string>>,
   outcome: IntakeOutcome = 'draft',
+  lastEditedStep?: StepId,
 ): IntakeSubmissionPayload {
   const pages = Object.entries(pageContents).map(([name, fields]) => ({ name, fields }))
   const structuredAssetStatuses = {
@@ -63,6 +68,11 @@ export function toSubmissionPayload(
       qualification: assetQualification,
       statuses: structuredAssetStatuses,
       requestedServices: formData.selectedAssetServices,
+      uploads: formData.uploadedAssets ?? [],
+      deckExists: formData.deckExists,
+      deckSectionNotes: formData.deckSectionNotes,
+      resourceNotes: formData.resourceNotes,
+      resourceAddOnCosts: formData.resourceAddOnCosts,
     },
     design: {
       styles: formData.designStyles,
@@ -73,6 +83,15 @@ export function toSubmissionPayload(
       features: [],
       coreFeatures: coreFeatureCodes,
       extensions: selectedExtensions,
+      customFeatures: formData.customFeatures ?? [],
+    },
+    outcome,
+    missingRequirements: formData.missingRequirements ?? [],
+    operatorNotes: formData.operatorNotes ?? [],
+    ...(formData.intakeId ? { intakeId: formData.intakeId } : {}),
+    sourceMetadata: {
+      submittedAt: new Date().toISOString(),
+      ...(lastEditedStep ? { lastEditedStep } : {}),
     },
   }
 
@@ -129,6 +148,7 @@ export function fromLegacyPayload(legacy: LegacyIntakePayload): IntakeSubmission
       qualification: legacy.assets?.qualification ?? '',
       statuses,
       requestedServices: legacy.assets?.requestedServices ?? [],
+      uploads: [],
     },
     content: {
       pages: legacy.content?.pages ?? [],
@@ -194,8 +214,9 @@ const INTAKE_API = `${API_BASE_URL}${API_ENDPOINT}`
 export async function saveDraft(
   payload: IntakeSubmissionPayload,
   idempotencyKey: string,
+  intakeId?: string,
 ): Promise<IntakeSubmissionResponse> {
-  return lifecycleOp('save_draft', payload, idempotencyKey)
+  return lifecycleOp('save_draft', payload, idempotencyKey, intakeId)
 }
 
 /**
@@ -205,8 +226,9 @@ export async function saveDraft(
 export async function submitIntakeForReview(
   payload: IntakeSubmissionPayload,
   idempotencyKey: string,
+  intakeId?: string,
 ): Promise<IntakeSubmissionResponse> {
-  return lifecycleOp('submit', payload, idempotencyKey)
+  return lifecycleOp('submit', payload, idempotencyKey, intakeId)
 }
 
 /**
@@ -217,24 +239,130 @@ export async function discardIntake(
   payload: IntakeSubmissionPayload,
   discardReason: DiscardReason,
   idempotencyKey: string,
+  intakeId?: string,
 ): Promise<IntakeSubmissionResponse> {
-  return lifecycleOp('discard', { ...payload, outcome: 'discarded', discardReason }, idempotencyKey)
+  return lifecycleOp('discard', { ...payload, outcome: 'discarded', discardReason }, idempotencyKey, intakeId)
+}
+
+export async function getIntakeDraft(intakeId: string): Promise<IntakeDraftResponse> {
+  try {
+    const response = await fetch(`${INTAKE_API}/${encodeURIComponent(intakeId)}`, {
+      credentials: 'include',
+      headers: await getApiAuthHeaders(),
+    })
+    const data = await response.json() as IntakeDraftResponse
+    if (!response.ok) {
+      return { success: false, error: data.error || 'Failed to reopen intake draft' }
+    }
+    return data
+  } catch (error) {
+    return {
+      success: false,
+      error: `Draft rehydration error: ${error instanceof Error ? error.message : 'Network error'}`,
+    }
+  }
+}
+
+export interface RehydratedDraftState {
+  form: Partial<FormData>
+  pageContents: Record<string, Record<string, string>>
+  lastEditedStep?: StepId
+}
+
+/**
+ * Maps the canonical authenticated read model into fresh wizard state. Callers
+ * merge this over EMPTY_FORM so values cleared by a prior path switch cannot
+ * leak back in from the operator's current in-memory form.
+ */
+export function rehydrateDraftState(record: IntakeDraftRecord): RehydratedDraftState {
+  const payload = record.payload
+  const statuses = payload.assets?.statuses ?? {}
+  const deckSectionStatuses = Object.fromEntries(
+    Object.entries(statuses)
+      .filter(([key]) => key.startsWith('deck.'))
+      .map(([key, value]) => [key.slice(5), value]),
+  ) as Record<string, AssetReadiness>
+  const resourceStatuses = Object.fromEntries(
+    Object.entries(statuses).filter(([key]) => !key.startsWith('deck.')),
+  ) as Record<string, AssetReadiness>
+  const legacyFeatures = payload.content?.features ?? payload.scope?.features ?? []
+
+  return {
+    form: {
+      fullName: payload.client?.fullName ?? '',
+      company: payload.client?.company ?? '',
+      email: payload.client?.email ?? '',
+      phone: payload.client?.phone ?? '',
+      projectName: payload.project?.projectName ?? '',
+      industry: payload.project?.industry ?? '',
+      projectType: payload.project?.projectType ?? '',
+      businessDesc: payload.project?.businessDescription ?? '',
+      tier: payload.tier === 'template' ? 'custom' : payload.tier,
+      assetQualification: payload.assets?.qualification ?? '',
+      assetStatuses: resourceStatuses,
+      selectedAssetServices: payload.assets?.requestedServices ?? [],
+      uploadedAssets: record.uploadedAssets ?? payload.assets?.uploads ?? [],
+      deckExists: payload.assets?.deckExists ?? '',
+      deckSectionStatuses,
+      deckSectionNotes: payload.assets?.deckSectionNotes ?? {},
+      resourceStatuses,
+      resourceNotes: payload.assets?.resourceNotes ?? {},
+      resourceAddOnCosts: payload.assets?.resourceAddOnCosts ?? {},
+      templateId: payload.template?.templateId ?? '',
+      projectVersion: payload.template?.projectVersion ?? '',
+      colorPreset: payload.template?.colorPreset ?? '',
+      websiteQuestionnaire: payload.websiteQuestionnaire ?? undefined,
+      projectVision: payload.enterprise?.projectVision ?? '',
+      targetUsers: payload.enterprise?.targetUsers ?? '',
+      userRoles: payload.enterprise?.userRoles ?? '',
+      businessWorkflows: payload.enterprise?.businessWorkflows ?? '',
+      integrations: payload.enterprise?.integrations ?? '',
+      existingSystems: payload.enterprise?.existingSystems ?? '',
+      dataSecurityReqs: payload.enterprise?.dataSecurityRequirements ?? '',
+      scalabilityReqs: payload.enterprise?.scalabilityRequirements ?? '',
+      designInspiration: payload.enterprise?.designInspiration ?? '',
+      competitors: payload.enterprise?.competitors ?? '',
+      successCriteria: payload.enterprise?.successCriteria ?? '',
+      selectedExtensions: payload.scope?.extensions ?? [],
+      customFeatures: payload.scope?.customFeatures ?? [],
+      features: legacyFeatures.map(feature => feature.name),
+      featurePriorities: Object.fromEntries(legacyFeatures.map(feature => [feature.name, feature.priority])),
+      designStyles: payload.design?.styles ?? [],
+      inspirationLink: payload.design?.inspirationLink ?? '',
+      paymentPlan: payload.payment?.plan ?? '',
+      maintenanceAfterFree: payload.payment?.maintenanceAfterFree ?? '',
+      maintenanceEndAcknowledged: payload.payment?.maintenanceEndAcknowledged ?? false,
+      voucherCode: payload.payment?.voucherCode ?? '',
+      intakeId: record.intakeId,
+      clientId: record.clientId,
+      referenceNumber: record.referenceNumber,
+      outcome: record.outcome,
+      missingRequirements: record.missingRequirements,
+      operatorNotes: record.operatorNotes,
+    },
+    pageContents: Object.fromEntries(
+      (payload.scope?.pages ?? payload.content?.pages ?? []).map(page => [page.name, page.fields]),
+    ),
+    lastEditedStep: payload.sourceMetadata?.lastEditedStep,
+  }
 }
 
 async function lifecycleOp(
   command: 'save_draft' | 'submit' | 'discard',
   payload: IntakeSubmissionPayload,
   idempotencyKey: string,
+  intakeId?: string,
 ): Promise<IntakeSubmissionResponse> {
   try {
     const response = await fetch(`${API_BASE_URL}${API_ENDPOINT}`, {
       method: 'POST',
       headers: {
+        ...await getApiAuthHeaders(),
         'Content-Type': 'application/json',
         'Idempotency-Key': idempotencyKey,
         'X-Intake-Command': command,
       },
-      body: JSON.stringify({ intake: payload, idempotencyKey, command }),
+      body: JSON.stringify({ intake: payload, idempotencyKey, command, ...(intakeId ? { intakeId } : {}) }),
     })
 
     const data: IntakeSubmissionResponse = await response.json()

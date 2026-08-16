@@ -154,12 +154,25 @@ describe("Phase 2 submission contract", () => {
     const result = validatePhase2Payload(validPayload({
       scope: {
         coreFeatures: ["contact-form"],
-        extensions: ["seo-basic"],
+        extensions: ["EXT-001"],
         pages: [{ name: "Home", fields: { headline: "Welcome" } }],
         features: [],
       },
     }));
     expect(result.success).toBe(true);
+  });
+
+  it("rejects unknown extension codes on submit", () => {
+    const result = validatePhase2Payload(validPayload({
+      scope: {
+        coreFeatures: [],
+        extensions: ["EXT-001", "UNKNOWN-CODE"],
+        pages: [],
+        features: [],
+      },
+    }));
+    expect(result.success).toBe(false);
+    expect(result.errors?.some((error) => error.field === "scope.extensions")).toBe(true);
   });
 
   it("REV-06: enforces questionnaire required fields for ai-assisted-website", () => {

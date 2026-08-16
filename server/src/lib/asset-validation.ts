@@ -39,9 +39,13 @@ const FILENAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._\- ]*$/;
 
 export const uploadRequestSchema = z.object({
   intakeId: z.string().uuid("intakeId must be a valid UUID"),
+  clientId: z.string().uuid("clientId must be a valid UUID"),
+  referenceNumber: z.string().min(1, "Reference Number is required").max(100),
   filename: z.string().min(1, "Filename is required").max(FILENAME_MAX_LENGTH),
   mimeType: z.string().min(1, "MIME type is required"),
   fileSizeBytes: z.number().int().positive("File size must be positive"),
+  requirementKey: z.string().max(500).optional(),
+  retryAssetId: z.string().uuid("retryAssetId must be a valid UUID").optional(),
 });
 
 export type UploadRequest = z.infer<typeof uploadRequestSchema>;
@@ -118,18 +122,18 @@ export const VALID_TRANSITIONS: Record<AssetStatus, AssetStatus[]> = {
   pending: ["uploaded", "failed"],
   uploaded: ["scanning", "rejected", "failed"],
   scanning: ["rejected", "failed"],
-  ready: [],
-  rejected: [],
-  failed: [],
+  ready: ["failed"],
+  rejected: ["pending"],
+  failed: ["pending"],
 };
 
 export const TRUSTED_TRANSITIONS: Record<AssetStatus, AssetStatus[]> = {
   pending: ["uploaded", "failed"],
   uploaded: ["scanning", "ready", "rejected", "failed"],
   scanning: ["ready", "rejected", "failed"],
-  ready: [],
-  rejected: [],
-  failed: [],
+  ready: ["failed"],
+  rejected: ["pending"],
+  failed: ["pending"],
 };
 
 export function isValidTransition(from: AssetStatus, to: AssetStatus, trusted: boolean = false): boolean {

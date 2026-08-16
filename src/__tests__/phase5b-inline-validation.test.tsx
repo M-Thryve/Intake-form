@@ -7,8 +7,8 @@ vi.mock('../api/intake', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api/intake')>()
   return {
     ...actual,
-    saveDraft: vi.fn().mockResolvedValue({ success: true, clientId: 'mock-client-id', status: 'draft' }),
-    submitIntake: vi.fn().mockResolvedValue({ success: true, buildReferenceNumber: 'MTH-TEST-001', clientId: 'mock-client-id' }),
+    saveDraft: vi.fn().mockResolvedValue({ success: true, intakeId: 'mock-intake-id', clientId: 'mock-client-id', buildReferenceNumber: 'MTH-TEST-001', status: 'draft' }),
+    submitIntake: vi.fn().mockResolvedValue({ success: true, intakeId: 'mock-intake-id', buildReferenceNumber: 'MTH-TEST-001', clientId: 'mock-client-id' }),
   }
 })
 
@@ -102,12 +102,12 @@ describe('PHASE_5B_REV01 — draft save toast message', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Website' }))
     next() // → pages-features
 
-    fireEvent.click(screen.getByRole('button', { name: /Authentication/ }))
-    next() // → review
+    next() // → review (extensions are optional — no selection needed)
 
     next() // → outcome
 
     fireEvent.click(screen.getByRole('button', { name: 'Save as draft' }))
-    expect(await screen.findByText('Draft saved. Review warnings before submit.')).toBeInTheDocument()
+    // P4: draft save navigates to draft-saved step instead of showing inline banner
+    expect(await screen.findByText('Intake Saved as Draft')).toBeInTheDocument()
   })
 })

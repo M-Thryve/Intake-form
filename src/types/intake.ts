@@ -126,11 +126,19 @@ export interface WebsiteQuestionnaire {
 
 /** Reference to a file uploaded to storage. Never contains raw content. */
 export interface UploadedAssetRef {
-  storageKey: string
-  fileName: string
+  assetId: string
+  filename: string
   mimeType: string
-  sizeBytes?: number
+  sizeBytes: number
+  assetStatus: 'pending' | 'uploaded' | 'scanning' | 'ready' | 'rejected' | 'failed'
+  scanStatus: 'pending' | 'clean' | 'blocked' | 'failed'
+  rejectionReason?: string
+  requirementKey?: string
   uploadedAt?: string
+  /** Legacy storage metadata is read-only and never submitted by v3 clients. */
+  storageKey?: string
+  /** @deprecated Legacy alias retained for historical records. */
+  fileName?: string
 }
 
 // ── Intake Outcomes ────────────────────────────────────────────────────────
@@ -300,6 +308,8 @@ export interface FormData {
   /** @deprecated legacy v1 pill state; superseded by resourceStatuses in v2 */
   assetStatuses: Record<string, string>
   selectedAssetServices: string[]
+  /** Storage-backed file metadata only. Raw bytes never enter intake payloads. */
+  uploadedAssets: UploadedAssetRef[]
 
   // v2 structured asset & deck state
   /** Does a company deck exist at all? 'yes' | 'partial' | 'no' | 'add_on' */
@@ -368,6 +378,11 @@ export interface FormData {
   discardReason?: DiscardReason
   operatorNotes?: OperatorNote[]
   missingRequirements?: MissingRequirement[]
+
+  // Stable identifiers — server-assigned on first persistence
+  intakeId?: string
+  clientId?: string
+  referenceNumber?: string
 
   // ── Legacy v1.x payment fields (removed from v2.0/v3.0 contract) ──
   /** @deprecated Removed from v2.0 intake contract. */
@@ -442,6 +457,11 @@ export interface IntakeSubmissionPayload {
     statuses: Record<string, AssetReadiness | string>
     requestedServices: string[]
     checklist?: AssetChecklistItem[]
+    uploads: UploadedAssetRef[]
+    deckExists?: string
+    deckSectionNotes?: Record<string, string>
+    resourceNotes?: Record<string, string>
+    resourceAddOnCosts?: Record<string, number>
   }
   /** @deprecated v3.0 uses `scope` instead. Retained for reading legacy records. */
   content?: {
@@ -494,6 +514,8 @@ export interface IntakeSubmissionPayload {
     coreFeatures?: string[]
     /** Operator-selected extension codes. */
     extensions?: string[]
+    /** Free-text custom requests — unconfirmed, routed to owner review. */
+    customFeatures?: string[]
   }
   /** Website questionnaire answers for ai-assisted-website builds. */
   websiteQuestionnaire?: WebsiteQuestionnaire
@@ -501,23 +523,51 @@ export interface IntakeSubmissionPayload {
   discardReason?: DiscardReason
   missingRequirements?: MissingRequirement[]
   operatorNotes?: OperatorNote[]
+  /** Present on re-saves so the server uses the update path instead of creating a new row. */
+  intakeId?: string
   sourceMetadata?: {
     operator?: string
     appointmentId?: string
     submittedAt?: string
     importedFrom?: string
+    lastEditedStep?: StepId
   }
 }
 
 export interface IntakeSubmissionResponse {
   success: boolean
-  buildReferenceNumber?: string
+  buildReferenceNumber?: string | null
+  referenceNumber?: string | null
   intakeId?: string
   clientId?: string
   status?: IntakeStatus
+  command?: string
   outcome?: IntakeOutcome
   preliminaryBuildCard?: Record<string, unknown>
   missingRequirements?: MissingRequirement[]
+  error?: string
+}
+
+/** Authenticated/internal read model used to reopen a persisted intake. */
+export interface IntakeDraftRecord {
+  intakeId: string
+  clientId: string
+  referenceNumber: string
+  status: IntakeStatus
+  outcome: IntakeOutcome
+  payload: IntakeSubmissionPayload
+  missingRequirements: MissingRequirement[]
+  uploadedAssets: UploadedAssetRef[]
+  operatorNotes: OperatorNote[]
+  lifecycleStatus: IntakeStatus
+  hasBuildCard: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface IntakeDraftResponse {
+  success: boolean
+  intake?: IntakeDraftRecord
   error?: string
 }
 
