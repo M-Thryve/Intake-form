@@ -1,16 +1,16 @@
-# Graph Report - Intake-form  (2026-08-14)
+# Graph Report - Intake-Form  (2026-08-16)
 
 ## Corpus Check
-- 320 files · ~241,833 words
+- 331 files · ~259,862 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3254 nodes · 4219 edges · 251 communities (196 shown, 55 thin omitted)
+- 3386 nodes · 4369 edges · 269 communities (216 shown, 53 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 56 edges (avg confidence: 0.63)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `cd03a96a`
+- Built from commit: `e32d1551`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -29,17 +29,17 @@
 - field-validators.ts
 - compilerOptions
 - routes/build-orchestration.ts
-- asset-validation.ts
+- config.ts
 - apply-migrations.mjs
 - compilerOptions
 - data/validation.ts
-- agreement.ts
+- Details and acceptance criteria
 - gray
-- finance.ts
-- auth.ts
+- agreement.ts
+- src/index.ts
 - M-THRYVE Intake Form Technical Handover
 - detect_domain
-- intakes.ts
+- build-delivery.test.ts
 - padding-y
 - md
 - voucher-service.ts
@@ -50,7 +50,7 @@
 - New Tier Selection Step
 - EKOMS AI Router and Project Guide
 - destructive
-- src/index.ts
+- data/features.ts
 - lifecycle.test.ts
 - Quick Task 260814-001: Supabase Migration Audit + Apply Prep
 - Versioned Agreement Drafts
@@ -64,7 +64,7 @@
 - validation.test.ts
 - slide_search_core.py
 - Brand Guidelines v1.0
-- e2e-intake-lifecycle.test.ts
+- M-THRYVE Intake Form — Revision Handover v3.0
 - ValidationWarning.tsx
 - Payment and Maintenance Plans
 - STATE.md — M-THRYVE Intake Form
@@ -116,7 +116,6 @@
 - TestTailwindConfigGenerator
 - html-token-validator.py
 - Asset Approval Checklist
-- inline-validation.integration.test.tsx
 - Logo AI Prompt Engineering
 - Color Palette Management
 - CIP Deliverable Guide
@@ -161,7 +160,7 @@
 - validate-asset.cjs
 - Layout Patterns
 - Tailwind Integration
-- radius
+- xl
 - Layout Patterns
 - .generate
 - brand/references/update.md
@@ -190,7 +189,7 @@
 - Component Tokens
 - generate-tokens.cjs
 - button
-- primitive
+- duration
 - Slide Strategies
 - _run
 - sync-brand-to-tokens.cjs
@@ -201,7 +200,7 @@
 - _select_palette_for_mode
 - ARCHITECTURE.md — High-Level Architecture
 - STACK.md — Technology Stack
-- default
+- Q: Does the Prompt 1 implementation satisfy the v3.0 contract?
 - graphify reference: query, path, explain
 - Slides
 - CONCERNS.md — Outstanding Concerns
@@ -210,8 +209,8 @@
 - Brand Guidelines Template
 - $type
 - radius
-- lg
-- shadow
+- radius
+- sm
 - 06 — UI Surface & Factory Console (PLAN)
 - PROJECT.md — M-THRYVE Intake Form
 - opencode.json
@@ -244,7 +243,7 @@
 - vouchercols.mjs
 - .test_list_installed_with_components
 - .test_init_default_project_root
-- .test_init_dry_run
+- 12
 - .test_check_shadcn_config_not_exists
 - .test_get_installed_components_empty
 - .test_get_installed_components_no_config
@@ -259,6 +258,24 @@
 - .test_default_output_path_typescript
 - .test_default_content_paths_vue
 - .test_add_colors
+- 2. Canonical Vocabulary
+- questionnaire.ts
+- lib/features.ts
+- Q: What current intake flow must the revision prompt account for?
+- Q: How do REVISION_HANDOVER v3.0 and TECHNICAL_HANDOVER v3.0 define the upcoming implementation?
+- 11. WS-10 / WS-11 — Step 5: Optional Feature Catalog
+- 6. WS-4 — Client ID and Reference Number Lifecycle
+- 7. WS-5 — Draft and Submission Navigation
+- 9. WS-7 — Real Company-Asset Uploads
+- 0. Document Control
+- 10. WS-8 / WS-9 — Step 4: Factory Core Features and the Conditional Base-Template Flow
+- 14. Data Contract
+- 3. WS-1 — Build Path and Project Type Matrix
+- 5. WS-3 — Mandatory Email
+- 2
+- 6
+- 8
+- .test_add_components_already_installed
 
 ## God Nodes (most connected - your core abstractions)
 1. `TailwindConfigGenerator` - 58 edges
@@ -268,9 +285,9 @@
 5. `DesignSystemGenerator` - 29 edges
 6. `TestShadcnInstaller` - 26 edges
 7. `supabase` - 25 edges
-8. `compilerOptions` - 17 edges
-9. `UI Styling Skill` - 17 edges
-10. `color` - 15 edges
+8. `M-THRYVE Intake Form — Revision Handover v3.0` - 23 edges
+9. `compilerOptions` - 17 edges
+10. `UI Styling Skill` - 17 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Submitted Build Card` --semantically_similar_to--> `Preliminary Build Card`  [INFERRED] [semantically similar]
@@ -279,10 +296,10 @@
   src/imports/pasted_text/m-thryve-ai-intake-update.md → server/PHASE_6_COMPLETION_REPORT.md
 - `Operational Escalation Path` --conceptually_related_to--> `Human Owner Review Gate`  [INFERRED]
   docs/support/troubleshooting.md → TECHNICAL_HANDOVER.md
+- `buildApp()` --indirect_call--> `requireAuth()`  [INFERRED]
+  server/src/__tests__/build-delivery.test.ts → server/src/middleware/auth.ts
 - `AGENTS.md Instruction Reference` --references--> `EKOMS AI Router and Project Guide`  [EXTRACTED]
   CLAUDE.md → AGENTS.md
-- `Client ID at First Persistence` --conceptually_related_to--> `Intake Status Lifecycle`  [EXTRACTED]
-  REVISION_NOTES.md → TECHNICAL_HANDOVER.md
 
 ## Import Cycles
 - None detected.
@@ -292,19 +309,19 @@
 - **Template Preview Constraint Set** — src_imports_updates_live_color_preview, src_imports_updates_mobile_viewport, src_imports_updates_page_loop, src_imports_updates_price_invariance [EXTRACTED 1.00]
 - **Intake to Owner Review Flow** — src_imports_pasted_text_m_thryve_ai_intake_update_workflow, src_imports_pasted_text_m_thryve_intake_update_submitted_build_card, server_mcp_build_card, server_phase_6_no_build_payment, server_phase_7_queue_gate [INFERRED 0.85]
 
-## Communities (251 total, 55 thin omitted)
+## Communities (269 total, 53 thin omitted)
 
 ### Community 0 - "IntakeDetail.tsx"
 Cohesion: 0.05
 Nodes (52): AuditEvent, DecisionRequest, DecisionResponse, DetailResponse, fetchAnalysisPackage(), fetchAnalysisRuns(), fetchAudit(), fetchIntakeDetail() (+44 more)
 
 ### Community 1 - "mcp-orchestration.ts"
-Cohesion: 0.08
-Nodes (52): AssetReadinessOutput, assetReadinessOutputSchema, BuildCardOutput, buildCardOutputSchema, FINDING_SEVERITY, FindingSeverity, IntakeValidationOutput, intakeValidationOutputSchema (+44 more)
+Cohesion: 0.09
+Nodes (48): AssetReadinessOutput, assetReadinessOutputSchema, BuildCardOutput, buildCardOutputSchema, FINDING_SEVERITY, FindingSeverity, IntakeValidationOutput, intakeValidationOutputSchema (+40 more)
 
 ### Community 2 - "App.tsx"
 Cohesion: 0.05
-Nodes (38): App(), ASSET_CHECKLIST, ASSET_SERVICES, ASSET_STATUS_OPTIONS, calcPrice(), cardStyle, COLOR_OPTIONS, ColorOption (+30 more)
+Nodes (39): generateIdempotencyKey(), App(), ASSET_CHECKLIST, ASSET_SERVICES, ASSET_STATUS_OPTIONS, calcPrice(), cardStyle, COLOR_OPTIONS (+31 more)
 
 ### Community 3 - "devDependencies"
 Cohesion: 0.04
@@ -316,7 +333,7 @@ Nodes (38): cors, express, dependencies, cors, express, @supabase/supabase-js, z
 
 ### Community 5 - "lib/validation.ts"
 Cohesion: 0.05
-Nodes (40): assetsDraftSchema, assetsFields, assetsSubmitSchema, clientDraftSchema, clientFields, clientSubmitSchema, confirmationsDraftSchema, confirmationsFields (+32 more)
+Nodes (37): assetsDraftSchema, assetsSubmitSchema, clientDraftSchema, clientSubmitSchema, confirmationsDraftSchema, confirmationsSubmitSchema, contentDraftSchema, contentSubmitSchema (+29 more)
 
 ### Community 6 - "Form and Draft Submission — Diagnosis Report"
 Cohesion: 0.20
@@ -327,32 +344,32 @@ Cohesion: 0.09
 Nodes (33): cancelBtn, confirmBanner, overrideBox, overrideBtn, overrideTitle, panelStyle, sectionHeader, selectedMark (+25 more)
 
 ### Community 8 - "types/intake.ts"
-Cohesion: 0.10
-Nodes (23): API_BASE_URL, discardIntake(), generateIdempotencyKey(), lifecycleOp(), saveDraft(), submitIntake(), submitIntakeForReview(), toSubmissionPayload() (+15 more)
+Cohesion: 0.09
+Nodes (26): API_BASE_URL, discardIntake(), lifecycleOp(), saveDraft(), submitIntake(), submitIntakeForReview(), toSubmissionPayload(), AssetChecklistItem (+18 more)
 
 ### Community 9 - "intake-submit/validation.ts"
 Cohesion: 0.13
 Nodes (25): hashPayload(), IntakeResult, persistIntake(), generateBuildReferenceNumber(), corsHeaders, errorResponse(), jsonResponse(), isBoolean() (+17 more)
 
 ### Community 10 - "data/assets.ts"
-Cohesion: 0.11
-Nodes (21): AI_AGENT_EXTRA, AI_DECK_EXTRA, CompanyDeckSectionDef, CORE_DECK, CORE_OPTIONAL, CORE_REQUIRED, ECOMMERCE_DECK_EXTRA, ECOMMERCE_EXTRA (+13 more)
+Cohesion: 0.10
+Nodes (27): CompanyAssetsStep(), ResourceReviewBlock(), AI_AGENT_EXTRA, AI_DECK_EXTRA, CompanyDeckSectionDef, CORE_DECK, CORE_OPTIONAL, CORE_REQUIRED (+19 more)
 
 ### Community 11 - "field-validators.ts"
-Cohesion: 0.17
-Nodes (21): buildApproachWarnings(), businessDescWarning(), clientDetailsWarnings(), companyWarning(), ENTERPRISE_RECOMMENDED, enterpriseVisionWarnings(), FieldValidationState, getInlineWarnings() (+13 more)
+Cohesion: 0.15
+Nodes (23): buildApproachWarnings(), businessDescWarning(), clientDetailsWarnings(), companyAssetsWarnings(), companyWarning(), ctxFor(), ENTERPRISE_RECOMMENDED, enterpriseVisionWarnings() (+15 more)
 
 ### Community 12 - "compilerOptions"
 Cohesion: 0.08
 Nodes (24): DOM, DOM.Iterable, ES2020, node, vite.config.ts, compilerOptions, allowImportingTsExtensions, baseUrl (+16 more)
 
 ### Community 13 - "routes/build-orchestration.ts"
-Cohesion: 0.10
-Nodes (25): applyOrchestrationTransition(), canTransition(), commercialStageFor(), isTerminal(), loadLatestOrchestration(), loadOrchestrationById(), newCorrelationId(), NON_TERMINAL_STATES (+17 more)
+Cohesion: 0.11
+Nodes (23): checkBuildEligibility(), applyOrchestrationTransition(), canTransition(), commercialStageFor(), isTerminal(), loadLatestOrchestration(), loadOrchestrationById(), newCorrelationId() (+15 more)
 
-### Community 14 - "asset-validation.ts"
-Cohesion: 0.18
-Nodes (15): ALLOWED_MIME_TYPES, AssetStatus, AssetValidationResult, buildStorageKey(), DANGEROUS_EXTENSIONS, formatBytes(), isValidTransition(), sanitizeFilename() (+7 more)
+### Community 14 - "config.ts"
+Cohesion: 0.09
+Nodes (28): ALLOWED_MIME_TYPES, AssetStatus, AssetValidationResult, buildStorageKey(), DANGEROUS_EXTENSIONS, formatBytes(), isValidTransition(), sanitizeFilename() (+20 more)
 
 ### Community 15 - "apply-migrations.mjs"
 Cohesion: 0.29
@@ -363,24 +380,24 @@ Cohesion: 0.12
 Nodes (16): dist, node_modules, compilerOptions, declaration, esModuleInterop, module, moduleResolution, outDir (+8 more)
 
 ### Community 17 - "data/validation.ts"
-Cohesion: 0.15
-Nodes (22): CompanyAssetsStep(), ReadinessPills(), ResourceReviewBlock(), getCompanyDeckSections(), getOptionalResources(), getRequiredResources(), getResourceRequirements(), isNotApplicableAllowed() (+14 more)
+Cohesion: 0.18
+Nodes (16): ReadinessPills(), isNotApplicableAllowed(), NEVER_NA, canSubmit(), collectMissingRequirements(), mk(), resourceStatusToGap(), validateBuildApproach() (+8 more)
 
-### Community 18 - "agreement.ts"
-Cohesion: 0.13
-Nodes (13): AgreementPackage, AgreementStatus, buildAgreementPackage(), DraftContext, nextVersionFor(), BuildCardRow, DecisionRow, EligibilityFailure (+5 more)
+### Community 18 - "Details and acceptance criteria"
+Cohesion: 0.11
+Nodes (17): 10. Build reference contract — P2/P3, 11. Documentation and state drift — P3, 1. Production and staging configuration — P0, 2. Test harness — P1, 3. Real browser E2E — P1, 4. Full post-submission lifecycle — P1, 5. Wrong-project migration detour — P1, decision required, 6. Migration rollback coverage — P2 (+9 more)
 
 ### Community 19 - "gray"
 Cohesion: 0.05
 Nodes (53): $type, $value, $type, $value, $type, $value, $type, $value (+45 more)
 
-### Community 20 - "finance.ts"
-Cohesion: 0.13
-Nodes (14): checkEligibility(), AGREEMENT_STATUSES, AgreementStatus, applyTransition(), audit(), handleTransition(), loadCurrentDraft(), parseUuid() (+6 more)
+### Community 20 - "agreement.ts"
+Cohesion: 0.07
+Nodes (27): AgreementPackage, AgreementStatus, buildAgreementPackage(), DraftContext, nextVersionFor(), BuildCardRow, checkEligibility(), DecisionRow (+19 more)
 
-### Community 21 - "auth.ts"
-Cohesion: 0.10
-Nodes (21): AuthenticatedClient, ClientRole, Express, INTERNAL_ROLES, Request, requireAuth(), requireClientAuth(), requireRole() (+13 more)
+### Community 21 - "src/index.ts"
+Cohesion: 0.07
+Nodes (33): app, config, preflight, getMcpRun(), getMcpRunsForIntake(), AuthenticatedClient, AuthenticatedUser, ClientRole (+25 more)
 
 ### Community 22 - "M-THRYVE Intake Form Technical Handover"
 Cohesion: 0.05
@@ -390,9 +407,9 @@ Nodes (52): Production Deployment Checklist, Backup and Rollback Readiness, Prod
 Cohesion: 0.43
 Nodes (3): detect_domain(), Auto-detect the most relevant domain from query. Matches are weighted by…, TestDomainDetection
 
-### Community 24 - "intakes.ts"
-Cohesion: 0.23
-Nodes (8): hashPayload(), generateBuildReferenceNumber(), DraftPayload, ValidatedPayload, COMMAND_SCHEMA, handleSubmitOrDiscard(), intakeRouter, persistIntake()
+### Community 24 - "build-delivery.test.ts"
+Cohesion: 0.21
+Nodes (9): buildDeliveryRouter, buildOrchestrationRouter, buildApp(), chain, enq(), enqEligibleNoPackageRequired(), enqEligibleWithFreshPackage(), enqPackagePayloadReads() (+1 more)
 
 ### Community 25 - "padding-y"
 Cohesion: 0.67
@@ -434,9 +451,9 @@ Nodes (8): React Vite Tailwind Dependencies, Vite Development Server, EKOMS AI R
 Cohesion: 0.67
 Nodes (3): destructive, $type, $value
 
-### Community 35 - "src/index.ts"
-Cohesion: 0.11
-Nodes (20): app, config, preflight, configSchema, envFile, getConfig(), getEnvironment(), preflightCheck() (+12 more)
+### Community 35 - "data/features.ts"
+Cohesion: 0.27
+Nodes (13): CATEGORIES_WITH_WEBSITE_EXTENSIONS, CORE_FEATURE_CODES, CORE_FEATURES, CoreFeatureDef, EXTENSION_CODES, ExtensionDef, EXTENSIONS, FEATURE_CATEGORIES (+5 more)
 
 ### Community 36 - "lifecycle.test.ts"
 Cohesion: 0.29
@@ -476,7 +493,7 @@ Nodes (11): PII_PATTERNS, redactPayload(), redactPii(), NOTIFICATION_SENSITIVE_K
 
 ### Community 46 - "validation.test.ts"
 Cohesion: 0.25
-Nodes (4): collectDraftMissingRequirements(), validateDraftPayload(), validateIntakePayload(), validatePhase2Payload()
+Nodes (5): CANONICAL_INDUSTRIES, collectDraftMissingRequirements(), validateDraftPayload(), validateIntakePayload(), validatePhase2Payload()
 
 ### Community 47 - "slide_search_core.py"
 Cohesion: 0.09
@@ -485,6 +502,10 @@ Nodes (36): format_context(), format_result(), main(), Format a single search re
 ### Community 48 - "Brand Guidelines v1.0"
 Cohesion: 0.05
 Nodes (37): 1. Color Palette, 2. Typography, 3. Logo Usage, 4. Voice & Tone, 5. Imagery Guidelines, 6. Design Components, Accessibility, AI Image Generation (+29 more)
+
+### Community 49 - "M-THRYVE Intake Form — Revision Handover v3.0"
+Cohesion: 0.14
+Nodes (13): 12. Revised Step Model, 13. Operator Spiels to Add, 15. File-by-File Change Map, 16. Backward Compatibility, 17. Test Matrix, 18. Verification Protocol, 19. Definition of Done, 1. Revision Summary (+5 more)
 
 ### Community 50 - "ValidationWarning.tsx"
 Cohesion: 0.50
@@ -551,8 +572,8 @@ Cohesion: 0.06
 Nodes (33): 1. Visual Theme & Atmosphere, 2. Color Palette & Roles, 3. Typography Rules, 4. Component Stylings, 5. Layout Principles, 6. Depth & Elevation, 7. Do's and Don'ts, 8. Responsive Behavior (+25 more)
 
 ### Community 90 - "supabase.ts"
-Cohesion: 0.19
-Nodes (9): ClientIdentityInput, ClientIdentityResult, normalizeClientEmail(), resolveOrCreateClient(), supabase, internalOutboxRouter, patchSchema, querySchema (+1 more)
+Cohesion: 0.11
+Nodes (17): ClientIdentityInput, ClientIdentityResult, normalizeClientEmail(), resolveOrCreateClient(), hashPayload(), generateBuildReferenceNumber(), supabase, DraftPayload (+9 more)
 
 ### Community 91 - "Prerequisites"
 Cohesion: 0.06
@@ -663,8 +684,8 @@ Cohesion: 0.14
 Nodes (11): DesignSystemGenerator, _palette_is_dark(), WCAG relative luminance of a #RRGGBB string, or None if unparseable., True when a colors.csv row's Background is a dark surface., Generates design system recommendations from aggregated searches., Load reasoning rules from CSV., _relative_luminance(), TestReasoningMatch (+3 more)
 
 ### Community 120 - "spacing"
-Cohesion: 0.06
-Nodes (34): $type, $value, $type, $value, $type, $value, $type, $value (+26 more)
+Cohesion: 0.09
+Nodes (22): $type, $value, $type, $value, $type, $value, $type, $value (+14 more)
 
 ### Community 121 - "Routing by Task Type"
 Cohesion: 0.10
@@ -719,8 +740,8 @@ Cohesion: 0.17
 Nodes (17): generate_css_for_background(), get_background_image(), get_curated_images(), get_overlay_css(), get_pexels_search_url(), load_backgrounds_config(), load_brand_colors(), main() (+9 more)
 
 ### Community 134 - "build-delivery.ts"
-Cohesion: 0.07
-Nodes (26): AgreementRow, BuildCardRow, BuildEligibilityFailure, BuildEligibilityResult, BuildEligibilitySnapshot, checkBuildEligibility(), DecisionRow, DeliveryPackageRow (+18 more)
+Cohesion: 0.09
+Nodes (20): AgreementRow, BuildCardRow, BuildEligibilityFailure, BuildEligibilityResult, BuildEligibilitySnapshot, DecisionRow, DeliveryPackageRow, IntakeRow (+12 more)
 
 ### Community 135 - "TestShadcnInstaller"
 Cohesion: 0.12
@@ -794,9 +815,9 @@ Nodes (13): Card Styles, Component Variants, CSS Structures, Feature Grid (3 col
 Cohesion: 0.14
 Nodes (13): Animation Tokens, Base Layer, Button Example, Component Classes, CSS Variables Setup, Dark Mode Toggle, HSL Format Benefits, shadcn/ui Alignment (+5 more)
 
-### Community 153 - "radius"
-Cohesion: 0.29
-Nodes (8): xl, $type, $value, radius, full, xl, $type, $value
+### Community 153 - "xl"
+Cohesion: 0.67
+Nodes (4): xl, xl, $type, $value
 
 ### Community 154 - "Layout Patterns"
 Cohesion: 0.14
@@ -848,7 +869,7 @@ Nodes (8): padding-x, input, $type, $value, focus-ring, padding-x, $type, $value
 
 ### Community 166 - "ShadcnInstaller"
 Cohesion: 0.20
-Nodes (7): main(), Handle shadcn/ui component installation., ShadcnInstaller, Tests for shadcn_add.py, Test adding components without shadcn config., Test adding components that are already installed., Test initialization with custom project root.
+Nodes (7): main(), Handle shadcn/ui component installation., ShadcnInstaller, Tests for shadcn_add.py, Test adding components without shadcn config., Test initialization with custom project root., Test initialization with dry run mode.
 
 ### Community 167 - ".add_components"
 Cohesion: 0.21
@@ -910,9 +931,9 @@ Nodes (9): flattenTokens(), fs, generateCSS(), generateTailwind(), main(), parse
 Cohesion: 0.20
 Nodes (10): fg, font-size, hover-bg, button, $type, $value, $type, $value (+2 more)
 
-### Community 182 - "primitive"
-Cohesion: 0.18
-Nodes (11): fast, normal, slow, $type, $value, $type, $value, primitive (+3 more)
+### Community 182 - "duration"
+Cohesion: 0.20
+Nodes (10): fast, normal, slow, $type, $value, $type, $value, duration (+2 more)
 
 ### Community 183 - "Slide Strategies"
 Cohesion: 0.20
@@ -954,9 +975,9 @@ Nodes (6): ARCHITECTURE.md — High-Level Architecture, Data flow, Factory Conso
 Cohesion: 0.29
 Nodes (6): Backend (`server/`), Data layer (frontend), Frontend (root package `figma-make-app`), STACK.md — Technology Stack, Styling pattern, UI surfaces
 
-### Community 193 - "default"
-Cohesion: 0.67
-Nodes (4): $type, $value, default, default
+### Community 193 - "Q: Does the Prompt 1 implementation satisfy the v3.0 contract?"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Does the Prompt 1 implementation satisfy the v3.0 contract?, Source Nodes
 
 ### Community 194 - "graphify reference: query, path, explain"
 Cohesion: 0.33
@@ -990,13 +1011,13 @@ Nodes (5): $type, $value, border, border, border
 Cohesion: 0.60
 Nodes (5): radius, radius, radius, $type, $value
 
-### Community 202 - "lg"
-Cohesion: 0.60
-Nodes (5): lg, $type, $value, lg, lg
+### Community 202 - "radius"
+Cohesion: 0.18
+Nodes (15): $type, $value, lg, $type, $value, $type, $value, primitive (+7 more)
 
-### Community 203 - "shadow"
-Cohesion: 0.47
-Nodes (6): sm, shadow, sm, sm, $type, $value
+### Community 203 - "sm"
+Cohesion: 0.60
+Nodes (5): sm, sm, sm, $type, $value
 
 ### Community 204 - "06 — UI Surface & Factory Console (PLAN)"
 Cohesion: 0.40
@@ -1050,14 +1071,86 @@ Nodes (3): ring, $type, $value
 Cohesion: 0.67
 Nodes (3): secondary-foreground, $type, $value
 
+### Community 236 - "12"
+Cohesion: 0.67
+Nodes (3): $type, $value, 12
+
+### Community 251 - "2. Canonical Vocabulary"
+Cohesion: 0.20
+Nodes (10): 2.1 Build paths (unchanged), 2.2 Project types, 2.3 Industries, 2.4 Factory Core Features (always included), 2.5 Feature categories (Step 5 dropdown), 2.6 Optional website extensions, 2.7 Intake outcome and status (unchanged), 2.8 Asset readiness (unchanged) (+2 more)
+
+### Community 252 - "questionnaire.ts"
+Cohesion: 0.20
+Nodes (9): QUESTIONNAIRE_FIELDS, QUESTIONNAIRE_GROUP_LABELS, QUESTIONNAIRE_GROUP_ORDER, QUESTIONNAIRE_SUBMIT_REQUIRED, QuestionnaireConditional, QuestionnaireControlType, QuestionnaireFieldDef, QuestionnaireGroup (+1 more)
+
+### Community 253 - "lib/features.ts"
+Cohesion: 0.29
+Nodes (6): CORE_FEATURE_CODE_LIST, CORE_FEATURE_CODES, EXTENSION_CODES, FEATURE_CATEGORIES, V3_CUSTOM_PROJECT_TYPES, V3_ENTERPRISE_PROJECT_TYPES
+
+### Community 254 - "Q: What current intake flow must the revision prompt account for?"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: What current intake flow must the revision prompt account for?, Source Nodes
+
+### Community 255 - "Q: How do REVISION_HANDOVER v3.0 and TECHNICAL_HANDOVER v3.0 define the upcoming implementation?"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: How do REVISION_HANDOVER v3.0 and TECHNICAL_HANDOVER v3.0 define the upcoming implementation?, Source Nodes
+
+### Community 256 - "11. WS-10 / WS-11 — Step 5: Optional Feature Catalog"
+Cohesion: 0.40
+Nodes (5): 11.1 Structure, 11.2 Persistence, 11.3 Custom feature requests, 11.4 WS-12 — Complete removal of "Set Priorities", 11. WS-10 / WS-11 — Step 5: Optional Feature Catalog
+
+### Community 257 - "6. WS-4 — Client ID and Reference Number Lifecycle"
+Cohesion: 0.40
+Nodes (5): 6.1 Definitions, 6.2 Required behavior, 6.3 Defects this closes (verified in the current code), 6.4 Required implementation, 6. WS-4 — Client ID and Reference Number Lifecycle
+
+### Community 258 - "7. WS-5 — Draft and Submission Navigation"
+Cohesion: 0.40
+Nodes (5): 7.1 Draft Saved page (new step `draft-saved`), 7.2 Submitted page (existing `build-card` step), 7.3 Failure behavior, 7.4 Files, 7. WS-5 — Draft and Submission Navigation
+
+### Community 259 - "9. WS-7 — Real Company-Asset Uploads"
+Cohesion: 0.40
+Nodes (5): 9.1 Remove, 9.2 Operator capabilities, 9.3 Wiring (existing endpoints — do not build a parallel pipeline), 9.4 Constraints, 9. WS-7 — Real Company-Asset Uploads
+
+### Community 260 - "0. Document Control"
+Cohesion: 0.50
+Nodes (4): 0.1 Precedence, 0.2 Anti-Drift Rules (binding on every implementer), 0.3 What This Revision Supersedes, 0. Document Control
+
+### Community 261 - "10. WS-8 / WS-9 — Step 4: Factory Core Features and the Conditional Base-Template Flow"
+Cohesion: 0.50
+Nodes (4): 10.1 Factory Core Features panel, 10.2 A — Templated Website, 10.3 B — AI-Assisted Website, 10. WS-8 / WS-9 — Step 4: Factory Core Features and the Conditional Base-Template Flow
+
+### Community 262 - "14. Data Contract"
+Cohesion: 0.50
+Nodes (4): 14.1 Frontend types (`src/types/intake.ts`), 14.2 API contract — `POST /api/intakes`, 14.3 Migration `016_revision_v3.sql` (idempotent, with `rollback/016_revision_v3_down.sql`), 14. Data Contract
+
+### Community 263 - "3. WS-1 — Build Path and Project Type Matrix"
+Cohesion: 0.50
+Nodes (4): 3.1 Required behavior, 3.2 Field-clearing matrix, 3.3 Files, 3. WS-1 — Build Path and Project Type Matrix
+
+### Community 264 - "5. WS-3 — Mandatory Email"
+Cohesion: 0.50
+Nodes (4): 5.1 Rules, 5.2 Why this is load-bearing, 5.3 Files, 5. WS-3 — Mandatory Email
+
+### Community 265 - "2"
+Cohesion: 0.67
+Nodes (3): $type, $value, 2
+
+### Community 266 - "6"
+Cohesion: 0.67
+Nodes (3): $type, $value, 6
+
+### Community 267 - "8"
+Cohesion: 0.67
+Nodes (3): $type, $value, 8
+
 ## Ambiguous Edges - Review These
 - `Remove Compare All Tiers` → `Compare Tiers Modal`  [AMBIGUOUS]
   src/imports/Updates.txt · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **1465 isolated node(s):** `$schema`, `.opencode/plugins/graphify.js`, `fs`, `path`, `fs` (+1460 more)
+- **1555 isolated node(s):** `$schema`, `.opencode/plugins/graphify.js`, `fs`, `path`, `fs` (+1550 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **55 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **53 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -1066,13 +1159,13 @@ _Questions this graph is uniquely positioned to answer:_
   _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
 - **Why does `Root()` connect `devDependencies` to `IntakeDetail.tsx`?**
   _High betweenness centrality (0.007) - this node is a cross-community bridge._
-- **Why does `primitive` connect `primitive` to `fontSize`, `shadow`, `gray`, `spacing`, `radius`, `design-tokens-starter.json`?**
+- **Why does `primitive` connect `radius` to `fontSize`, `gray`, `duration`, `spacing`, `design-tokens-starter.json`?**
   _High betweenness centrality (0.006) - this node is a cross-community bridge._
 - **Are the 2 inferred relationships involving `TailwindConfigGenerator` (e.g. with `TestGeneratedConfigIsValidJs` and `TestTailwindConfigGenerator`) actually correct?**
   _`TailwindConfigGenerator` has 2 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 10 inferred relationships involving `DesignSystemGenerator` (e.g. with `TestDomainDetection` and `TestPersistence`) actually correct?**
   _`DesignSystemGenerator` has 10 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `$schema`, `.opencode/plugins/graphify.js`, `fs` to the rest of the system?**
-  _1465 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1555 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `IntakeDetail.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.050078247261345854 - nodes in this community are weakly interconnected._

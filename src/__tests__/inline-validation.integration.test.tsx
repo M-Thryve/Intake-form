@@ -154,10 +154,7 @@ describe('inline validation — draft save with active warnings', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Website' }))
     clickContinue() // → pages-features
 
-    // Add a feature without a priority — an inline warning appears but does
-    // not block navigation to review or the outcome step.
-    fireEvent.click(screen.getByRole('button', { name: /Authentication/ }))
-    expect(screen.getByText("Feature 'Authentication' needs a priority")).toBeInTheDocument()
+    // v3.0: features are optional and have no priority system; navigation is not blocked.
     clickContinue() // → review
 
     clickContinue() // → outcome
@@ -166,7 +163,7 @@ describe('inline validation — draft save with active warnings', () => {
     expect(await screen.findByText('Draft saved. Review warnings before submit.')).toBeInTheDocument()
   })
 
-  it('warns on required features when none are selected after interaction', () => {
+  it('produces no feature warning when none are selected (v3.0: features optional)', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /Start Project Intake/ }))
     // On build-approach
@@ -183,7 +180,7 @@ describe('inline validation — draft save with active warnings', () => {
     const chips = document.getElementById('field-features')
     expect(chips).not.toBeNull()
     fireEvent.blur(chips!)
-    expect(screen.getByText('At least one feature is required')).toBeInTheDocument()
+    expect(screen.queryByText('At least one feature is required')).not.toBeInTheDocument()
     expect(within(chips! as HTMLElement).getAllByRole('button').length).toBeGreaterThan(0)
   })
 })

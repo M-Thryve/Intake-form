@@ -4,6 +4,7 @@ import { redactPayload } from "./notification-redaction.js"
 export type OutboxChannel = "email" | "sms" | "in_app" | "webhook" | "slack"
 
 export type OutboxEventType =
+  | "draft_saved"
   | "intake_submitted"
   | "build_card_generated"
   | "owner_approved"

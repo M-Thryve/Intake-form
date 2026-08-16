@@ -1,22 +1,137 @@
-// ── Canonical Intake Form Types (v2.0) ──
+// ── Canonical Intake Form Types (v3.0) ──
 //
-// v2.0 restricts new intakes to the "custom" and "enterprise" build paths and
-// removes payment capture from the active contract. Legacy tier/payment fields
-// remain readable through the compatibility layer in `src/api/intake.ts`.
+// v3.0 introduces the Website-Only Custom Build: two Custom project types
+// (Templated Website and AI-Assisted Website) and four Enterprise types.
+// Payment capture is permanently removed from the active contract.
+// Legacy tier/payment fields remain readable through the compatibility
+// layer in `src/api/intake.ts`.
 
 // ── Build Path ─────────────────────────────────────────────────────────────
 
-/** Active build path for new v2.0 intakes. */
+/** Active build path for new intakes. */
 export type BuildPath = 'custom' | 'enterprise'
 
 /**
- * Legacy tier union kept for reading historical records and for the current
- * UI form state during the Phase 1 -> Phase 2 transition. The legacy 'template'
- * value maps to 'custom' when normalized to a v2 payload.
+ * Legacy tier union kept for reading historical records. The legacy 'template'
+ * value maps to 'custom' when normalized to a v3.0 payload.
  *
  * @deprecated Use `BuildPath` for new intakes.
  */
 export type Tier = 'template' | 'custom' | 'enterprise' | ''
+
+// ── v3.0 Project Types ─────────────────────────────────────────────────────
+
+/** v3.0 Custom Build project types — Website-Only paths. */
+export type CustomProjectType = 'templated-website' | 'ai-assisted-website'
+
+/** v3.0 Enterprise Build project types. */
+export type EnterpriseProjectType = 'website' | 'webapp' | 'ecommerce' | 'internal'
+
+/** All v3.0 active project types — union of Custom and Enterprise paths. */
+export type ProjectType = CustomProjectType | EnterpriseProjectType
+
+// ── v3.0 Canonical Industries ──────────────────────────────────────────────
+
+/** Seven canonical industry values. New records must use exactly these slugs. */
+export type Industry =
+  | 'service-commerce'
+  | 'dtc-ecommerce'
+  | 'retail-multi-branch'
+  | 'wholesale-distribution'
+  | 'manufacturing-fabrication'
+  | 'warehousing-storage'
+  | 'logistics-transportation'
+
+// ── v3.0 Feature Codes ─────────────────────────────────────────────────────
+
+/** Factory core features — always included, never selectable by the operator. */
+export type CoreFeatureCode =
+  | 'Core001'
+  | 'Core002'
+  | 'Core003'
+  | 'Core004'
+  | 'Core005'
+  | 'Core006'
+  | 'Core007'
+  | 'Core008'
+
+/** Optional website extension codes selectable for Custom builds. */
+export type ExtensionCode =
+  | 'EXT-001'
+  | 'EXT-002'
+  | 'EXT-003'
+  | 'EXT-004'
+  | 'EXT-005'
+  | 'EXT-006'
+  | 'EXT-007'
+  | 'EXT-008'
+  | 'EXT-009'
+  | 'EXT-010'
+  | 'EXT-011'
+
+/** Feature category for browsing — not persisted as scope. */
+export type FeatureCategory =
+  | 'crm'
+  | 'catalog'
+  | 'sales'
+  | 'operations'
+  | 'scheduling'
+  | 'inventory'
+  | 'documents'
+  | 'workflow'
+  | 'billing'
+  | 'engagement'
+  | 'analytics'
+  | 'administration'
+  | 'integrations'
+
+// ── v3.0 Website Questionnaire ─────────────────────────────────────────────
+//
+// Collected for `ai-assisted-website` builds only.
+// Every field is optional at draft time; submit validation enforces
+// `primaryGoal`, `visitorAction`, and `websitePurpose`.
+
+export interface WebsiteQuestionnaire {
+  // Business & Objectives
+  businessDescription?: string
+  primaryGoal?: string
+  visitorAction?: string
+  websitePurpose?: string[]
+  websitePurposeOther?: string
+  // Visual Direction
+  feel?: string[]
+  // Typography
+  fontPreference?: string
+  fontNames?: string
+  // Color
+  hasBrandColors?: string
+  brandColors?: string
+  colorMode?: string
+  // Layout
+  density?: string
+  gridStyle?: string
+  // Components & UI Style
+  buttonStyle?: string
+  cardStyle?: string
+  shadowStyle?: string
+  gradientStyle?: string
+  // Motion & Interaction
+  transitions?: string
+  interactivity?: string
+  hoverEffects?: string
+  notes?: string
+}
+
+// ── v3.0 Uploaded Asset Reference ─────────────────────────────────────────
+
+/** Reference to a file uploaded to storage. Never contains raw content. */
+export interface UploadedAssetRef {
+  storageKey: string
+  fileName: string
+  mimeType: string
+  sizeBytes?: number
+  uploadedAt?: string
+}
 
 // ── Intake Outcomes ────────────────────────────────────────────────────────
 
@@ -136,12 +251,12 @@ export interface OutcomeMetadata {
   reason?: DiscardReason
 }
 
-// ── Step / Flow (v2.0) ─────────────────────────────────────────────────────
+// ── Step / Flow (v3.0) ─────────────────────────────────────────────────────
 
 /**
- * v2.0 step ids. `payment` and `final-confirm` are retained in the union only
- * so the existing UI can render/reference them during Phase 1; they are not
- * part of `getFlow()` and should be removed once Phase 2 UX lands.
+ * v3.0 step ids. `payment`, `final-confirm`, and `draft-saved` are included
+ * for type completeness; only `draft-saved` is part of the active flow.
+ * `payment` and `final-confirm` are retained for legacy render compatibility.
  */
 export type StepId =
   | 'intro'
@@ -155,6 +270,7 @@ export type StepId =
   | 'review'
   | 'outcome'
   | 'build-card'
+  | 'draft-saved'
   /** @deprecated v1.x payment step removed from v2.0 flow */
   | 'payment'
   /** @deprecated v1.x final-confirmation step removed from v2.0 flow */
@@ -163,9 +279,10 @@ export type StepId =
 // ── UI Form State ──────────────────────────────────────────────────────────
 //
 // FormData is the operator-facing wizard state model. Payment/voucher/
-// maintenance/confirmation fields are marked @deprecated: they remain to
-// preserve the existing UI compile during Phase 1 and MUST be removed as
-// part of the Phase 2 UX redesign.
+// maintenance/confirmation fields are @deprecated; they remain to preserve
+// existing UI compile and MUST be removed as part of the Phase 2 UX redesign.
+// `featurePriorities` is deprecated in v3.0 — scope is expressed via
+// `selectedExtensions` (EXT-xxx codes), not feature+priority pairs.
 
 export interface FormData {
   // Client
@@ -201,7 +318,7 @@ export interface FormData {
   // Build approach
   tier: Tier
 
-  // Template (Custom Build)
+  // Template (Custom Build — Templated Website only)
   templateCategory: string
   templateId: string
   projectVersion: string
@@ -222,8 +339,23 @@ export interface FormData {
   competitors: string
   successCriteria: string
 
-  // Features
+  // v3.0 scope — Website-Only Custom Build
+  /** Selected extension codes (EXT-xxx) for website builds. */
+  selectedExtensions: string[]
+  /**
+   * Questionnaire answers for ai-assisted-website.
+   * Only populated when projectType is `ai-assisted-website`.
+   */
+  websiteQuestionnaire?: WebsiteQuestionnaire
+
+  // Legacy features (Enterprise / v2.0 phases)
   features: string[]
+  /**
+   * Per-feature priority labels. Deprecated in v3.0 — Custom builds no
+   * longer collect priority. Retained to compile existing Enterprise UI code.
+   *
+   * @deprecated v3.0 scope uses selectedExtensions, not feature+priority pairs.
+   */
   featurePriorities: Record<string, string>
   customFeatures: string[]
 
@@ -231,13 +363,13 @@ export interface FormData {
   designStyles: string[]
   inspirationLink: string
 
-  // Outcome / v2.0
+  // Outcome / v3.0
   outcome?: IntakeOutcome
   discardReason?: DiscardReason
   operatorNotes?: OperatorNote[]
   missingRequirements?: MissingRequirement[]
 
-  // ── Legacy v1.x payment fields (removed from v2.0 contract) ──
+  // ── Legacy v1.x payment fields (removed from v2.0/v3.0 contract) ──
   /** @deprecated Removed from v2.0 intake contract. */
   paymentPlan: string
   /** @deprecated Removed from v2.0 intake contract. */
@@ -266,7 +398,12 @@ export interface FormData {
   confirmSubmission: boolean
 }
 
-// ── v2.0 Intake Submission Payload ─────────────────────────────────────────
+// ── v3.0 Intake Submission Payload ─────────────────────────────────────────
+//
+// `payment` and `confirmations` are optional for read compatibility with
+// legacy stored records. New v3.0 submissions omit both fields. The
+// `fromLegacyPayload` compat mapper still populates them for historical reads.
+// `content` is optional — v3.0 submissions use `scope` instead.
 
 export interface IntakeSubmissionPayload {
   client: {
@@ -306,7 +443,8 @@ export interface IntakeSubmissionPayload {
     requestedServices: string[]
     checklist?: AssetChecklistItem[]
   }
-  content: {
+  /** @deprecated v3.0 uses `scope` instead. Retained for reading legacy records. */
+  content?: {
     pages: Array<{ name: string; fields: Record<string, string> }>
     features: Array<{
       name: string
@@ -320,13 +458,15 @@ export interface IntakeSubmissionPayload {
     styles: string[]
     inspirationLink: string
   }
-  payment: {
+  /** @deprecated Removed from v3.0 active contract. Retained for read compatibility. */
+  payment?: {
     plan: string
     maintenanceAfterFree: string
     maintenanceEndAcknowledged: boolean
     voucherCode: string
   }
-  confirmations: {
+  /** @deprecated Removed from v3.0 active contract. Retained for read compatibility. */
+  confirmations?: {
     accurate: boolean
     receipt: boolean
     payment: boolean
@@ -334,8 +474,13 @@ export interface IntakeSubmissionPayload {
     buildCard: boolean
     submission: boolean
   }
-  // Later lifecycle metadata remains optional for read compatibility.
+  /** Active build path derived from tier. Populated by v3.0 mapper. */
   buildPath?: BuildPath
+  /**
+   * v3.0 scope — replaces `content` for new intakes.
+   * `coreFeatures` lists the always-included Core001..Core008 codes.
+   * `extensions` lists the operator-selected EXT-xxx codes.
+   */
   scope?: {
     pages: Array<{ name: string; fields: Record<string, string> }>
     features: Array<{
@@ -345,7 +490,13 @@ export interface IntakeSubmissionPayload {
       preliminaryCost?: number
       note?: string
     }>
+    /** Always-included core feature codes. */
+    coreFeatures?: string[]
+    /** Operator-selected extension codes. */
+    extensions?: string[]
   }
+  /** Website questionnaire answers for ai-assisted-website builds. */
+  websiteQuestionnaire?: WebsiteQuestionnaire
   outcome?: IntakeOutcome
   discardReason?: DiscardReason
   missingRequirements?: MissingRequirement[]
@@ -380,7 +531,7 @@ export interface ValidationError {
 //
 // Legacy stored records may include the historical 'template' tier and
 // payment/voucher/maintenance groups. The compatibility layer in
-// `src/api/intake.ts` normalizes these into the v2.0 shape for reads.
+// `src/api/intake.ts` normalizes these into the v3.0 shape for reads.
 
 /** @deprecated v1.x payload shape, retained for read compatibility. */
 export interface LegacyIntakePayload {

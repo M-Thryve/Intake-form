@@ -41,7 +41,7 @@ function formWithV2Assets(): FormData {
     successCriteria: "",
     features: ["Contact Form"],
     featurePriorities: { "Contact Form": "Required" },
-    customFeatures: [],
+    customFeatures: [], selectedExtensions: [],
     designStyles: [],
     inspirationLink: "",
     paymentPlan: "",

@@ -81,10 +81,11 @@ beforeEach(() => {
 function makePayload(overrides: Record<string, unknown> = {}) {
   return {
     client: { fullName: "Juan Dela Cruz", company: "Test Corp", email: "juan@test.com", phone: "+63 912" },
-    project: { projectName: "Test App", industry: "Technology", projectType: "website", businessDescription: "A test application" },
+    project: { projectName: "Test App", industry: "service-commerce", projectType: "templated-website", businessDescription: "A test application" },
     assets: { qualification: "ready", statuses: { logo: "Available" }, requestedServices: [] },
     tier: "custom",
     template: { templateId: "starter-portfolio", projectVersion: "desktop", colorPreset: "blue" },
+    scope: { coreFeatures: [], extensions: [], pages: [{ name: "Home", fields: { headline: "Welcome" } }], features: [] },
     content: { pages: [{ name: "Home", fields: { headline: "Welcome" } }], features: [{ name: "Contact Form", priority: "Required", source: "chip" }] },
     design: { styles: ["Modern"], inspirationLink: "" },
     payment: { plan: "one-time", maintenanceAfterFree: "cancel", maintenanceEndAcknowledged: true, voucherCode: "" },

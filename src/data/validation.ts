@@ -138,8 +138,7 @@ export function collectMissingRequirements(formData: FormData): MissingRequireme
   }
 
   // ── Path-specific ─────────────────────────────────────────────────────
-  const path = formData.tier === 'enterprise' ? 'enterprise' : 'custom'
-  if (path === 'custom' && formData.tier) {
+  if (formData.projectType === 'templated-website') {
     if (!formData.templateId) {
       missing.push(mk('template.id', 'Template selection', 'build_path', 'template-select', 'required'))
     }
@@ -147,7 +146,22 @@ export function collectMissingRequirements(formData: FormData): MissingRequireme
       missing.push(mk('template.version', 'Project version (platform)', 'build_path', 'template-select', 'required'))
     }
   }
-  if (path === 'enterprise' && formData.tier === 'enterprise') {
+  if (formData.projectType === 'ai-assisted-website') {
+    const q = formData.websiteQuestionnaire
+    if (!q?.primaryGoal?.trim()) {
+      missing.push(mk('websiteQuestionnaire.primaryGoal', 'Primary goal (questionnaire)', 'project', 'template-select', 'required'))
+    }
+    if (!q?.visitorAction?.trim()) {
+      missing.push(mk('websiteQuestionnaire.visitorAction', 'Visitor action (questionnaire)', 'project', 'template-select', 'required'))
+    }
+    if (!q?.websitePurpose?.length) {
+      missing.push(mk('websiteQuestionnaire.websitePurpose', 'Website purpose (questionnaire)', 'project', 'template-select', 'required'))
+    }
+    if (q?.websitePurpose?.includes('other') && !q?.websitePurposeOther?.trim()) {
+      missing.push(mk('websiteQuestionnaire.websitePurposeOther', 'Explain "other" website purpose', 'project', 'template-select', 'required'))
+    }
+  }
+  if (formData.tier === 'enterprise') {
     if (!formData.projectVision.trim()) {
       missing.push(mk('enterprise.vision', 'Project vision', 'project', 'enterprise-vision', 'required'))
     }
@@ -156,11 +170,6 @@ export function collectMissingRequirements(formData: FormData): MissingRequireme
     }
   }
 
-  // ── Scope ─────────────────────────────────────────────────────────────
-  const allFeatures = [...formData.features, ...formData.customFeatures]
-  if (allFeatures.length === 0) {
-    missing.push(mk('scope.features', 'At least one feature', 'scope', 'pages-features', 'required'))
-  }
   // design.styles check removed per REV-05 — design step is no longer collected
 
   // ── Structured resources ──────────────────────────────────────────────
@@ -275,7 +284,7 @@ export function canSubmit(formData: FormData): { ok: boolean; missing: MissingRe
 function validateClientDetails(form: FormData): ValidationError[] {
   const errors: ValidationError[] = []
   if (!isNonEmpty(form.fullName)) errors.push({ field: 'fullName', message: 'Full name is required' })
-  if (!isValidEmail(form.email)) errors.push({ field: 'email', message: 'Valid email is required' })
+  if (!isValidEmail(form.email)) errors.push({ field: 'email', message: 'A valid client email is required' })
   if (!isNonEmpty(form.projectName)) errors.push({ field: 'projectName', message: 'Project name is required' })
   if (!form.industry) errors.push({ field: 'industry', message: 'Industry is required' })
   if (!form.projectType) errors.push({ field: 'projectType', message: 'Project type is required' })
@@ -300,11 +309,11 @@ function validateBuildApproach(form: FormData): ValidationError[] {
 
 function validateTemplateSelect(form: FormData): ValidationError[] {
   const errors: ValidationError[] = []
-  const isCustom = form.tier === 'custom' || form.tier === 'template'
-  if (isCustom && !form.templateId) {
+  const needsTemplate = form.projectType === 'templated-website'
+  if (needsTemplate && !form.templateId) {
     errors.push({ message: 'Template selection is required' })
   }
-  if (isCustom && !form.projectVersion) {
+  if (needsTemplate && !form.projectVersion) {
     errors.push({ message: 'Project version is required' })
   }
   return errors
@@ -321,13 +330,9 @@ function validateEnterpriseVision(form: FormData): ValidationError[] {
   return errors
 }
 
-function validatePagesFeatures(form: FormData): ValidationError[] {
-  const errors: ValidationError[] = []
-  const allFeatures = [...form.features, ...form.customFeatures]
-  if (allFeatures.length === 0) {
-    errors.push({ message: 'At least one feature is required' })
-  }
-  return errors
+function validatePagesFeatures(_form: FormData): ValidationError[] {
+  // v3.0: features/extensions are optional — no minimum enforced at step-level.
+  return []
 }
 
 function validateDesign(form: FormData): ValidationError[] {

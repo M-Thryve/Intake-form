@@ -1,4 +1,10 @@
 import { z } from "zod";
+import {
+  V3_CUSTOM_PROJECT_TYPES,
+  V3_ENTERPRISE_PROJECT_TYPES,
+  CANONICAL_INDUSTRIES,
+  EXTENSION_CODES,
+} from "./features.js";
 
 const MAX_SHORT = 500;
 const MAX_LONG = 5000;
@@ -9,26 +15,6 @@ const MAX_PAGES = 50;
 // Shared field shapes — single source of truth for field
 // definitions so draft and submit schemas never drift.
 // ═══════════════════════════════════════════════════════════
-
-const clientFields = {
-  fullName: z.string().max(MAX_SHORT),
-  company: z.string().max(MAX_SHORT),
-  email: z.string().max(MAX_SHORT),
-  phone: z.string().max(MAX_SHORT),
-};
-
-const projectFields = {
-  projectName: z.string().max(MAX_SHORT),
-  industry: z.string().max(MAX_SHORT),
-  projectType: z.string().max(MAX_SHORT),
-  businessDescription: z.string().max(MAX_LONG),
-};
-
-const assetsFields = {
-  qualification: z.enum(["provided", "ready", "incomplete", "no-assets"]),
-  statuses: z.record(z.string()),
-  requestedServices: z.array(z.string()),
-};
 
 const templateFields = {
   templateId: z.string(),
@@ -50,46 +36,17 @@ const enterpriseFields = {
   successCriteria: z.string().max(MAX_LONG),
 };
 
-const featureFields = {
-  name: z.string(),
-  priority: z.enum(["Required", "Nice to Have", "Future Phase", "Need Help Deciding"]),
-  source: z.enum(["chip", "custom"]),
-};
-
-const pageFields = {
-  name: z.string(),
-  fields: z.record(z.string()),
-};
-
-const designFields = {
-  styles: z.array(z.string()),
-  inspirationLink: z.string().max(2000),
-};
-
-const paymentFields = {
-  plan: z.string(),
-  maintenanceAfterFree: z.string(),
-  maintenanceEndAcknowledged: z.boolean(),
-  voucherCode: z.string(),
-};
-
-const confirmationsFields = {
-  accurate: z.boolean(),
-  receipt: z.boolean(),
-  payment: z.boolean(),
-  maintenance: z.boolean(),
-  buildCard: z.boolean(),
-  submission: z.boolean(),
-};
-
 // ═══════════════════════════════════════════════════════════
-// Submit schema — full contract, strict validation
+// Submit schemas — full contract, strict validation.
+// Payment and confirmation fields are deliberately absent from
+// the active v3.0 submit contract. They remain on the legacy
+// intakeSubmitSchema (for historical record reads only).
 // ═══════════════════════════════════════════════════════════
 
 const clientSubmitSchema = z.object({
   fullName: z.string().min(1, "Full name is required").max(MAX_SHORT),
   company: z.string().max(MAX_SHORT).default(""),
-  email: z.string().email("Valid email is required"),
+  email: z.string().email("A valid client email is required"),
   phone: z.string().max(MAX_SHORT).default(""),
 });
 
@@ -132,7 +89,9 @@ const enterpriseSubmitSchema = z.object({
 
 const featureSubmitSchema = z.object({
   name: z.string().min(1, "Feature name is required"),
-  priority: z.enum(["Required", "Nice to Have", "Future Phase", "Need Help Deciding"]).default("Need Help Deciding"),
+  priority: z
+    .enum(["Required", "Nice to Have", "Future Phase", "Need Help Deciding"])
+    .default("Need Help Deciding"),
   source: z.enum(["chip", "custom"]).default("chip"),
 });
 
@@ -141,10 +100,28 @@ const pageSubmitSchema = z.object({
   fields: z.record(z.string()).default({}),
 });
 
+// v3.0: features are no longer required — extensions replace them for website builds.
 const contentSubmitSchema = z.object({
-  features: z.array(featureSubmitSchema).min(1, "At least one feature is required").max(MAX_FEATURES),
+  features: z.array(featureSubmitSchema).max(MAX_FEATURES).default([]),
   pages: z.array(pageSubmitSchema).max(MAX_PAGES).default([]),
 });
+
+// v3.0 active scope block — replaces content in new submissions.
+const scopeSubmitSchema = z
+  .object({
+    coreFeatures: z.array(z.string()).default([]),
+    extensions: z.array(z.string()).default([]),
+    pages: z.array(pageSubmitSchema).max(MAX_PAGES).default([]),
+    features: z.array(featureSubmitSchema).max(MAX_FEATURES).default([]),
+  })
+  .default({});
+
+// Questionnaire is a free-form record; field requirements are enforced in
+// validatePhase2Payload (see QUESTIONNAIRE_SUBMIT_REQUIRED in questionnaire.ts).
+const websiteQuestionnaireSubmitSchema = z
+  .record(z.string(), z.union([z.string(), z.array(z.string())]))
+  .optional()
+  .nullable();
 
 const designSubmitSchema = z.object({
   styles: z.array(z.string()).default([]),
@@ -167,6 +144,7 @@ const confirmationsSubmitSchema = z.object({
   submission: z.literal(true, { errorMap: () => ({ message: "Must confirm submission" }) }),
 });
 
+// Legacy strict schema — used by validateIntakePayload (historical path only).
 const intakeSubmitSchema = z.object({
   client: clientSubmitSchema,
   project: projectSubmitSchema,
@@ -182,99 +160,124 @@ const intakeSubmitSchema = z.object({
   confirmations: confirmationsSubmitSchema,
 });
 
-// The active v2 lifecycle contract accepts all three tier values for legacy
-// compatibility, while new UI selections remain custom/enterprise. The active
-// v2 intake no longer collects payment preferences or payment
-// confirmations. Keep accepting those legacy fields when a caller sends them,
-// but make them informational/defaulted so the v2 frontend can submit without
-// controls that were intentionally removed from the flow.
-const phase2PaymentSchema = z.object({
-  plan: z.string().default(""),
-  maintenanceAfterFree: z.string().default(""),
-  maintenanceEndAcknowledged: z.boolean().default(false),
-  voucherCode: z.string().default(""),
-}).default({});
+// v3.0 active schema — payment and confirmations are informational defaults.
+const phase2PaymentSchema = z
+  .object({
+    plan: z.string().default(""),
+    maintenanceAfterFree: z.string().default(""),
+    maintenanceEndAcknowledged: z.boolean().default(false),
+    voucherCode: z.string().default(""),
+  })
+  .default({});
 
-const phase2ConfirmationsSchema = z.object({
-  accurate: z.boolean().default(false),
-  receipt: z.boolean().default(false),
-  payment: z.boolean().default(false),
-  maintenance: z.boolean().default(false),
-  buildCard: z.boolean().default(false),
-  submission: z.boolean().default(false),
-}).default({});
+const phase2ConfirmationsSchema = z
+  .object({
+    accurate: z.boolean().default(false),
+    receipt: z.boolean().default(false),
+    payment: z.boolean().default(false),
+    maintenance: z.boolean().default(false),
+    buildCard: z.boolean().default(false),
+    submission: z.boolean().default(false),
+  })
+  .default({});
 
 const phase2IntakeSubmitSchema = z.object({
   client: clientSubmitSchema,
   project: projectSubmitSchema,
   assets: assetsSubmitSchema,
-  tier: z.enum(["template", "custom", "enterprise"], {
-    errorMap: () => ({ message: "Tier must be template, custom, or enterprise" }),
+  tier: z.enum(["custom", "enterprise"], {
+    errorMap: () => ({ message: "Tier must be custom or enterprise. Template is legacy-read-only." }),
   }),
   template: templateSubmitSchema.optional(),
   enterprise: enterpriseSubmitSchema.optional(),
-  content: contentSubmitSchema,
+  // v3.0 active scope (replaces content for new submissions)
+  scope: scopeSubmitSchema,
+  // content kept optional for legacy read-compatibility only
+  content: contentSubmitSchema.optional(),
   design: designSubmitSchema,
   payment: phase2PaymentSchema,
   confirmations: phase2ConfirmationsSchema,
+  // Questionnaire: sent for ai-assisted-website builds only
+  websiteQuestionnaire: websiteQuestionnaireSubmitSchema,
+  buildPath: z.enum(["custom", "enterprise"]).optional().nullable(),
 });
 
 // ═══════════════════════════════════════════════════════════
-// Draft schema — shape-only validation. Every business-
-// required field is optional. Validates UUIDs, enum values
-// where present, and field length ceilings. Never 422 on
-// incompleteness.
+// Draft schema — shape-only validation. Email is the only
+// universal hard requirement (missing → 422). Every other
+// business-required field is optional; gaps are returned as
+// MissingRequirementItem records. Field length ceilings still
+// apply; enum values where present are still validated.
 // ═══════════════════════════════════════════════════════════
 
+// email is required — missing or invalid email → 422 on draft save.
 const clientDraftSchema = z.object({
   fullName: z.string().max(MAX_SHORT).default(""),
   company: z.string().max(MAX_SHORT).default(""),
-  email: z.string().max(MAX_SHORT).default(""),
+  email: z
+    .string()
+    .trim()
+    .min(1, "A valid client email is required")
+    .email("A valid client email is required")
+    .max(MAX_SHORT),
   phone: z.string().max(MAX_SHORT).default(""),
-}).default({});
+});
+// NOTE: no .default({}) — email is required, so the object itself is required.
 
-const projectDraftSchema = z.object({
-  projectName: z.string().max(MAX_SHORT).default(""),
-  industry: z.string().max(MAX_SHORT).default(""),
-  projectType: z.string().max(MAX_SHORT).default(""),
-  businessDescription: z.string().max(MAX_LONG).default(""),
-}).default({});
+const projectDraftSchema = z
+  .object({
+    projectName: z.string().max(MAX_SHORT).default(""),
+    industry: z.string().max(MAX_SHORT).default(""),
+    projectType: z.string().max(MAX_SHORT).default(""),
+    businessDescription: z.string().max(MAX_LONG).default(""),
+  })
+  .default({});
 
-const assetsDraftSchema = z.object({
-  qualification: z.union([
-    z.enum(["provided", "ready", "incomplete", "no-assets"]),
-    z.literal(""),
-  ]).optional().nullable(),
-  statuses: z.record(z.string()).default({}),
-  requestedServices: z.array(z.string()).default([]),
-}).default({});
+const assetsDraftSchema = z
+  .object({
+    qualification: z
+      .union([z.enum(["provided", "ready", "incomplete", "no-assets"]), z.literal("")])
+      .optional()
+      .nullable(),
+    statuses: z.record(z.string()).default({}),
+    requestedServices: z.array(z.string()).default([]),
+  })
+  .default({});
 
-const templateDraftSchema = z.object({
-  templateId: z.string().default(""),
-  projectVersion: z.union([
-    z.enum(["desktop", "mobile", "both"]),
-    z.literal(""),
-  ]).optional().nullable(),
-  colorPreset: z.string().default(""),
-}).optional().nullable();
+const templateDraftSchema = z
+  .object({
+    templateId: z.string().default(""),
+    projectVersion: z
+      .union([z.enum(["desktop", "mobile", "both"]), z.literal("")])
+      .optional()
+      .nullable(),
+    colorPreset: z.string().default(""),
+  })
+  .optional()
+  .nullable();
 
-const enterpriseDraftSchema = z.object({
-  projectVision: z.string().max(MAX_LONG).default(""),
-  targetUsers: z.string().max(MAX_LONG).default(""),
-  userRoles: z.string().max(MAX_LONG).default(""),
-  businessWorkflows: z.string().max(MAX_LONG).default(""),
-  integrations: z.string().max(MAX_LONG).default(""),
-  existingSystems: z.string().max(MAX_LONG).default(""),
-  dataSecurityRequirements: z.string().max(MAX_LONG).default(""),
-  scalabilityRequirements: z.string().max(MAX_LONG).default(""),
-  designInspiration: z.string().max(MAX_LONG).default(""),
-  competitors: z.string().max(MAX_LONG).default(""),
-  successCriteria: z.string().max(MAX_LONG).default(""),
-}).optional().nullable();
+const enterpriseDraftSchema = z
+  .object({
+    projectVision: z.string().max(MAX_LONG).default(""),
+    targetUsers: z.string().max(MAX_LONG).default(""),
+    userRoles: z.string().max(MAX_LONG).default(""),
+    businessWorkflows: z.string().max(MAX_LONG).default(""),
+    integrations: z.string().max(MAX_LONG).default(""),
+    existingSystems: z.string().max(MAX_LONG).default(""),
+    dataSecurityRequirements: z.string().max(MAX_LONG).default(""),
+    scalabilityRequirements: z.string().max(MAX_LONG).default(""),
+    designInspiration: z.string().max(MAX_LONG).default(""),
+    competitors: z.string().max(MAX_LONG).default(""),
+    successCriteria: z.string().max(MAX_LONG).default(""),
+  })
+  .optional()
+  .nullable();
 
 const featureDraftSchema = z.object({
   name: z.string().default(""),
-  priority: z.enum(["Required", "Nice to Have", "Future Phase", "Need Help Deciding"]).default("Need Help Deciding"),
+  priority: z
+    .enum(["Required", "Nice to Have", "Future Phase", "Need Help Deciding"])
+    .default("Need Help Deciding"),
   source: z.enum(["chip", "custom"]).default("chip"),
 });
 
@@ -283,46 +286,76 @@ const pageDraftSchema = z.object({
   fields: z.record(z.string()).default({}),
 });
 
-const contentDraftSchema = z.object({
-  features: z.array(featureDraftSchema).max(MAX_FEATURES).default([]),
-  pages: z.array(pageDraftSchema).max(MAX_PAGES).default([]),
-}).default({});
+// Legacy content block — retained for reading older payloads.
+const contentDraftSchema = z
+  .object({
+    features: z.array(featureDraftSchema).max(MAX_FEATURES).default([]),
+    pages: z.array(pageDraftSchema).max(MAX_PAGES).default([]),
+  })
+  .default({});
 
-const designDraftSchema = z.object({
-  styles: z.array(z.string()).default([]),
-  inspirationLink: z.string().max(2000).default(""),
-}).default({});
+// v3.0 scope block — coreFeatures and extensions replace content.features.
+const scopeDraftSchema = z
+  .object({
+    coreFeatures: z.array(z.string()).default([]),
+    extensions: z.array(z.string()).default([]),
+    pages: z.array(pageDraftSchema).max(MAX_PAGES).default([]),
+    features: z.array(featureDraftSchema).max(MAX_FEATURES).default([]),
+  })
+  .default({});
 
-const paymentDraftSchema = z.object({
-  plan: z.string().default(""),
-  maintenanceAfterFree: z.string().default(""),
-  maintenanceEndAcknowledged: z.boolean().default(false),
-  voucherCode: z.string().default(""),
-}).default({});
+// Questionnaire answers are free-form; each value is a string or string[].
+const websiteQuestionnaireDraftSchema = z
+  .record(z.string(), z.union([z.string(), z.array(z.string())]))
+  .optional()
+  .nullable();
 
-const confirmationsDraftSchema = z.object({
-  accurate: z.boolean().default(false),
-  receipt: z.boolean().default(false),
-  payment: z.boolean().default(false),
-  maintenance: z.boolean().default(false),
-  buildCard: z.boolean().default(false),
-  submission: z.boolean().default(false),
-}).default({});
+const designDraftSchema = z
+  .object({
+    styles: z.array(z.string()).default([]),
+    inspirationLink: z.string().max(2000).default(""),
+  })
+  .default({});
+
+// payment and confirmations: kept for shape compatibility, but no longer
+// added as missing requirements for draft saves in v3.0.
+const paymentDraftSchema = z
+  .object({
+    plan: z.string().default(""),
+    maintenanceAfterFree: z.string().default(""),
+    maintenanceEndAcknowledged: z.boolean().default(false),
+    voucherCode: z.string().default(""),
+  })
+  .default({});
+
+const confirmationsDraftSchema = z
+  .object({
+    accurate: z.boolean().default(false),
+    receipt: z.boolean().default(false),
+    payment: z.boolean().default(false),
+    maintenance: z.boolean().default(false),
+    buildCard: z.boolean().default(false),
+    submission: z.boolean().default(false),
+  })
+  .default({});
 
 const intakeDraftSchema = z.object({
   client: clientDraftSchema,
   project: projectDraftSchema,
   assets: assetsDraftSchema,
-  tier: z.union([
-    z.enum(["custom", "enterprise"]),
-    z.literal(""),
-  ]).optional().nullable(),
+  tier: z
+    .union([z.enum(["template", "custom", "enterprise"]), z.literal("")])
+    .optional()
+    .nullable(),
   template: templateDraftSchema,
   enterprise: enterpriseDraftSchema,
+  scope: scopeDraftSchema,
   content: contentDraftSchema,
   design: designDraftSchema,
   payment: paymentDraftSchema,
   confirmations: confirmationsDraftSchema,
+  websiteQuestionnaire: websiteQuestionnaireDraftSchema,
+  buildPath: z.enum(["custom", "enterprise"]).optional().nullable(),
 });
 
 // ═══════════════════════════════════════════════════════════
@@ -364,10 +397,11 @@ export function validateIntakePayload(payload: unknown): ValidationResult {
   const data = result.data;
   const tierErrors: Array<{ field: string; message: string }> = [];
 
-  if ((data.tier === "custom") && !data.template) {
+  // Template required only for Templated Website builds.
+  if (data.project.projectType === "templated-website" && !data.template) {
     tierErrors.push({
       field: "template",
-      message: "Template selection is required for custom tier",
+      message: "Template selection is required for Templated Website builds",
     });
   }
 
@@ -378,23 +412,16 @@ export function validateIntakePayload(payload: unknown): ValidationResult {
     });
   }
 
-  const CUSTOM_PROJECT_TYPES = new Set(["website", "mobile"]);
-  const ENTERPRISE_PROJECT_TYPES = new Set([
-    "website", "webapp", "mobile", "ai-agent", "ecommerce", "internal",
-  ]);
-  const buildPath = data.tier === "enterprise" ? "enterprise" : "custom";
+  const projectTypes =
+    data.tier === "enterprise" ? V3_ENTERPRISE_PROJECT_TYPES : V3_CUSTOM_PROJECT_TYPES;
 
-  if (buildPath === "custom" && !CUSTOM_PROJECT_TYPES.has(data.project.projectType)) {
+  if (!projectTypes.has(data.project.projectType)) {
     tierErrors.push({
       field: "project.projectType",
-      message: `Custom Build only supports: Website, Mobile App. Got: "${data.project.projectType}"`,
-    });
-  }
-
-  if (buildPath === "enterprise" && !ENTERPRISE_PROJECT_TYPES.has(data.project.projectType)) {
-    tierErrors.push({
-      field: "project.projectType",
-      message: `Enterprise Level supports: Website, Web App, Mobile App, AI Agent, E-Commerce, Internal Tool. Got: "${data.project.projectType}"`,
+      message:
+        data.tier === "enterprise"
+          ? `Enterprise Level supports: Website, Web App, E-Commerce, Internal Tool. Got: "${data.project.projectType}"`
+          : `Custom Build supports: Templated Website, AI-Assisted Website. Got: "${data.project.projectType}"`,
     });
   }
 
@@ -421,20 +448,19 @@ export function validatePhase2Payload(payload: unknown): ValidationResult {
   const data = result.data;
   const tierErrors: Array<{ field: string; message: string }> = [];
 
-  if (
-    data.tier === "template" &&
-    (data.assets.qualification === "incomplete" || data.assets.qualification === "no-assets")
-  ) {
+  // Canonical industry allowlist (7 values).
+  if (!CANONICAL_INDUSTRIES.has(data.project.industry)) {
     tierErrors.push({
-      field: "assets.qualification",
-      message: "Template tier requires at least 'ready' asset status",
+      field: "project.industry",
+      message: `Industry must be one of the seven M-THRYVE canonical values. Got: "${data.project.industry}"`,
     });
   }
 
-  if ((data.tier === "template" || data.tier === "custom") && !data.template) {
+  // Template required only for Templated Website builds.
+  if (data.project.projectType === "templated-website" && !data.template) {
     tierErrors.push({
       field: "template",
-      message: "Template selection is required for template/custom tier",
+      message: "Template selection is required for Templated Website builds",
     });
   }
 
@@ -445,16 +471,42 @@ export function validatePhase2Payload(payload: unknown): ValidationResult {
     });
   }
 
-  const customProjectTypes = new Set(["website", "mobile"]);
-  const enterpriseProjectTypes = new Set([
-    "website", "webapp", "mobile", "ai-agent", "ecommerce", "internal",
-  ]);
-  const projectTypes = data.tier === "enterprise" ? enterpriseProjectTypes : customProjectTypes;
+  const projectTypes =
+    data.tier === "enterprise" ? V3_ENTERPRISE_PROJECT_TYPES : V3_CUSTOM_PROJECT_TYPES;
+
   if (!projectTypes.has(data.project.projectType)) {
     tierErrors.push({
       field: "project.projectType",
-      message: `${data.tier === "enterprise" ? "Enterprise" : "Template/Custom"} tier does not support project type "${data.project.projectType}"`,
+      message: `${data.tier === "enterprise" ? "Enterprise" : "Custom Build"} tier does not support project type "${data.project.projectType}"`,
     });
+  }
+
+  // Questionnaire required fields for AI-Assisted Website submissions only.
+  if (data.project.projectType === "ai-assisted-website") {
+    const q = data.websiteQuestionnaire as Record<string, unknown> | null | undefined;
+    const REQUIRED = ["primaryGoal", "visitorAction", "websitePurpose"] as const;
+    for (const field of REQUIRED) {
+      const val = q?.[field];
+      const isEmpty = !val || (Array.isArray(val) ? val.length === 0 : String(val).trim() === "");
+      if (isEmpty) {
+        tierErrors.push({
+          field: `websiteQuestionnaire.${field}`,
+          message: `${field} is required for AI-Assisted Website submissions`,
+        });
+      }
+    }
+    // Conditional: websitePurposeOther required when websitePurpose includes 'other'.
+    const purpose = q?.websitePurpose;
+    const purposeArr = Array.isArray(purpose) ? purpose : purpose ? [String(purpose)] : [];
+    if (purposeArr.includes("other")) {
+      const other = q?.websitePurposeOther;
+      if (!other || String(other).trim() === "") {
+        tierErrors.push({
+          field: "websiteQuestionnaire.websitePurposeOther",
+          message: "Please explain the 'other' website purpose",
+        });
+      }
+    }
   }
 
   return tierErrors.length > 0
@@ -481,58 +533,65 @@ export function validateDraftPayload(payload: unknown): DraftValidationResult {
 function collectDraftMissingRequirements(data: DraftPayload): MissingRequirementItem[] {
   const missing: MissingRequirementItem[] = [];
 
+  // email is validated at schema level (→ 422 when invalid); only fullName is checked here.
   if (!data.client?.fullName?.trim()) {
     missing.push({ field: "client.fullName", message: "Full name is required" });
   }
-  if (!data.client?.email?.trim() || !data.client.email.includes("@")) {
-    missing.push({ field: "client.email", message: "Valid email is required" });
-  }
+
   if (!data.project?.projectName?.trim()) {
     missing.push({ field: "project.projectName", message: "Project name is required" });
   }
+
   if (!data.project?.industry?.trim()) {
     missing.push({ field: "project.industry", message: "Industry is required" });
+  } else if (!CANONICAL_INDUSTRIES.has(data.project.industry)) {
+    missing.push({
+      field: "project.industry",
+      message: "Industry must be one of the seven M-THRYVE canonical values",
+    });
   }
+
   if (!data.project?.projectType?.trim()) {
     missing.push({ field: "project.projectType", message: "Project type is required" });
   }
+
   if (!data.tier) {
     missing.push({ field: "tier", message: "Build path selection is required" });
   }
 
-  if (data.tier === "custom" && !data.template?.templateId?.trim()) {
-    missing.push({ field: "template.templateId", message: "Template selection is required" });
-  }
-  if (data.tier === "custom" && !data.template?.projectVersion) {
-    missing.push({ field: "template.projectVersion", message: "Project version is required" });
-  }
-  if (data.tier === "enterprise" && !data.enterprise?.projectVision?.trim()) {
-    missing.push({ field: "enterprise.projectVision", message: "Project vision is required" });
-  }
-  if (data.tier === "enterprise" && !data.enterprise?.targetUsers?.trim()) {
-    missing.push({ field: "enterprise.targetUsers", message: "Target users is required" });
+  // Template required only for Templated Website builds.
+  if (data.project?.projectType === "templated-website") {
+    if (!data.template?.templateId?.trim()) {
+      missing.push({ field: "template.templateId", message: "Template selection is required" });
+    }
+    if (!data.template?.projectVersion) {
+      missing.push({ field: "template.projectVersion", message: "Project version is required" });
+    }
   }
 
-  if (!data.content?.features || data.content.features.length === 0) {
-    missing.push({ field: "content.features", message: "At least one feature is required" });
+  if (data.tier === "enterprise") {
+    if (!data.enterprise?.projectVision?.trim()) {
+      missing.push({ field: "enterprise.projectVision", message: "Project vision is required" });
+    }
+    if (!data.enterprise?.targetUsers?.trim()) {
+      missing.push({ field: "enterprise.targetUsers", message: "Target users is required" });
+    }
   }
 
-  if (!data.payment?.plan?.trim()) {
-    missing.push({ field: "payment.plan", message: "Payment plan is required" });
+  // Extension code validation — unknown codes produce missing requirements (not 422).
+  if (data.scope?.extensions) {
+    for (const code of data.scope.extensions) {
+      if (!EXTENSION_CODES.has(code)) {
+        missing.push({
+          field: "scope.extensions",
+          message: `Unknown extension code: ${code}`,
+        });
+      }
+    }
   }
 
   if (!data.assets?.qualification) {
     missing.push({ field: "assets.qualification", message: "Asset qualification is required" });
-  }
-
-  const confirmations = data.confirmations;
-  if (confirmations) {
-    if (!confirmations.accurate) missing.push({ field: "confirmations.accurate", message: "Must confirm accuracy" });
-    if (!confirmations.receipt) missing.push({ field: "confirmations.receipt", message: "Must confirm receipt" });
-    if (!confirmations.payment) missing.push({ field: "confirmations.payment", message: "Must confirm payment" });
-    if (!confirmations.maintenance) missing.push({ field: "confirmations.maintenance", message: "Must confirm maintenance" });
-    if (!confirmations.buildCard) missing.push({ field: "confirmations.buildCard", message: "Must confirm build card" });
-    if (!confirmations.submission) missing.push({ field: "confirmations.submission", message: "Must confirm submission" });
   }
 
   return missing;

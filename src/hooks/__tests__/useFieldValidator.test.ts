@@ -17,7 +17,7 @@ function emptyForm(): FormData {
     projectVision: '', targetUsers: '', userRoles: '', businessWorkflows: '',
     integrations: '', existingSystems: '', dataSecurityReqs: '', scalabilityReqs: '',
     designInspiration: '', competitors: '', successCriteria: '',
-    features: [], featurePriorities: {}, customFeatures: [],
+    features: [], featurePriorities: {}, customFeatures: [], selectedExtensions: [],
     designStyles: [], inspirationLink: '',
     paymentPlan: '', voucherCode: '', voucherStatus: '',
     maintenanceAfterFree: '', maintenanceEndAcknowledged: false, preferredBillingDate: '',
