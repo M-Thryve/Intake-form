@@ -22,7 +22,7 @@ function emptyForm(): FormData {
     projectVision: '', targetUsers: '', userRoles: '', businessWorkflows: '',
     integrations: '', existingSystems: '', dataSecurityReqs: '', scalabilityReqs: '',
     designInspiration: '', competitors: '', successCriteria: '',
-    features: [], featurePriorities: {}, customFeatures: [],
+    features: [], featurePriorities: {}, customFeatures: [], selectedExtensions: [],
     designStyles: [], inspirationLink: '',
     paymentPlan: '', voucherCode: '', voucherStatus: '',
     maintenanceAfterFree: '', maintenanceEndAcknowledged: false, preferredBillingDate: '',
@@ -185,16 +185,21 @@ describe('getInlineWarnings — build-approach', () => {
 })
 
 describe('getInlineWarnings — template-select', () => {
-  it('warns on missing template and version for the custom path', () => {
-    const warnings = getInlineWarnings('template-select', form({ tier: 'custom' }))
+  it('warns on missing template and version for the templated-website path', () => {
+    const warnings = getInlineWarnings('template-select', form({ projectType: 'templated-website' }))
     expect(warnings['field-templateId']).toBe('Please select a template')
     expect(warnings['field-projectVersion']).toBe('Please select a project version')
   })
 
   it('only warns on the version once a template is selected', () => {
-    const warnings = getInlineWarnings('template-select', form({ tier: 'custom', templateId: 'apex' }))
+    const warnings = getInlineWarnings('template-select', form({ projectType: 'templated-website', templateId: 'apex' }))
     expect(warnings['field-templateId']).toBeNull()
     expect(warnings['field-projectVersion']).toBe('Please select a project version')
+  })
+
+  it('produces no warnings for non-templated-website paths', () => {
+    const warnings = getInlineWarnings('template-select', form({ projectType: 'ai-assisted-website' }))
+    expect(warnings).toEqual({})
   })
 
   it('produces no warnings for the enterprise path', () => {
@@ -234,23 +239,22 @@ describe('getInlineWarnings — enterprise-vision', () => {
 })
 
 describe('getInlineWarnings — pages-features', () => {
-  it('warns when no feature is selected', () => {
+  it('produces no warnings when no feature is selected (v3.0: features are optional)', () => {
     const warnings = getInlineWarnings('pages-features', form())
-    expect(warnings['field-features']).toBe('At least one feature is required')
+    expect(warnings).toEqual({})
   })
 
-  it('warns on features missing a priority', () => {
+  it('produces no warnings for selected features (v3.0: priority system removed)', () => {
     const warnings = getInlineWarnings('pages-features', form({ features: ['Authentication'] }))
-    expect(warnings['field-features']).toBeNull()
-    expect(warnings['field-priority-Authentication']).toBe("Feature 'Authentication' needs a priority")
+    expect(warnings).toEqual({})
   })
 
-  it('clears the priority warning once set', () => {
+  it('produces no priority warnings even with featurePriorities set (v3.0: priorities deprecated)', () => {
     const warnings = getInlineWarnings('pages-features', form({
       features: ['Authentication'],
       featurePriorities: { Authentication: 'Required' },
     }))
-    expect(warnings['field-priority-Authentication']).toBeNull()
+    expect(warnings).toEqual({})
   })
 
   it('sanitizes feature names into html-safe field ids', () => {

@@ -153,8 +153,7 @@ function buildApproachWarnings(form: FormData): Record<string, string | null> {
 }
 
 function templateSelectWarnings(form: FormData): Record<string, string | null> {
-  const isCustom = form.tier === 'custom' || form.tier === 'template'
-  if (!isCustom) return {}
+  if (form.projectType !== 'templated-website') return {}
   return {
     'field-templateId': isNonEmpty(form.templateId) ? null : 'Please select a template',
     'field-projectVersion': isNonEmpty(form.projectVersion) ? null : 'Please select a project version',
@@ -198,20 +197,10 @@ function enterpriseVisionWarnings(form: FormData): Record<string, string | null>
   return out
 }
 
-function pagesFeaturesWarnings(form: FormData): Record<string, string | null> {
-  const allFeatures = [...form.features, ...form.customFeatures]
-  const out: Record<string, string | null> = {
-    'field-features': allFeatures.length > 0 ? null : 'At least one feature is required',
-  }
-
-  for (const f of form.features) {
-    const priority = form.featurePriorities[f] ?? ''
-    out[`field-priority-${slugify(f)}`] = isNonEmpty(priority)
-      ? null
-      : `Feature '${f}' needs a priority`
-  }
-
-  return out
+function pagesFeaturesWarnings(_form: FormData): Record<string, string | null> {
+  // v3.0: feature selection is optional — no minimum warning.
+  // Priority per-feature is removed; scope is expressed as extension codes.
+  return {}
 }
 
 /** HTML-safe id fragment for feature-derived field ids. */

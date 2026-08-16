@@ -128,6 +128,16 @@ function coerceDraftForPersistence(draft: DraftPayload): ValidatedPayload {
       competitors: draft.enterprise.competitors || "",
       successCriteria: draft.enterprise.successCriteria || "",
     } : undefined,
+    scope: {
+      coreFeatures: draft.scope?.coreFeatures || [],
+      extensions: draft.scope?.extensions || [],
+      pages: draft.scope?.pages?.map(p => ({ name: p.name || "", fields: p.fields || {} })) || [],
+      features: draft.scope?.features?.map(f => ({
+        name: f.name || "",
+        priority: f.priority || "Need Help Deciding",
+        source: f.source || "chip",
+      })) || [],
+    },
     content: {
       features: draft.content?.features?.map(f => ({
         name: f.name || "",
@@ -247,8 +257,8 @@ async function persistIntake(
     p_asset_services: JSON.stringify(data.assets.requestedServices),
     p_template: data.template ? JSON.stringify(data.template) : null,
     p_enterprise: data.enterprise ? JSON.stringify(data.enterprise) : null,
-    p_pages: JSON.stringify(data.content.pages),
-    p_features: JSON.stringify(data.content.features),
+    p_pages: JSON.stringify(data.scope?.pages ?? data.content?.pages ?? []),
+    p_features: JSON.stringify(data.scope?.features ?? data.content?.features ?? []),
     p_design_styles: JSON.stringify(data.design.styles),
     p_inspiration_link: data.design.inspirationLink,
     p_payment_plan: data.payment.plan,

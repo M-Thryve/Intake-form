@@ -7,7 +7,9 @@ import type {
   LegacyIntakePayload,
   AssetReadiness,
   DiscardReason,
+  BuildPath,
 } from '../types/intake'
+import { CORE_FEATURE_CODES } from '../data/features'
 
 // Keep local development same-origin so Vite can proxy /api to localhost:3200.
 // Deployments can point the static frontend at the separately hosted API by
@@ -16,15 +18,15 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, ''
 const API_ENDPOINT = '/api/intakes'
 
 /**
- * Phase 2 payload mapper. Payment and final confirmations are part of the
- * original Phase 1 wire contract and are sent to the backend here.
+ * v3.0 payload mapper. Payment and final confirmations are omitted — they
+ * are no longer part of the active intake contract. The legacy
+ * `fromLegacyPayload` mapper retains those fields for historical reads.
  */
 export function toSubmissionPayload(
   formData: FormData,
   pageContents: Record<string, Record<string, string>>,
   outcome: IntakeOutcome = 'draft',
 ): IntakeSubmissionPayload {
-  const allFeatures = [...formData.features, ...formData.customFeatures]
   const pages = Object.entries(pageContents).map(([name, fields]) => ({ name, fields }))
   const structuredAssetStatuses = {
     ...formData.assetStatuses,
@@ -33,12 +35,14 @@ export function toSubmissionPayload(
       Object.entries(formData.deckSectionStatuses).map(([key, status]) => [`deck.${key}`, status]),
     ),
   }
-  // v2 uses the structured resource checklist instead of the legacy asset
-  // qualification control. Keep the legacy field when present and provide a
-  // valid default for a complete v2 submission; drafts may remain blank.
   const assetQualification = formData.assetQualification || (
     Object.keys(structuredAssetStatuses).length > 0 ? 'ready' : ''
   )
+
+  const buildPath: BuildPath = formData.tier === 'enterprise' ? 'enterprise' : 'custom'
+
+  const coreFeatureCodes = Array.from(CORE_FEATURE_CODES)
+  const selectedExtensions = formData.selectedExtensions ?? []
 
   const payload: IntakeSubmissionPayload = {
     client: {
@@ -54,46 +58,35 @@ export function toSubmissionPayload(
       businessDescription: formData.businessDesc,
     },
     tier: formData.tier,
+    buildPath,
     assets: {
       qualification: assetQualification,
       statuses: structuredAssetStatuses,
       requestedServices: formData.selectedAssetServices,
     },
-    content: {
-      pages,
-      features: allFeatures.map(name => ({
-        name,
-        priority: formData.featurePriorities[name] || 'Need Help Deciding',
-        source: formData.customFeatures.includes(name) ? 'custom' : 'chip',
-      })),
-    },
     design: {
       styles: formData.designStyles,
       inspirationLink: formData.inspirationLink,
     },
-    payment: {
-      plan: formData.paymentPlan,
-      maintenanceAfterFree: formData.maintenanceAfterFree,
-      maintenanceEndAcknowledged: formData.maintenanceEndAcknowledged,
-      voucherCode: formData.voucherCode,
-    },
-    confirmations: {
-      accurate: formData.confirmAccurate,
-      receipt: formData.confirmReceipt,
-      payment: formData.confirmPayment,
-      maintenance: formData.confirmMaintenance,
-      buildCard: formData.confirmBuildCard,
-      submission: formData.confirmSubmission,
+    scope: {
+      pages,
+      features: [],
+      coreFeatures: coreFeatureCodes,
+      extensions: selectedExtensions,
     },
   }
 
-  if (formData.tier === 'template' || formData.tier === 'custom') {
+  // Template block: only for Templated Website builds.
+  if (formData.projectType === 'templated-website') {
     payload.template = {
       templateId: formData.templateId,
       projectVersion: formData.projectVersion,
       colorPreset: formData.colorPreset,
     }
-  } else if (formData.tier === 'enterprise') {
+  }
+
+  // Enterprise block: only for enterprise build path.
+  if (formData.tier === 'enterprise') {
     payload.enterprise = {
       projectVision: formData.projectVision,
       targetUsers: formData.targetUsers,
@@ -107,6 +100,12 @@ export function toSubmissionPayload(
       competitors: formData.competitors,
       successCriteria: formData.successCriteria,
     }
+  }
+
+  // Questionnaire: AI-Assisted Website only. Templated Website uses a base template
+  // and does not collect questionnaire answers.
+  if (formData.projectType === 'ai-assisted-website' && formData.websiteQuestionnaire) {
+    payload.websiteQuestionnaire = formData.websiteQuestionnaire
   }
 
   return payload

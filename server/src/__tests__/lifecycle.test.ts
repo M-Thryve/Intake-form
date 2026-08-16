@@ -93,8 +93,8 @@ function makePayload(overrides: Record<string, unknown> = {}) {
     },
     project: {
       projectName: "Test App",
-      industry: "Technology",
-      projectType: "website",
+      industry: "service-commerce",
+      projectType: "templated-website",
       businessDescription: "A test application",
     },
     assets: {
@@ -107,6 +107,12 @@ function makePayload(overrides: Record<string, unknown> = {}) {
       templateId: "starter-portfolio",
       projectVersion: "desktop",
       colorPreset: "blue",
+    },
+    scope: {
+      coreFeatures: [],
+      extensions: [],
+      pages: [{ name: "Home", fields: { headline: "Welcome" } }],
+      features: [],
     },
     content: {
       pages: [{ name: "Home", fields: { headline: "Welcome" } }],

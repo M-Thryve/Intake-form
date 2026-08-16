@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { validateIntakePayload, validateDraftPayload, validatePhase2Payload } from "../lib/validation.js";
 
+// v3.0 canonical payload. projectType uses v3.0 values; industry is canonical.
 function validPayload(overrides: Record<string, unknown> = {}) {
   return {
     client: {
@@ -11,8 +12,8 @@ function validPayload(overrides: Record<string, unknown> = {}) {
     },
     project: {
       projectName: "Test App",
-      industry: "Technology",
-      projectType: "website",
+      industry: "service-commerce",
+      projectType: "templated-website",
       businessDescription: "A test application",
     },
     assets: {
@@ -25,6 +26,12 @@ function validPayload(overrides: Record<string, unknown> = {}) {
       templateId: "starter-portfolio",
       projectVersion: "desktop",
       colorPreset: "blue",
+    },
+    scope: {
+      coreFeatures: [],
+      extensions: [],
+      pages: [{ name: "Home", fields: { headline: "Welcome" } }],
+      features: [],
     },
     content: {
       pages: [{ name: "Home", fields: { headline: "Welcome" } }],
@@ -53,7 +60,7 @@ function validPayload(overrides: Record<string, unknown> = {}) {
 }
 
 describe("validateIntakePayload", () => {
-  it("accepts a valid template payload", () => {
+  it("accepts a valid Templated Website payload", () => {
     const result = validateIntakePayload(validPayload());
     expect(result.success).toBe(true);
     expect(result.data).toBeDefined();
@@ -64,6 +71,12 @@ describe("validateIntakePayload", () => {
       validPayload({
         tier: "enterprise",
         template: undefined,
+        project: {
+          projectName: "Enterprise App",
+          industry: "service-commerce",
+          projectType: "website",
+          businessDescription: "An enterprise application",
+        },
         enterprise: {
           projectVision: "Build a platform",
           targetUsers: "Businesses",
@@ -83,9 +96,7 @@ describe("validateIntakePayload", () => {
   });
 
   it("accepts a valid custom payload", () => {
-    const result = validateIntakePayload(
-      validPayload({ tier: "custom" })
-    );
+    const result = validateIntakePayload(validPayload({ tier: "custom" }));
     expect(result.success).toBe(true);
   });
 
@@ -112,7 +123,12 @@ describe("validateIntakePayload", () => {
   it("rejects missing project name", () => {
     const result = validateIntakePayload(
       validPayload({
-        project: { projectName: "", industry: "Tech", projectType: "Web", businessDescription: "" },
+        project: {
+          projectName: "",
+          industry: "service-commerce",
+          projectType: "templated-website",
+          businessDescription: "",
+        },
       })
     );
     expect(result.success).toBe(false);
@@ -125,7 +141,7 @@ describe("validateIntakePayload", () => {
     expect(result.errors?.some((e) => e.field === "tier")).toBe(true);
   });
 
-  it("rejects legacy template tier (not an active tier)", () => {
+  it("rejects legacy template tier (not an active tier in the submit contract)", () => {
     const result = validateIntakePayload(
       validPayload({
         tier: "template",
@@ -136,9 +152,7 @@ describe("validateIntakePayload", () => {
     expect(result.errors?.some((e) => e.field === "tier")).toBe(true);
   });
 
-  // Previous template+incomplete test replaced by the above (template tier itself is rejected).
-
-  it("rejects template tier without template selection", () => {
+  it("rejects Templated Website build without template selection", () => {
     const result = validateIntakePayload(
       validPayload({ template: undefined })
     );
@@ -151,6 +165,12 @@ describe("validateIntakePayload", () => {
       validPayload({
         tier: "enterprise",
         template: undefined,
+        project: {
+          projectName: "App",
+          industry: "service-commerce",
+          projectType: "website",
+          businessDescription: "",
+        },
         enterprise: undefined,
       })
     );
@@ -158,14 +178,14 @@ describe("validateIntakePayload", () => {
     expect(result.errors?.some((e) => e.field === "enterprise")).toBe(true);
   });
 
-  it("rejects empty features array", () => {
+  // v3.0: features are optional — empty array is now valid.
+  it("accepts empty features array (v3.0 — features no longer required)", () => {
     const result = validateIntakePayload(
       validPayload({
         content: { pages: [], features: [] },
       })
     );
-    expect(result.success).toBe(false);
-    expect(result.errors?.some((e) => e.field.includes("features"))).toBe(true);
+    expect(result.success).toBe(true);
   });
 
   it("accepts empty design styles (REV-05 — default-empty payload)", () => {
@@ -177,7 +197,7 @@ describe("validateIntakePayload", () => {
     expect(result.success).toBe(true);
   });
 
-  it("rejects missing payment plan", () => {
+  it("rejects missing payment plan (legacy intakeSubmitSchema — payment still validated)", () => {
     const result = validateIntakePayload(
       validPayload({
         payment: { plan: "", maintenanceAfterFree: "", maintenanceEndAcknowledged: true, voucherCode: "" },
@@ -187,7 +207,7 @@ describe("validateIntakePayload", () => {
     expect(result.errors?.some((e) => e.field.includes("plan"))).toBe(true);
   });
 
-  it("rejects false confirmations", () => {
+  it("rejects false confirmations (legacy intakeSubmitSchema)", () => {
     const result = validateIntakePayload(
       validPayload({
         confirmations: {
@@ -215,8 +235,8 @@ describe("validateIntakePayload", () => {
       validPayload({
         project: {
           projectName: "Test",
-          industry: "Tech",
-          projectType: "Web",
+          industry: "service-commerce",
+          projectType: "templated-website",
           businessDescription: "x".repeat(5001),
         },
       })
@@ -236,15 +256,15 @@ describe("validateIntakePayload", () => {
     expect(result.success).toBe(false);
   });
 
-  // ── Phase 4 Delta: New test cases ──────────────────────────────────────
+  // ── REV-02: v3.0 project type constants ────────────────────────────────────
 
-  it("REV-02: rejects saas project type for custom tier", () => {
+  it("REV-02: rejects saas project type for custom tier (not in v3.0 custom types)", () => {
     const result = validateIntakePayload(
       validPayload({
         tier: "custom",
         project: {
           projectName: "Test",
-          industry: "Tech",
+          industry: "service-commerce",
           projectType: "saas",
           businessDescription: "A SaaS",
         },
@@ -255,15 +275,31 @@ describe("validateIntakePayload", () => {
     expect(result.errors?.some((e) => e.message.includes("Custom Build"))).toBe(true);
   });
 
-  it("REV-02: rejects webapp project type for custom tier", () => {
+  it("REV-02: rejects webapp project type for custom tier (not in v3.0 custom types)", () => {
     const result = validateIntakePayload(
       validPayload({
         tier: "custom",
         project: {
           projectName: "Test",
-          industry: "Tech",
+          industry: "service-commerce",
           projectType: "webapp",
           businessDescription: "A web app",
+        },
+      })
+    );
+    expect(result.success).toBe(false);
+    expect(result.errors?.some((e) => e.field.includes("projectType"))).toBe(true);
+  });
+
+  it("REV-02: rejects mobile project type for custom tier (removed from v3.0)", () => {
+    const result = validateIntakePayload(
+      validPayload({
+        tier: "custom",
+        project: {
+          projectName: "Mobile App",
+          industry: "service-commerce",
+          projectType: "mobile",
+          businessDescription: "A mobile app",
         },
       })
     );
@@ -291,24 +327,24 @@ describe("validateIntakePayload", () => {
         },
         project: {
           projectName: "SaaS Product",
-          industry: "Tech",
+          industry: "service-commerce",
           projectType: "saas",
           businessDescription: "A SaaS product",
         },
       })
     );
     expect(result.success).toBe(false);
-    expect(result.errors?.some((e) => e.message.includes("Enterprise Level"))).toBe(true);
+    expect(result.errors?.some((e) => e.message.includes("Enterprise"))).toBe(true);
   });
 
-  it("REV-02: accepts website project type for custom tier", () => {
+  it("REV-02: accepts Templated Website project type for custom tier", () => {
     const result = validateIntakePayload(
       validPayload({
         tier: "custom",
         project: {
           projectName: "Website",
-          industry: "Tech",
-          projectType: "website",
+          industry: "service-commerce",
+          projectType: "templated-website",
           businessDescription: "A website",
         },
       })
@@ -316,23 +352,24 @@ describe("validateIntakePayload", () => {
     expect(result.success).toBe(true);
   });
 
-  it("REV-02: accepts mobile project type for custom tier", () => {
+  it("REV-02: accepts AI-Assisted Website project type for custom tier", () => {
     const result = validateIntakePayload(
       validPayload({
         tier: "custom",
+        template: undefined,
         project: {
-          projectName: "Mobile App",
-          industry: "Tech",
-          projectType: "mobile",
-          businessDescription: "A mobile app",
+          projectName: "AI Website",
+          industry: "service-commerce",
+          projectType: "ai-assisted-website",
+          businessDescription: "An AI-assisted website",
         },
       })
     );
     expect(result.success).toBe(true);
   });
 
-  it("REV-02: accepts all six enterprise project types", () => {
-    for (const pt of ["website", "webapp", "mobile", "ai-agent", "ecommerce", "internal"]) {
+  it("REV-02: accepts all four v3.0 enterprise project types", () => {
+    for (const pt of ["website", "webapp", "ecommerce", "internal"]) {
       const result = validateIntakePayload(
         validPayload({
           tier: "enterprise",
@@ -352,7 +389,7 @@ describe("validateIntakePayload", () => {
           },
           project: {
             projectName: "Project",
-            industry: "Tech",
+            industry: "service-commerce",
             projectType: pt,
             businessDescription: "Desc",
           },
@@ -362,19 +399,80 @@ describe("validateIntakePayload", () => {
     }
   });
 
+  it("REV-02: rejects mobile and ai-agent (removed from v3.0 enterprise types)", () => {
+    for (const pt of ["mobile", "ai-agent"]) {
+      const result = validateIntakePayload(
+        validPayload({
+          tier: "enterprise",
+          template: undefined,
+          enterprise: {
+            projectVision: "Platform",
+            targetUsers: "Teams",
+            userRoles: "Admin",
+            businessWorkflows: "Wf",
+            integrations: "",
+            existingSystems: "",
+            dataSecurityRequirements: "",
+            scalabilityRequirements: "",
+            designInspiration: "",
+            competitors: "",
+            successCriteria: "",
+          },
+          project: {
+            projectName: "Project",
+            industry: "service-commerce",
+            projectType: pt,
+            businessDescription: "Desc",
+          },
+        })
+      );
+      expect(result.success).toBe(false);
+    }
+  });
+
   it("Phase 4: rejects legacy 'template' tier", () => {
-    const result = validateIntakePayload(
-      validPayload({ tier: "template" })
-    );
+    const result = validateIntakePayload(validPayload({ tier: "template" }));
     expect(result.success).toBe(false);
     expect(result.errors?.some((e) => e.field === "tier")).toBe(true);
   });
 });
 
 describe("validateDraftPayload", () => {
-  it("accepts the frontend's empty placeholders and reports them as gaps", () => {
+  // v3.0: email is the single universal hard requirement for draft saves.
+  // An empty or missing email → schema-level failure (422); all other gaps
+  // are returned as missingRequirements records.
+
+  it("rejects a completely empty object (email is required at schema level)", () => {
+    const result = validateDraftPayload({});
+    expect(result.success).toBe(false);
+    expect(result.errors).toBeDefined();
+    expect(result.errors!.length).toBeGreaterThan(0);
+  });
+
+  it("rejects draft with missing email (schema-level, not a gap record)", () => {
     const result = validateDraftPayload({
-      client: { fullName: "", company: "", email: "", phone: "" },
+      client: { fullName: "A", company: "", phone: "" },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects draft with empty email string", () => {
+    const result = validateDraftPayload({
+      client: { fullName: "A", company: "", email: "", phone: "" },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects draft with invalid email format", () => {
+    const result = validateDraftPayload({
+      client: { fullName: "A", email: "notanemail" },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts the frontend's empty placeholders when email is present", () => {
+    const result = validateDraftPayload({
+      client: { fullName: "", company: "", email: "draft@client.com", phone: "" },
       project: { projectName: "", industry: "", projectType: "", businessDescription: "" },
       tier: "",
       assets: { qualification: "", statuses: {}, requestedServices: [] },
@@ -396,29 +494,32 @@ describe("validateDraftPayload", () => {
     expect(result.missingRequirements.map((item) => item.field)).toContain("tier");
   });
 
-  it("accepts a minimal draft with only clientName", () => {
-    const result = validateDraftPayload({ client: { fullName: "A" } });
+  it("accepts a minimal draft with valid email", () => {
+    const result = validateDraftPayload({
+      client: { fullName: "A", email: "a@test.com" },
+    });
     expect(result.success).toBe(true);
     expect(result.missingRequirements.length).toBeGreaterThan(0);
   });
 
-  it("accepts a completely empty object", () => {
-    const result = validateDraftPayload({});
-    expect(result.success).toBe(true);
-    expect(result.missingRequirements.length).toBeGreaterThan(0);
-  });
-
-  it("returns missingRequirements listing all gaps", () => {
-    const result = validateDraftPayload({ client: { fullName: "A" } });
+  it("returns missingRequirements listing gaps (email validated at schema level, not as a gap)", () => {
+    const result = validateDraftPayload({
+      client: { fullName: "A", email: "a@test.com" },
+    });
     expect(result.success).toBe(true);
     const fields = result.missingRequirements.map((m) => m.field);
-    expect(fields).toContain("client.email");
+    // Email is valid → NOT in missingRequirements (schema-level validation handled it).
+    expect(fields).not.toContain("client.email");
+    // Other required fields are missing.
     expect(fields).toContain("project.projectName");
     expect(fields).toContain("tier");
   });
 
   it("does not list fullName as missing when provided", () => {
-    const result = validateDraftPayload({ client: { fullName: "Juan" } });
+    const result = validateDraftPayload({
+      client: { fullName: "Juan", email: "juan@test.com" },
+    });
+    expect(result.success).toBe(true);
     const fields = result.missingRequirements.map((m) => m.field);
     expect(fields).not.toContain("client.fullName");
   });
@@ -431,16 +532,16 @@ describe("validateDraftPayload", () => {
 
   it("rejects payloads that violate shape constraints (field too long)", () => {
     const result = validateDraftPayload({
-      client: { fullName: "x".repeat(501) },
+      client: { fullName: "x".repeat(501), email: "a@b.com" },
     });
     expect(result.success).toBe(false);
     expect(result.errors).toBeDefined();
   });
 
-  it("lists custom-tier template gaps when tier is custom", () => {
+  it("lists template gaps when projectType is templated-website", () => {
     const result = validateDraftPayload({
       client: { fullName: "A", email: "a@b.com" },
-      project: { projectName: "P", industry: "Tech", projectType: "website" },
+      project: { projectName: "P", industry: "service-commerce", projectType: "templated-website" },
       tier: "custom",
     });
     const fields = result.missingRequirements.map((m) => m.field);
@@ -448,30 +549,150 @@ describe("validateDraftPayload", () => {
     expect(fields).toContain("template.projectVersion");
   });
 
+  it("does NOT list template gaps when projectType is ai-assisted-website", () => {
+    const result = validateDraftPayload({
+      client: { fullName: "A", email: "a@b.com" },
+      project: { projectName: "P", industry: "service-commerce", projectType: "ai-assisted-website" },
+      tier: "custom",
+    });
+    const fields = result.missingRequirements.map((m) => m.field);
+    expect(fields).not.toContain("template.templateId");
+    expect(fields).not.toContain("template.projectVersion");
+  });
+
   it("lists enterprise gaps when tier is enterprise", () => {
     const result = validateDraftPayload({
       client: { fullName: "A", email: "a@b.com" },
-      project: { projectName: "P", industry: "Tech", projectType: "website" },
+      project: { projectName: "P", industry: "service-commerce", projectType: "website" },
       tier: "enterprise",
     });
     const fields = result.missingRequirements.map((m) => m.field);
     expect(fields).toContain("enterprise.projectVision");
     expect(fields).toContain("enterprise.targetUsers");
   });
+
+  it("reports non-canonical industry as a missing requirement", () => {
+    const result = validateDraftPayload({
+      client: { fullName: "A", email: "a@b.com" },
+      project: { projectName: "P", industry: "Technology", projectType: "templated-website" },
+      tier: "custom",
+    });
+    expect(result.success).toBe(true);
+    const fields = result.missingRequirements.map((m) => m.field);
+    expect(fields).toContain("project.industry");
+  });
+
+  it("reports unknown extension codes as missing requirements", () => {
+    const result = validateDraftPayload({
+      client: { fullName: "A", email: "a@b.com" },
+      project: { projectName: "P", industry: "service-commerce", projectType: "templated-website" },
+      tier: "custom",
+      scope: { extensions: ["EXT-001", "UNKNOWN-CODE"] },
+    });
+    expect(result.success).toBe(true);
+    const messages = result.missingRequirements.map((m) => m.message);
+    expect(messages.some((m) => m.includes("UNKNOWN-CODE"))).toBe(true);
+  });
+
+  it("accepts valid extension codes without reporting gaps", () => {
+    const result = validateDraftPayload({
+      client: { fullName: "Juan", email: "juan@test.com" },
+      project: { projectName: "P", industry: "service-commerce", projectType: "templated-website" },
+      tier: "custom",
+      template: { templateId: "starter", projectVersion: "desktop", colorPreset: "" },
+      assets: { qualification: "ready", statuses: {}, requestedServices: [] },
+      scope: { extensions: ["EXT-001", "EXT-003", "EXT-007"] },
+    });
+    expect(result.success).toBe(true);
+    const messages = result.missingRequirements.map((m) => m.message);
+    expect(messages.some((m) => m.includes("Unknown extension code"))).toBe(false);
+  });
+
+  // v3.0: payment plan and confirmations are NOT required for draft saves.
+  it("does NOT report payment.plan as a missing requirement", () => {
+    const result = validateDraftPayload({
+      client: { fullName: "A", email: "a@b.com" },
+      project: { projectName: "P", industry: "service-commerce", projectType: "templated-website" },
+      tier: "custom",
+      payment: { plan: "" },
+    });
+    expect(result.success).toBe(true);
+    const fields = result.missingRequirements.map((m) => m.field);
+    expect(fields).not.toContain("payment.plan");
+  });
+
+  it("does NOT report confirmations as missing requirements", () => {
+    const result = validateDraftPayload({
+      client: { fullName: "A", email: "a@b.com" },
+      project: { projectName: "P", industry: "service-commerce", projectType: "templated-website" },
+      tier: "custom",
+      confirmations: { accurate: false, receipt: false, payment: false, maintenance: false, buildCard: false, submission: false },
+    });
+    expect(result.success).toBe(true);
+    const fields = result.missingRequirements.map((m) => m.field);
+    expect(fields.some((f) => f.startsWith("confirmations"))).toBe(false);
+  });
 });
 
 describe("validatePhase2Payload", () => {
-  it("accepts a complete v2 submission without legacy payment or confirmation controls", () => {
+  it("accepts a complete v3.0 submission without legacy payment or confirmation controls", () => {
     const result = validatePhase2Payload({
       client: { fullName: "A", company: "", email: "a@example.com", phone: "" },
-      project: { projectName: "Project", industry: "Tech", projectType: "website", businessDescription: "" },
+      project: {
+        projectName: "Project",
+        industry: "service-commerce",
+        projectType: "templated-website",
+        businessDescription: "",
+      },
       assets: { qualification: "ready", statuses: {}, requestedServices: [] },
       tier: "custom",
       template: { templateId: "starter", projectVersion: "desktop", colorPreset: "" },
-      content: { pages: [], features: [{ name: "Feature", priority: "Required", source: "chip" }] },
+      content: { pages: [], features: [] },
       design: { styles: [], inspirationLink: "" },
     });
 
     expect(result.success).toBe(true);
+  });
+
+  it("accepts an AI-Assisted Website build without template", () => {
+    const result = validatePhase2Payload({
+      client: { fullName: "A", company: "", email: "a@example.com", phone: "" },
+      project: {
+        projectName: "AI Site",
+        industry: "service-commerce",
+        projectType: "ai-assisted-website",
+        businessDescription: "",
+      },
+      assets: { qualification: "ready", statuses: {}, requestedServices: [] },
+      tier: "custom",
+      websiteQuestionnaire: {
+        primaryGoal: "Drive leads for the business",
+        visitorAction: "Fill out a contact form",
+        websitePurpose: ["generate-leads"],
+      },
+      content: { pages: [], features: [] },
+      design: { styles: [], inspirationLink: "" },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an unknown project type for custom tier", () => {
+    const result = validatePhase2Payload({
+      client: { fullName: "A", company: "", email: "a@example.com", phone: "" },
+      project: {
+        projectName: "Project",
+        industry: "service-commerce",
+        projectType: "mobile",
+        businessDescription: "",
+      },
+      assets: { qualification: "ready", statuses: {}, requestedServices: [] },
+      tier: "custom",
+      content: { pages: [], features: [] },
+      design: { styles: [], inspirationLink: "" },
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.errors?.some((e) => e.field.includes("projectType"))).toBe(true);
   });
 });
