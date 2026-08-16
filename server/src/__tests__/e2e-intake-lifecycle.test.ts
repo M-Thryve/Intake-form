@@ -43,6 +43,8 @@ const appSupabase = vi.hoisted(() => {
       };
     }),
     update: vi.fn().mockReturnThis(),
+    upsert: vi.fn().mockResolvedValue({ data: null, error: null }),
+    delete: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     gte: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
@@ -244,7 +246,8 @@ describe("Work Stream 3 — Draft recovery verification", () => {
       const res = await request(app).post("/api/intakes").send({ idempotencyKey: "draft-incomplete", command: "save_draft", intake: payload });
       expect(res.status).toBe(200);
       expect(res.body.status).toBe("draft");
-      expect(res.body.buildReferenceNumber).toBeNull();
+      // P4: buildReferenceNumber is now generated on first draft persistence
+      expect(res.body.buildReferenceNumber).toMatch(/^MTH-\d{4}-\d{4}-[A-Z0-9]{4}$/);
     });
   });
   describe("Test 18 — submit-blocking errors save as draft", () => {

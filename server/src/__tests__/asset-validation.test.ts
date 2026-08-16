@@ -18,6 +18,8 @@ beforeAll(() => {
 function validUpload(overrides: Partial<UploadRequest> = {}): UploadRequest {
   return {
     intakeId: "550e8400-e29b-41d4-a716-446655440000",
+    clientId: "650e8400-e29b-41d4-a716-446655440000",
+    referenceNumber: "MTH-2608-0001-TEST",
     filename: "logo.png",
     mimeType: "image/png",
     fileSizeBytes: 1024 * 100, // 100KB
@@ -128,6 +130,8 @@ describe("isValidTransition (public callers)", () => {
     ["uploaded", "failed"],
     ["scanning", "rejected"],
     ["scanning", "failed"],
+    ["failed", "pending"],
+    ["rejected", "pending"],
   ];
 
   const invalidTransitions: [AssetStatus, AssetStatus][] = [
@@ -137,7 +141,6 @@ describe("isValidTransition (public callers)", () => {
     ["rejected", "ready"],
     ["rejected", "uploaded"],
     ["failed", "ready"],
-    ["failed", "pending"],
     ["pending", "ready"],
     ["pending", "scanning"],
     ["scanning", "uploaded"],

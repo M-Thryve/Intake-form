@@ -8,8 +8,9 @@
 --   4. Relax intake_features.priority NOT NULL constraint and add default 'not_applicable'
 --   5. Add a unique partial index on notification_outbox for lifecycle deduplication
 --
--- All statements are idempotent. This migration does NOT rewrite submit_intake,
--- implement draft_saved outbox events, or perform any lifecycle behavior changes.
+-- All statements are idempotent. Lifecycle behavior is implemented by the
+-- Prompt 4 route and atomic submit function; this migration supplies the v3
+-- projection tables and lifecycle deduplication index used by those writes.
 
 -- ── 1. intakes: reference_issued_at ─────────────────────────────────────────
 
@@ -44,11 +45,7 @@ BEGIN
       ON public.intake_website_questionnaire
       FOR SELECT
       TO authenticated
-      USING (
-        auth.uid() IN (
-          SELECT id FROM public.users WHERE role = 'internal'
-        )
-      );
+      USING (public.is_internal_user());
   END IF;
 END $$;
 
@@ -90,11 +87,7 @@ BEGIN
       ON public.intake_scope_items
       FOR SELECT
       TO authenticated
-      USING (
-        auth.uid() IN (
-          SELECT id FROM public.users WHERE role = 'internal'
-        )
-      );
+      USING (public.is_internal_user());
   END IF;
 END $$;
 

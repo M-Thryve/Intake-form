@@ -4,6 +4,12 @@
 -- intake, child records, Build Card, and audit records are then written in one
 -- database transaction.
 
+-- Make lifecycle outbox writes safe before the later v3 migration is applied
+-- (the statement is repeated idempotently in migration 016).
+CREATE UNIQUE INDEX IF NOT EXISTS idx_outbox_intake_lifecycle_event
+  ON public.notification_outbox (intake_id, event_type)
+  WHERE event_type IN ('draft_saved', 'intake_submitted');
+
 -- Migrations 005/006 replace the commercial-stage check with post-approval
 -- states. Clear the Phase 2 table default so draft/submit inserts do not
 -- receive the obsolete `not_started` value before the commercial workflow.
@@ -50,9 +56,12 @@ DECLARE
   v_existing_hash text;
   v_existing_response jsonb;
   v_previous_status text;
+  v_previous_reference text;
   v_template jsonb;
   v_enterprise jsonb;
   v_response jsonb;
+  v_client_id uuid;
+  v_reference_number text;
   v_page jsonb;
   v_feature jsonb;
   v_asset_key text;
@@ -85,8 +94,8 @@ BEGIN
     );
   END IF;
 
-  SELECT id, status
-    INTO v_intake_id, v_previous_status
+  SELECT id, status, build_reference_number
+    INTO v_intake_id, v_previous_status, v_previous_reference
     FROM public.intakes
    WHERE p_build_ref IS NOT NULL
      AND build_reference_number = p_build_ref
@@ -97,6 +106,7 @@ BEGIN
       build_path,
       build_reference_number,
       status,
+      reference_issued_at,
       tier,
       client_details,
       project_details,
@@ -105,8 +115,9 @@ BEGIN
       commercial_stage
     ) VALUES (
       CASE WHEN p_tier = 'enterprise' THEN 'enterprise' ELSE 'custom' END,
-      CASE WHEN p_status = 'submitted' THEN p_build_ref ELSE NULL END,
+      CASE WHEN p_status <> 'discarded' THEN p_build_ref ELSE NULL END,
       p_status,
+      CASE WHEN p_status <> 'discarded' AND p_build_ref IS NOT NULL THEN now() ELSE NULL END,
       p_tier,
       jsonb_build_object(
         'full_name', p_client_full_name,
@@ -168,9 +179,31 @@ BEGIN
   ELSE
     UPDATE public.intakes
        SET status = p_status,
-           build_reference_number = CASE WHEN p_status = 'submitted' THEN p_build_ref ELSE build_reference_number END,
+           build_reference_number = CASE
+             WHEN p_status <> 'discarded' AND p_build_ref IS NOT NULL THEN p_build_ref
+             ELSE build_reference_number
+           END,
+           reference_issued_at = CASE
+             WHEN reference_issued_at IS NULL AND p_build_ref IS NOT NULL THEN now()
+             ELSE reference_issued_at
+           END,
            updated_at = now()
      WHERE id = v_intake_id;
+  END IF;
+
+  SELECT client_id, build_reference_number
+    INTO v_client_id, v_reference_number
+    FROM public.intakes
+   WHERE id = v_intake_id;
+
+  IF v_reference_number IS NOT NULL AND p_build_ref IS NOT NULL
+     AND v_previous_reference IS NULL THEN
+    INSERT INTO public.intake_lifecycle_events (
+      intake_id, event_type, actor_type, new_status, idempotency_key, metadata
+    ) VALUES (
+      v_intake_id, 'build_reference_assigned', 'system', p_status,
+      p_idempotency_key, jsonb_build_object('reference_number', v_reference_number)
+    );
   END IF;
 
   INSERT INTO public.intake_asset_qualifications (intake_id, qualification)
@@ -292,14 +325,61 @@ BEGIN
 
   v_response := jsonb_build_object(
     'success', true,
-    'buildReferenceNumber', CASE WHEN p_status = 'submitted' THEN p_build_ref ELSE NULL END,
+    'buildReferenceNumber', v_reference_number,
+    'referenceNumber', v_reference_number,
     'intakeId', v_intake_id,
+    'clientId', v_client_id,
     'status', p_status,
+    'command', CASE p_status
+      WHEN 'draft' THEN 'save_draft'
+      WHEN 'submitted' THEN 'submit'
+      ELSE 'discard'
+    END,
     'ownerReviewStatus', CASE WHEN p_status = 'submitted' THEN 'waiting_owner_review' ELSE NULL END,
     'preliminaryBuildCard', CASE WHEN p_status = 'submitted' THEN
       jsonb_build_object('status', 'queued', 'message', 'Your intake has been submitted and is waiting for owner review.')
       ELSE NULL END
   );
+
+  IF p_status = 'draft' THEN
+    INSERT INTO public.notification_outbox (
+      intake_id, event_type, channel, recipient_ref, payload
+    ) VALUES (
+      v_intake_id, 'draft_saved', 'email', v_client_id::text,
+      jsonb_build_object(
+        'intakeId', v_intake_id,
+        'clientId', v_client_id,
+        'referenceNumber', v_reference_number,
+        'status', 'draft',
+        'missingRequirements', '[]'::jsonb
+      )
+    )
+    ON CONFLICT (intake_id, event_type)
+      WHERE event_type IN ('draft_saved', 'intake_submitted')
+    DO UPDATE SET
+      payload = EXCLUDED.payload,
+      recipient_ref = EXCLUDED.recipient_ref,
+      updated_at = now();
+  ELSIF p_status = 'submitted' THEN
+    INSERT INTO public.notification_outbox (
+      intake_id, event_type, channel, recipient_ref, payload
+    ) VALUES (
+      v_intake_id, 'intake_submitted', 'email', v_client_id::text,
+      jsonb_build_object(
+        'intakeId', v_intake_id,
+        'clientId', v_client_id,
+        'referenceNumber', v_reference_number,
+        'status', 'submitted',
+        'ownerReviewStatus', 'waiting_owner_review'
+      )
+    )
+    ON CONFLICT (intake_id, event_type)
+      WHERE event_type IN ('draft_saved', 'intake_submitted')
+    DO UPDATE SET
+      payload = EXCLUDED.payload,
+      recipient_ref = EXCLUDED.recipient_ref,
+      updated_at = now();
+  END IF;
 
   INSERT INTO public.idempotency_keys (
     idempotency_key, intake_id, payload_hash, response_body

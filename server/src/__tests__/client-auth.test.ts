@@ -130,6 +130,17 @@ describe("client authentication boundary", () => {
     expect(response.status).toBe(401)
   })
 
+  it("rejects an expired Supabase token at the internal route boundary", async () => {
+    state.authUser = null
+    state.authError = { message: "JWT expired" }
+    const { requireAuth } = await import("../middleware/auth.js")
+    const response = await request(appWith(requireAuth))
+      .get("/probe")
+      .set("Authorization", "Bearer expired-token")
+    expect(response.status).toBe(401)
+    expect(response.body.error).toBe("Invalid or expired token")
+  })
+
   it("rejects an empty bearer token", async () => {
     const { requireClientAuth } = await import("../middleware/auth.js")
     const response = await request(appWith(requireClientAuth))

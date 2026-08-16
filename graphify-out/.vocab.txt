@@ -12,6 +12,7 @@ across
 action
 actions
 activate
+active
 adaptation
 add
 adding
@@ -237,6 +238,7 @@ clone
 closes
 cluster
 code
+codebase
 codes
 coerce
 coherence
@@ -267,6 +269,7 @@ compiler
 complementary
 complete
 completed
+completion
 complexity
 compliance
 component
@@ -305,6 +308,7 @@ contains
 content
 context
 contextual
+contextualize
 continue
 continuity
 continuous
@@ -637,6 +641,7 @@ github
 given
 glyph
 goal
+goals
 gold
 google
 gracefully
@@ -956,6 +961,7 @@ number
 numbering
 numbers
 object
+objective
 obsidian
 ocean
 off
@@ -1395,6 +1401,7 @@ standard
 standards
 start
 starter
+starting
 startup
 state
 statement
@@ -1440,6 +1447,7 @@ sufficient
 suggest
 suggestion
 suggestions
+sum
 summaries
 summary
 supabase
@@ -1667,6 +1675,7 @@ wiring
 with
 within
 without
+wizard
 wordmark
 words
 work

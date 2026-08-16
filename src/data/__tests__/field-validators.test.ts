@@ -12,7 +12,7 @@ function emptyForm(): FormData {
   return {
     fullName: '', company: '', email: '', phone: '', projectName: '',
     industry: '', projectType: '', businessDesc: '',
-    assetQualification: '', assetStatuses: {}, selectedAssetServices: [],
+    assetQualification: '', assetStatuses: {}, selectedAssetServices: [], uploadedAssets: [],
     deckExists: '',
     deckSectionStatuses: {}, deckSectionNotes: {},
     resourceStatuses: {}, resourceNotes: {}, resourceAddOnCosts: {},

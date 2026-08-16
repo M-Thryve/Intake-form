@@ -23,6 +23,8 @@ const mockSelect = Object.assign(vi.fn().mockReturnThis(), {
   eq: mockEq,
   maybeSingle: vi.fn(() => Promise.resolve({ data: mockMaybeSingleResult, error: null })),
 });
+const mockUpsert = vi.fn().mockResolvedValue({ data: null, error: null });
+const mockDelete = vi.fn().mockReturnThis();
 const fromMock = vi.fn().mockReturnValue({
   select: vi.fn().mockReturnValue({
     eq: mockEq,
@@ -45,6 +47,12 @@ const fromMock = vi.fn().mockReturnValue({
         Promise.resolve({ data: null, error: null }).finally(fn),
     };
   }),
+  upsert: mockUpsert,
+  update: vi.fn().mockReturnValue({
+    eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+  }),
+  delete: mockDelete,
+  eq: mockEq,
 });
 
 vi.mock("../lib/reference.js", () => ({
@@ -193,7 +201,8 @@ describe("Intake Lifecycle API", () => {
     expect(res.body.success).toBe(true);
     expect(res.body.command).toBe("save_draft");
     expect(res.body.status).toBe("draft");
-    expect(res.body.buildReferenceNumber).toBeNull();
+    // P4: buildReferenceNumber is generated on first draft persistence
+    expect(res.body.buildReferenceNumber).toBe("MTH-20260806-FAKE-TEST");
   });
 
   it("submit command: triggers RPC call and receives intake response", async () => {
@@ -204,6 +213,68 @@ describe("Intake Lifecycle API", () => {
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
     expect(res.body.command).toBe("submit");
+  });
+
+  it("supplements an atomic RPC response with v3 scope persistence and Build Card scope", async () => {
+    mockRpc.mockResolvedValueOnce({
+      data: {
+        intake_id: "test-intake-id",
+        response_body: {
+          success: true,
+          buildReferenceNumber: "MTH-20260806-FAKE-TEST",
+          intakeId: "test-intake-id",
+          status: "submitted",
+          command: "submit",
+          preliminaryBuildCard: { status: "queued" },
+        },
+      },
+      error: null,
+    });
+
+    const res = await request(app)
+      .post("/api/intakes")
+      .send(buildBody({
+        command: "submit",
+        payloadOverrides: {
+          scope: { coreFeatures: [], extensions: ["EXT-001"], customFeatures: [], pages: [], features: [] },
+        },
+      }));
+
+    expect(res.status).toBe(201);
+    expect(mockUpsert).toHaveBeenCalled();
+    expect(fromMock).toHaveBeenCalledWith("intake_scope_items");
+    expect(res.body.preliminaryBuildCard.scope.coreFeatures).toHaveLength(8);
+    expect(res.body.preliminaryBuildCard.scope.extensions).toEqual([
+      { code: "EXT-001", name: "Contact Forms" },
+    ]);
+  });
+
+  it("keeps stable identifiers and lifecycle outbox writes on RPC-backed drafts", async () => {
+    mockRpc.mockResolvedValueOnce({
+      data: {
+        intake_id: "test-intake-id",
+        response_body: {
+          success: true,
+          buildReferenceNumber: "MTH-20260806-FAKE-TEST",
+          referenceNumber: "MTH-20260806-FAKE-TEST",
+          intakeId: "test-intake-id",
+          clientId: "client-123",
+          status: "draft",
+          command: "save_draft",
+        },
+      },
+      error: null,
+    });
+
+    const res = await request(app)
+      .post("/api/intakes")
+      .send(buildBody({ command: "save_draft" }));
+
+    expect(res.status).toBe(200);
+    expect(res.body.intakeId).toBe("test-intake-id");
+    expect(res.body.clientId).toBe("client-123");
+    expect(res.body.referenceNumber).toBe("MTH-20260806-FAKE-TEST");
+    expect(fromMock).toHaveBeenCalledWith("notification_outbox");
   });
 
   it("discard command: intake with command=discard persists without reference", async () => {

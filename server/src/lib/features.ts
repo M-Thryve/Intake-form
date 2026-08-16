@@ -69,6 +69,35 @@ export const V3_ENTERPRISE_PROJECT_TYPES: ReadonlySet<string> = new Set([
   "internal",
 ])
 
+// ── §2.4 Core Feature names (for build card) ─────────────────────────────────
+
+export const CORE_FEATURE_NAMES: ReadonlyMap<string, string> = new Map([
+  ["Core001", "Responsive Multi-Device Layout"],
+  ["Core002", "Core Page Structure"],
+  ["Core003", "Brand Application & Design System"],
+  ["Core004", "Navigation & Site Architecture"],
+  ["Core005", "SEO Foundation"],
+  ["Core006", "Performance Baseline"],
+  ["Core007", "Security & Privacy Baseline"],
+  ["Core008", "Deployment & Analytics-Ready Handover"],
+])
+
+// ── §2.6 Extension names (for build card and scope items) ────────────────────
+
+export const EXTENSION_NAMES: ReadonlyMap<string, string> = new Map([
+  ["EXT-001", "Contact Forms"],
+  ["EXT-002", "Appointment Booking"],
+  ["EXT-003", "Lead Capture"],
+  ["EXT-004", "Blog Module"],
+  ["EXT-005", "Newsletter Integration"],
+  ["EXT-006", "Analytics"],
+  ["EXT-007", "Portfolio / Project Gallery"],
+  ["EXT-008", "Reviews / Testimonials"],
+  ["EXT-009", "FAQ Module"],
+  ["EXT-010", "Download Center"],
+  ["EXT-011", "Product Showcase"],
+])
+
 // ── §2.5 Feature category values ─────────────────────────────────────────────
 
 export const FEATURE_CATEGORIES: ReadonlySet<string> = new Set([

@@ -15,6 +15,7 @@ function formWithV2Assets(): FormData {
     assetQualification: "",
     assetStatuses: {},
     selectedAssetServices: [],
+    uploadedAssets: [],
     deckExists: "partial",
     deckSectionStatuses: { overview: "available" },
     deckSectionNotes: {},

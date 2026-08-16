@@ -7,8 +7,8 @@ vi.mock('../api/intake', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api/intake')>()
   return {
     ...actual,
-    saveDraft: vi.fn().mockResolvedValue({ success: true, clientId: 'mock-client-id', status: 'draft' }),
-    submitIntake: vi.fn().mockResolvedValue({ success: true, buildReferenceNumber: 'MTH-TEST-001', clientId: 'mock-client-id' }),
+    saveDraft: vi.fn().mockResolvedValue({ success: true, intakeId: 'mock-intake-id', clientId: 'mock-client-id', buildReferenceNumber: 'MTH-TEST-001', status: 'draft' }),
+    submitIntake: vi.fn().mockResolvedValue({ success: true, intakeId: 'mock-intake-id', buildReferenceNumber: 'MTH-TEST-001', clientId: 'mock-client-id' }),
   }
 })
 
@@ -160,10 +160,11 @@ describe('inline validation — draft save with active warnings', () => {
     clickContinue() // → outcome
 
     fireEvent.click(screen.getByRole('button', { name: 'Save as draft' }))
-    expect(await screen.findByText('Draft saved. Review warnings before submit.')).toBeInTheDocument()
+    // P4: draft save navigates to draft-saved step instead of showing inline banner
+    expect(await screen.findByText('Intake Saved as Draft')).toBeInTheDocument()
   })
 
-  it('produces no feature warning when none are selected (v3.0: features optional)', () => {
+  it('shows extension catalog and allows continuing without selection (v3.0: extensions optional)', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /Start Project Intake/ }))
     // On build-approach
@@ -177,11 +178,11 @@ describe('inline validation — draft save with active warnings', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Website' }))
     clickContinue() // → pages-features
 
-    const chips = document.getElementById('field-features')
-    expect(chips).not.toBeNull()
-    fireEvent.blur(chips!)
+    // Extension catalog is present — category dropdown and extension cards
+    expect(screen.getByText('Browse by category')).toBeInTheDocument()
+    expect(screen.getByText('Contact Forms')).toBeInTheDocument()
+    // No "At least one feature is required" warning — extensions are optional
     expect(screen.queryByText('At least one feature is required')).not.toBeInTheDocument()
-    expect(within(chips! as HTMLElement).getAllByRole('button').length).toBeGreaterThan(0)
   })
 })
 

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-16T18:54:37.050063+00:00",
+  "generated_at": "2026-08-16T22:58:12.409733+00:00",
   "nodes": {
     "docs_support_draft_follow_up": {
       "code_fingerprint": "3135339f1c5cca54425380d6d9c6513717df90845425cf19b6afeb1ea16244e2",
@@ -23,7 +23,7 @@
           "q": "What current intake flow must the revision prompt account for?"
         }
       ],
-      "score": 0.982187059,
+      "score": 0.978355762,
       "source_file": "docs/support/draft-follow-up.md",
       "status": "contested",
       "uses": 2,
@@ -40,7 +40,7 @@
           "q": "What current intake flow must the revision prompt account for?"
         }
       ],
-      "score": 0.98318037,
+      "score": 0.979345199,
       "source_file": "FORM_SUBMISSION_DEBUG_REPORT.md",
       "status": "tentative",
       "uses": 1
@@ -56,7 +56,7 @@
           "q": "How do REVISION_HANDOVER v3.0 and TECHNICAL_HANDOVER v3.0 define the upcoming implementation?"
         }
       ],
-      "score": 0.990286347,
+      "score": 0.986423457,
       "source_file": "REVISION_NOTES.md",
       "status": "tentative",
       "uses": 1
@@ -83,14 +83,14 @@
           "q": "What current intake flow must the revision prompt account for?"
         }
       ],
-      "score": 0.982187059,
+      "score": 0.978355762,
       "source_file": "REVISION_NOTES.md",
       "status": "contested",
       "uses": 2,
       "verdict": "useful"
     },
     "server_src_index": {
-      "code_fingerprint": "149424d6dde29c9b1044406965c19e8d0840abafaaffff4384b03a53fc3a5a66",
+      "code_fingerprint": "c3cde70fef4a6e7aceb1913bfd562782d3219cc20cb28bcc875059c62d4a3368",
       "label": "src/index.ts",
       "last": "2026-08-16T18:38:12.287490+00:00",
       "provenance": [
@@ -100,13 +100,13 @@
           "q": "contextualize with the current codebase"
         }
       ],
-      "score": 0.999736692,
+      "score": 0.995836938,
       "source_file": "server/src/index.ts",
       "status": "tentative",
       "uses": 1
     },
     "server_src_lib_asset_validation_uploadrequestschema": {
-      "code_fingerprint": "7e19654bdb29d3c15a46605a92bcf8d96579ad84ec217bea0f656771d128ff04",
+      "code_fingerprint": "58ef175113cc4b70da471c68910601b536713eb590ec0ca6cc890532cc049d95",
       "label": "uploadRequestSchema",
       "last": "2026-08-16T01:17:25.670186+00:00",
       "provenance": [
@@ -116,7 +116,7 @@
           "q": "What current intake flow must the revision prompt account for?"
         }
       ],
-      "score": 0.98318037,
+      "score": 0.979345199,
       "source_file": "server/src/lib/asset-validation.ts",
       "status": "tentative",
       "uses": 1
@@ -132,13 +132,13 @@
           "q": "contextualize with the current codebase"
         }
       ],
-      "score": 0.999736692,
+      "score": 0.995836938,
       "source_file": "server/src/lib/supabase.ts",
       "status": "tentative",
       "uses": 1
     },
     "server_src_routes_intakes_intakerouter": {
-      "code_fingerprint": "99843df9d5106c56c98ad3f4c09726d5c8b203e492c3caefb1cbdc096940a221",
+      "code_fingerprint": "1aa7936c7a6ebb6c821281ae3d25aee3a0e39fde9baeda4469552eeada0d67e3",
       "label": "intakeRouter",
       "last": "2026-08-16T18:38:12.287490+00:00",
       "provenance": [
@@ -148,13 +148,13 @@
           "q": "contextualize with the current codebase"
         }
       ],
-      "score": 0.999736692,
+      "score": 0.995836938,
       "source_file": "server/src/routes/intakes.ts",
       "status": "tentative",
       "uses": 1
     },
     "src_app": {
-      "code_fingerprint": "f5cf25e73490ce9d6b27b073a878123c16ad0cd7fcb1e7d633c68ed110907919",
+      "code_fingerprint": "6f97224b71fd1a009931d2b67c73f51d3c6b3f99e395f1c39346537c0f1aba09",
       "label": "App.tsx",
       "last": "2026-08-16T18:48:02.109734+00:00",
       "neg": 1,
@@ -170,7 +170,7 @@
           "q": "contextualize with the current codebase"
         }
       ],
-      "score": -0.0001577,
+      "score": -0.000157085,
       "source_file": "src/App.tsx",
       "status": "contested",
       "uses": 1,
@@ -193,7 +193,7 @@
           "q": "contextualize with the current codebase"
         }
       ],
-      "score": -0.0001577,
+      "score": -0.000157085,
       "source_file": "src/data/questionnaire.ts",
       "status": "contested",
       "uses": 1,
@@ -210,7 +210,7 @@
           "q": "How do REVISION_HANDOVER v3.0 and TECHNICAL_HANDOVER v3.0 define the upcoming implementation?"
         }
       ],
-      "score": 0.990286347,
+      "score": 0.986423457,
       "source_file": "TECHNICAL_HANDOVER.md",
       "status": "tentative",
       "uses": 1
