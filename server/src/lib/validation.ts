@@ -363,6 +363,7 @@ const intakeDraftSchema = z.object({
 // ═══════════════════════════════════════════════════════════
 
 export type ValidatedPayload = z.infer<typeof phase2IntakeSubmitSchema>;
+export type LegacyValidatedPayload = z.infer<typeof intakeSubmitSchema>;
 export type DraftPayload = z.infer<typeof intakeDraftSchema>;
 
 export interface MissingRequirementItem {
@@ -370,9 +371,9 @@ export interface MissingRequirementItem {
   message: string;
 }
 
-export interface ValidationResult {
+export interface ValidationResult<T = ValidatedPayload> {
   success: boolean;
-  data?: ValidatedPayload;
+  data?: T;
   errors?: Array<{ field: string; message: string }>;
 }
 
@@ -383,7 +384,7 @@ export interface DraftValidationResult {
   errors?: Array<{ field: string; message: string }>;
 }
 
-export function validateIntakePayload(payload: unknown): ValidationResult {
+export function validateIntakePayload(payload: unknown): ValidationResult<LegacyValidatedPayload> {
   const result = intakeSubmitSchema.safeParse(payload);
 
   if (!result.success) {

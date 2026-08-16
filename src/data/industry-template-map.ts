@@ -213,6 +213,7 @@ const INDUSTRY_ALIASES: Record<string, string> = {
   'retail-multi-branch': 'ecommerce',
   'wholesale-distribution': 'ecommerce',
   'manufacturing-fabrication': 'construction',
+  'warehousing-storage': 'construction',
   'logistics-transportation': 'travel',
 }
 

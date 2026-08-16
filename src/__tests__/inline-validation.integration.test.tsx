@@ -284,7 +284,7 @@ describe('REV-03 — industry template filter', () => {
     expect(screen.getByText('Boutique')).toBeInTheDocument()
   })
 
-  it('shows all templates without filtering when no industry is selected', () => {
+  it('maps warehousing-storage to the construction template family', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /Start Project Intake/ }))
     // On build-approach
@@ -302,10 +302,8 @@ describe('REV-03 — industry template filter', () => {
     fireEvent.click(screen.getByRole('button', { name: /Continue/ }))
     // On template-select
 
-    // 'warehousing-storage' has no alias → resolves to 'other' (empty compatibleTags) — no filter indicator, all templates visible.
-    expect(screen.queryByText(/Showing starting points/)).not.toBeInTheDocument()
+    expect(screen.getByText(/Recommended alternatives for Construction & Trades/)).toBeInTheDocument()
+    expect(screen.getByText('Show all templates')).toBeInTheDocument()
     expect(screen.getByText('Apex Business')).toBeInTheDocument()
-    expect(screen.getByText('Property Pro')).toBeInTheDocument()
-    expect(screen.getByText('Commerce Starter')).toBeInTheDocument()
   })
 })

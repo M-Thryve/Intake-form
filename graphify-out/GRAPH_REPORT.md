@@ -1,16 +1,16 @@
-# Graph Report - Intake-Form  (2026-08-16)
+# Graph Report - Intake-form  (2026-08-16)
 
 ## Corpus Check
-- 331 files · ~259,862 words
+- 336 files · ~262,379 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3386 nodes · 4369 edges · 269 communities (216 shown, 53 thin omitted)
+- 3413 nodes · 4404 edges · 273 communities (220 shown, 53 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 56 edges (avg confidence: 0.63)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `e32d1551`
+- Built from commit: `5d248f40`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -29,16 +29,16 @@
 - field-validators.ts
 - compilerOptions
 - routes/build-orchestration.ts
-- config.ts
+- src/index.ts
 - apply-migrations.mjs
 - compilerOptions
 - data/validation.ts
 - Details and acceptance criteria
 - gray
-- agreement.ts
-- src/index.ts
+- finance.ts
+- auth.ts
 - M-THRYVE Intake Form Technical Handover
-- detect_domain
+- test_core.py
 - build-delivery.test.ts
 - padding-y
 - md
@@ -215,7 +215,7 @@
 - PROJECT.md — M-THRYVE Intake Form
 - opencode.json
 - rows.mjs
-- none
+- agreement.ts
 - graphify reference: add a URL and watch a folder
 - graphify reference: commit hook and native CLAUDE.md integration
 - graphify reference: incremental update and cluster-only
@@ -235,15 +235,15 @@
 - secondary-foreground
 - graphify reference: GitHub clone and cross-repo merge
 - graphify reference: transcribe video and audio
-- .__init__
+- asset-validation.ts
 - verify-luszi.mjs
 - slides-create.md
 - extraction-spec.md
 - create.md
 - vouchercols.mjs
 - .test_list_installed_with_components
-- .test_init_default_project_root
-- 12
+- Prompt 3 — Factory Core Features, Optional Extensions, Review, and Build Card Scope
+- routes/console.ts
 - .test_check_shadcn_config_not_exists
 - .test_get_installed_components_empty
 - .test_get_installed_components_no_config
@@ -272,16 +272,20 @@
 - 14. Data Contract
 - 3. WS-1 — Build Path and Project Type Matrix
 - 5. WS-3 — Mandatory Email
-- 2
-- 6
-- 8
+- intakes.ts
+- Q: contextualize with the current codebase
+- Q: Verify the supplied v3.0 wizard implementation summary
 - .test_add_components_already_installed
+- lg
+- default
+- .test_list_installed_empty
+- .test_init_dry_run
 
 ## God Nodes (most connected - your core abstractions)
 1. `TailwindConfigGenerator` - 58 edges
 2. `TestTailwindConfigGenerator` - 35 edges
 3. `ShadcnInstaller` - 34 edges
-4. `App()` - 31 edges
+4. `App()` - 32 edges
 5. `DesignSystemGenerator` - 29 edges
 6. `TestShadcnInstaller` - 26 edges
 7. `supabase` - 25 edges
@@ -309,7 +313,7 @@
 - **Template Preview Constraint Set** — src_imports_updates_live_color_preview, src_imports_updates_mobile_viewport, src_imports_updates_page_loop, src_imports_updates_price_invariance [EXTRACTED 1.00]
 - **Intake to Owner Review Flow** — src_imports_pasted_text_m_thryve_ai_intake_update_workflow, src_imports_pasted_text_m_thryve_intake_update_submitted_build_card, server_mcp_build_card, server_phase_6_no_build_payment, server_phase_7_queue_gate [INFERRED 0.85]
 
-## Communities (269 total, 53 thin omitted)
+## Communities (273 total, 53 thin omitted)
 
 ### Community 0 - "IntakeDetail.tsx"
 Cohesion: 0.05
@@ -321,7 +325,7 @@ Nodes (48): AssetReadinessOutput, assetReadinessOutputSchema, BuildCardOutput, b
 
 ### Community 2 - "App.tsx"
 Cohesion: 0.05
-Nodes (39): generateIdempotencyKey(), App(), ASSET_CHECKLIST, ASSET_SERVICES, ASSET_STATUS_OPTIONS, calcPrice(), cardStyle, COLOR_OPTIONS (+31 more)
+Nodes (38): App(), ASSET_CHECKLIST, ASSET_SERVICES, ASSET_STATUS_OPTIONS, calcPrice(), cardStyle, COLOR_OPTIONS, ColorOption (+30 more)
 
 ### Community 3 - "devDependencies"
 Cohesion: 0.04
@@ -333,7 +337,7 @@ Nodes (38): cors, express, dependencies, cors, express, @supabase/supabase-js, z
 
 ### Community 5 - "lib/validation.ts"
 Cohesion: 0.05
-Nodes (37): assetsDraftSchema, assetsSubmitSchema, clientDraftSchema, clientSubmitSchema, confirmationsDraftSchema, confirmationsSubmitSchema, contentDraftSchema, contentSubmitSchema (+29 more)
+Nodes (38): assetsDraftSchema, assetsSubmitSchema, clientDraftSchema, clientSubmitSchema, confirmationsDraftSchema, confirmationsSubmitSchema, contentDraftSchema, contentSubmitSchema (+30 more)
 
 ### Community 6 - "Form and Draft Submission — Diagnosis Report"
 Cohesion: 0.20
@@ -345,7 +349,7 @@ Nodes (33): cancelBtn, confirmBanner, overrideBox, overrideBtn, overrideTitle, p
 
 ### Community 8 - "types/intake.ts"
 Cohesion: 0.09
-Nodes (26): API_BASE_URL, discardIntake(), lifecycleOp(), saveDraft(), submitIntake(), submitIntakeForReview(), toSubmissionPayload(), AssetChecklistItem (+18 more)
+Nodes (27): API_BASE_URL, discardIntake(), generateIdempotencyKey(), lifecycleOp(), saveDraft(), submitIntake(), submitIntakeForReview(), toSubmissionPayload() (+19 more)
 
 ### Community 9 - "intake-submit/validation.ts"
 Cohesion: 0.13
@@ -356,20 +360,20 @@ Cohesion: 0.10
 Nodes (27): CompanyAssetsStep(), ResourceReviewBlock(), AI_AGENT_EXTRA, AI_DECK_EXTRA, CompanyDeckSectionDef, CORE_DECK, CORE_OPTIONAL, CORE_REQUIRED (+19 more)
 
 ### Community 11 - "field-validators.ts"
-Cohesion: 0.15
-Nodes (23): buildApproachWarnings(), businessDescWarning(), clientDetailsWarnings(), companyAssetsWarnings(), companyWarning(), ctxFor(), ENTERPRISE_RECOMMENDED, enterpriseVisionWarnings() (+15 more)
+Cohesion: 0.16
+Nodes (22): buildApproachWarnings(), businessDescWarning(), clientDetailsWarnings(), companyAssetsWarnings(), companyWarning(), ENTERPRISE_RECOMMENDED, enterpriseVisionWarnings(), FieldValidationState (+14 more)
 
 ### Community 12 - "compilerOptions"
 Cohesion: 0.08
 Nodes (24): DOM, DOM.Iterable, ES2020, node, vite.config.ts, compilerOptions, allowImportingTsExtensions, baseUrl (+16 more)
 
 ### Community 13 - "routes/build-orchestration.ts"
-Cohesion: 0.11
-Nodes (23): checkBuildEligibility(), applyOrchestrationTransition(), canTransition(), commercialStageFor(), isTerminal(), loadLatestOrchestration(), loadOrchestrationById(), newCorrelationId() (+15 more)
+Cohesion: 0.17
+Nodes (17): applyOrchestrationTransition(), canTransition(), commercialStageFor(), isTerminal(), loadLatestOrchestration(), loadOrchestrationById(), newCorrelationId(), NON_TERMINAL_STATES (+9 more)
 
-### Community 14 - "config.ts"
-Cohesion: 0.09
-Nodes (28): ALLOWED_MIME_TYPES, AssetStatus, AssetValidationResult, buildStorageKey(), DANGEROUS_EXTENSIONS, formatBytes(), isValidTransition(), sanitizeFilename() (+20 more)
+### Community 14 - "src/index.ts"
+Cohesion: 0.12
+Nodes (17): app, config, preflight, configSchema, envFile, getConfig(), getEnvironment(), preflightCheck() (+9 more)
 
 ### Community 15 - "apply-migrations.mjs"
 Cohesion: 0.29
@@ -380,8 +384,8 @@ Cohesion: 0.12
 Nodes (16): dist, node_modules, compilerOptions, declaration, esModuleInterop, module, moduleResolution, outDir (+8 more)
 
 ### Community 17 - "data/validation.ts"
-Cohesion: 0.18
-Nodes (16): ReadinessPills(), isNotApplicableAllowed(), NEVER_NA, canSubmit(), collectMissingRequirements(), mk(), resourceStatusToGap(), validateBuildApproach() (+8 more)
+Cohesion: 0.17
+Nodes (17): ReadinessPills(), isNotApplicableAllowed(), NEVER_NA, ctxFor(), canSubmit(), collectMissingRequirements(), mk(), resourceStatusToGap() (+9 more)
 
 ### Community 18 - "Details and acceptance criteria"
 Cohesion: 0.11
@@ -391,21 +395,21 @@ Nodes (17): 10. Build reference contract — P2/P3, 11. Documentation and state 
 Cohesion: 0.05
 Nodes (53): $type, $value, $type, $value, $type, $value, $type, $value (+45 more)
 
-### Community 20 - "agreement.ts"
-Cohesion: 0.07
-Nodes (27): AgreementPackage, AgreementStatus, buildAgreementPackage(), DraftContext, nextVersionFor(), BuildCardRow, checkEligibility(), DecisionRow (+19 more)
+### Community 20 - "finance.ts"
+Cohesion: 0.12
+Nodes (15): checkEligibility(), AGREEMENT_STATUSES, AgreementStatus, applyTransition(), audit(), financeRouter, handleTransition(), loadCurrentDraft() (+7 more)
 
-### Community 21 - "src/index.ts"
-Cohesion: 0.07
-Nodes (33): app, config, preflight, getMcpRun(), getMcpRunsForIntake(), AuthenticatedClient, AuthenticatedUser, ClientRole (+25 more)
+### Community 21 - "auth.ts"
+Cohesion: 0.12
+Nodes (20): getMcpRun(), getMcpRunsForIntake(), AuthenticatedClient, AuthenticatedUser, ClientRole, Express, INTERNAL_ROLES, Request (+12 more)
 
 ### Community 22 - "M-THRYVE Intake Form Technical Handover"
 Cohesion: 0.05
 Nodes (52): Production Deployment Checklist, Backup and Rollback Readiness, Production Environment Security, Production Migration Readiness, Production Monitoring and Alerts, Discard Procedure, Admin-Only Discard Reversal, Discard Reason Codes (+44 more)
 
-### Community 23 - "detect_domain"
-Cohesion: 0.43
-Nodes (3): detect_domain(), Auto-detect the most relevant domain from query. Matches are weighted by…, TestDomainDetection
+### Community 23 - "test_core.py"
+Cohesion: 0.19
+Nodes (8): detect_domain(), Auto-detect the most relevant domain from query. Matches are weighted by…, format_markdown(), generate_design_system(), Format design system as markdown., Main entry point for design system generation. Args: query: Search query (e.g.,…, TestDomainDetection, TestPersistence
 
 ### Community 24 - "build-delivery.test.ts"
 Cohesion: 0.21
@@ -572,8 +576,8 @@ Cohesion: 0.06
 Nodes (33): 1. Visual Theme & Atmosphere, 2. Color Palette & Roles, 3. Typography Rules, 4. Component Stylings, 5. Layout Principles, 6. Depth & Elevation, 7. Do's and Don'ts, 8. Responsive Behavior (+25 more)
 
 ### Community 90 - "supabase.ts"
-Cohesion: 0.11
-Nodes (17): ClientIdentityInput, ClientIdentityResult, normalizeClientEmail(), resolveOrCreateClient(), hashPayload(), generateBuildReferenceNumber(), supabase, DraftPayload (+9 more)
+Cohesion: 0.19
+Nodes (9): ClientIdentityInput, ClientIdentityResult, normalizeClientEmail(), resolveOrCreateClient(), supabase, internalOutboxRouter, patchSchema, querySchema (+1 more)
 
 ### Community 91 - "Prerequisites"
 Cohesion: 0.06
@@ -608,11 +612,11 @@ Cohesion: 0.33
 Nodes (4): clientRecord, configState, fromMock, state
 
 ### Community 99 - "design_system.py"
-Cohesion: 0.11
-Nodes (25): ansi_ljust(), _detect_page_type(), format_ascii_box(), format_markdown(), format_master_md(), format_page_override_md(), generate_design_system(), _generate_intelligent_overrides() (+17 more)
+Cohesion: 0.13
+Nodes (20): ansi_ljust(), _detect_page_type(), format_ascii_box(), format_master_md(), format_page_override_md(), _generate_intelligent_overrides(), hex_to_ansi(), persist_design_system() (+12 more)
 
 ### Community 100 - "flow.ts"
-Cohesion: 0.60
+Cohesion: 0.53
 Nodes (4): getFlow(), isStepAllowed(), normalizeToBuildPath(), Tier
 
 ### Community 101 - "Logo Usage Rules"
@@ -684,8 +688,8 @@ Cohesion: 0.14
 Nodes (11): DesignSystemGenerator, _palette_is_dark(), WCAG relative luminance of a #RRGGBB string, or None if unparseable., True when a colors.csv row's Background is a dark surface., Generates design system recommendations from aggregated searches., Load reasoning rules from CSV., _relative_luminance(), TestReasoningMatch (+3 more)
 
 ### Community 120 - "spacing"
-Cohesion: 0.09
-Nodes (22): $type, $value, $type, $value, $type, $value, $type, $value (+14 more)
+Cohesion: 0.06
+Nodes (34): $type, $value, $type, $value, $type, $value, $type, $value (+26 more)
 
 ### Community 121 - "Routing by Task Type"
 Cohesion: 0.10
@@ -740,12 +744,12 @@ Cohesion: 0.17
 Nodes (17): generate_css_for_background(), get_background_image(), get_curated_images(), get_overlay_css(), get_pexels_search_url(), load_backgrounds_config(), load_brand_colors(), main() (+9 more)
 
 ### Community 134 - "build-delivery.ts"
-Cohesion: 0.09
-Nodes (20): AgreementRow, BuildCardRow, BuildEligibilityFailure, BuildEligibilityResult, BuildEligibilitySnapshot, DecisionRow, DeliveryPackageRow, IntakeRow (+12 more)
+Cohesion: 0.07
+Nodes (26): AgreementRow, BuildCardRow, BuildEligibilityFailure, BuildEligibilityResult, BuildEligibilitySnapshot, checkBuildEligibility(), DecisionRow, DeliveryPackageRow (+18 more)
 
 ### Community 135 - "TestShadcnInstaller"
 Cohesion: 0.12
-Nodes (10): fixture, Test ShadcnInstaller class., Test adding all components without config., Test adding all components in dry run mode., Create temporary project structure., Test listing installed components without config., Test listing installed components when none exist., Test checking for existing shadcn config. (+2 more)
+Nodes (10): fixture, Test adding components without shadcn config., Test ShadcnInstaller class., Test adding all components without config., Test adding all components in dry run mode., Create temporary project structure., Test listing installed components without config., Test initialization with default project root. (+2 more)
 
 ### Community 136 - "Design Principles"
 Cohesion: 0.12
@@ -868,12 +872,12 @@ Cohesion: 0.29
 Nodes (8): padding-x, input, $type, $value, focus-ring, padding-x, $type, $value
 
 ### Community 166 - "ShadcnInstaller"
-Cohesion: 0.20
-Nodes (7): main(), Handle shadcn/ui component installation., ShadcnInstaller, Tests for shadcn_add.py, Test adding components without shadcn config., Test initialization with custom project root., Test initialization with dry run mode.
+Cohesion: 0.18
+Nodes (7): Path, Handle shadcn/ui component installation., Initialize installer. Args: project_root: Project root directory (default:…, ShadcnInstaller, Tests for shadcn_add.py, Test initialization with custom project root., Test getting installed components when files exist.
 
 ### Community 167 - ".add_components"
-Cohesion: 0.21
-Nodes (6): Add all available shadcn/ui components. Args: overwrite: If True, overwrite…, List installed components. Returns: Tuple of (success, message with component…, Check if shadcn is initialized in project. Returns: True if components.json…, Get list of already installed components. Returns: List of installed component…, Read shadcn version from project package.json; fall back to a pinned default., Add shadcn/ui components. Args: components: List of component names to add…
+Cohesion: 0.22
+Nodes (7): main(), Add all available shadcn/ui components. Args: overwrite: If True, overwrite…, List installed components. Returns: Tuple of (success, message with component…, Check if shadcn is initialized in project. Returns: True if components.json…, Get list of already installed components. Returns: List of installed component…, Read shadcn version from project package.json; fall back to a pinned default., Add shadcn/ui components. Args: components: List of component names to add…
 
 ### Community 168 - "test_tailwind_config_gen.py"
 Cohesion: 0.20
@@ -1012,8 +1016,8 @@ Cohesion: 0.60
 Nodes (5): radius, radius, radius, $type, $value
 
 ### Community 202 - "radius"
-Cohesion: 0.18
-Nodes (15): $type, $value, lg, $type, $value, $type, $value, primitive (+7 more)
+Cohesion: 0.24
+Nodes (10): $type, $value, $type, $value, primitive, radius, shadow, full (+2 more)
 
 ### Community 203 - "sm"
 Cohesion: 0.60
@@ -1031,9 +1035,9 @@ Nodes (4): Product Boundary & Construction Context, PROJECT.md — M-THRYVE Inta
 Cohesion: 0.50
 Nodes (3): plugin, $schema, .opencode/plugins/graphify.js
 
-### Community 208 - "none"
-Cohesion: 0.67
-Nodes (4): $type, $value, none, none
+### Community 208 - "agreement.ts"
+Cohesion: 0.13
+Nodes (13): AgreementPackage, AgreementStatus, buildAgreementPackage(), DraftContext, nextVersionFor(), BuildCardRow, DecisionRow, EligibilityFailure (+5 more)
 
 ### Community 209 - "graphify reference: add a URL and watch a folder"
 Cohesion: 0.50
@@ -1071,16 +1075,24 @@ Nodes (3): ring, $type, $value
 Cohesion: 0.67
 Nodes (3): secondary-foreground, $type, $value
 
-### Community 236 - "12"
-Cohesion: 0.67
-Nodes (3): $type, $value, 12
+### Community 228 - "asset-validation.ts"
+Cohesion: 0.18
+Nodes (15): ALLOWED_MIME_TYPES, AssetStatus, AssetValidationResult, buildStorageKey(), DANGEROUS_EXTENSIONS, formatBytes(), isValidTransition(), sanitizeFilename() (+7 more)
+
+### Community 235 - "Prompt 3 — Factory Core Features, Optional Extensions, Review, and Build Card Scope"
+Cohesion: 0.14
+Nodes (13): 1. Factory Core Features, 2. Optional Extension Catalog, 3. Active Types and Payload, 4. Server Validation and Persistence, 5. Complete Review Projection, 6. Preliminary Build Card Scope, Completion Report, Non-Goals (+5 more)
+
+### Community 236 - "routes/console.ts"
+Cohesion: 0.18
+Nodes (8): consoleRouter, decideSchema, parseUuid(), queueQuerySchema, uuid(), buildApp(), controllableSupabase, requireRoleCtx()
 
 ### Community 251 - "2. Canonical Vocabulary"
 Cohesion: 0.20
 Nodes (10): 2.1 Build paths (unchanged), 2.2 Project types, 2.3 Industries, 2.4 Factory Core Features (always included), 2.5 Feature categories (Step 5 dropdown), 2.6 Optional website extensions, 2.7 Intake outcome and status (unchanged), 2.8 Asset readiness (unchanged) (+2 more)
 
 ### Community 252 - "questionnaire.ts"
-Cohesion: 0.20
+Cohesion: 0.24
 Nodes (9): QUESTIONNAIRE_FIELDS, QUESTIONNAIRE_GROUP_LABELS, QUESTIONNAIRE_GROUP_ORDER, QUESTIONNAIRE_SUBMIT_REQUIRED, QuestionnaireConditional, QuestionnaireControlType, QuestionnaireFieldDef, QuestionnaireGroup (+1 more)
 
 ### Community 253 - "lib/features.ts"
@@ -1131,24 +1143,32 @@ Nodes (4): 3.1 Required behavior, 3.2 Field-clearing matrix, 3.3 Files, 3. WS-1 
 Cohesion: 0.50
 Nodes (4): 5.1 Rules, 5.2 Why this is load-bearing, 5.3 Files, 5. WS-3 — Mandatory Email
 
-### Community 265 - "2"
-Cohesion: 0.67
-Nodes (3): $type, $value, 2
+### Community 265 - "intakes.ts"
+Cohesion: 0.23
+Nodes (8): hashPayload(), generateBuildReferenceNumber(), DraftPayload, ValidatedPayload, COMMAND_SCHEMA, handleSubmitOrDiscard(), intakeRouter, persistIntake()
 
-### Community 266 - "6"
-Cohesion: 0.67
-Nodes (3): $type, $value, 6
+### Community 266 - "Q: contextualize with the current codebase"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: contextualize with the current codebase, Source Nodes
 
-### Community 267 - "8"
+### Community 267 - "Q: Verify the supplied v3.0 wizard implementation summary"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Verify the supplied v3.0 wizard implementation summary, Source Nodes
+
+### Community 269 - "lg"
+Cohesion: 0.60
+Nodes (5): lg, $type, $value, lg, lg
+
+### Community 270 - "default"
 Cohesion: 0.67
-Nodes (3): $type, $value, 8
+Nodes (4): $type, $value, default, default
 
 ## Ambiguous Edges - Review These
 - `Remove Compare All Tiers` → `Compare Tiers Modal`  [AMBIGUOUS]
   src/imports/Updates.txt · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **1555 isolated node(s):** `$schema`, `.opencode/plugins/graphify.js`, `fs`, `path`, `fs` (+1550 more)
+- **1566 isolated node(s):** `$schema`, `.opencode/plugins/graphify.js`, `fs`, `path`, `fs` (+1561 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **53 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -1166,6 +1186,6 @@ _Questions this graph is uniquely positioned to answer:_
 - **Are the 10 inferred relationships involving `DesignSystemGenerator` (e.g. with `TestDomainDetection` and `TestPersistence`) actually correct?**
   _`DesignSystemGenerator` has 10 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `$schema`, `.opencode/plugins/graphify.js`, `fs` to the rest of the system?**
-  _1555 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1566 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `IntakeDetail.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.050078247261345854 - nodes in this community are weakly interconnected._
