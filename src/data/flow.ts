@@ -1,13 +1,12 @@
 import type { Tier, StepId, FormData, BuildPath } from '../types/intake'
 
 /**
- * v2.0 flow — no `payment` or `final-confirm` steps. Legacy 'template' tier
- * is treated as 'custom' for step sequencing during the Phase 1 transition.
+ * v3.0 flow — accepts projectType for future branching. Both custom build
+ * paths (templated-website, ai-assisted-website) use the same step sequence;
+ * the template-select step renders different content per projectType.
+ * draft-saved follows outcome in all flows.
  */
-export function getFlow(tier: Tier): StepId[] {
-  // v2.0 flow per TECHNICAL_HANDOVER §6: build-approach precedes
-  // company-assets so that the resource checklist can be derived from the
-  // chosen build path and project type.
+export function getFlow(tier: Tier, _projectType?: string): StepId[] {
   const base: StepId[] = ['intro', 'build-approach', 'client-details']
   if (!tier) return base
 
@@ -20,6 +19,7 @@ export function getFlow(tier: Tier): StepId[] {
       'pages-features',
       'review',
       'outcome',
+      'draft-saved',
       'build-card',
     ]
   }
@@ -30,6 +30,7 @@ export function getFlow(tier: Tier): StepId[] {
     'pages-features',
     'review',
     'outcome',
+    'draft-saved',
     'build-card',
   ]
 }
@@ -44,7 +45,7 @@ export function normalizeToBuildPath(tier: Tier): BuildPath {
 }
 
 export function isStepAllowed(stepId: StepId, formData: FormData): boolean {
-  const flow = getFlow(formData.tier)
+  const flow = getFlow(formData.tier, formData.projectType)
   const currentIndex = flow.indexOf(stepId)
   if (currentIndex < 0) return false
 

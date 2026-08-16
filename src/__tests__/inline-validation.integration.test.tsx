@@ -27,8 +27,8 @@ function fillClientBasics() {
   fireEvent.change(screen.getByPlaceholderText('Alex Johnson'), { target: { value: 'Alex Johnson' } })
   fireEvent.change(screen.getByPlaceholderText('alex@acmecorp.com'), { target: { value: 'alex@acmecorp.com' } })
   fireEvent.change(screen.getByPlaceholderText('e.g. Acme Client Portal'), { target: { value: 'Client Portal' } })
-  fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Technology' } })
-  fireEvent.click(screen.getByRole('button', { name: /Website/ }))
+  fireEvent.change(screen.getByRole('combobox'), { target: { value: 'warehousing-storage' } })
+  fireEvent.click(screen.getByRole('button', { name: /Templated Website/ }))
 }
 
 function clickContinue() {
@@ -199,7 +199,7 @@ function navigateToTemplateSelect(industry: string) {
   fireEvent.change(screen.getByPlaceholderText('alex@acmecorp.com'), { target: { value: 'alex@acmecorp.com' } })
   fireEvent.change(screen.getByPlaceholderText('e.g. Acme Client Portal'), { target: { value: 'Client Portal' } })
   fireEvent.change(screen.getByRole('combobox'), { target: { value: industry } })
-  fireEvent.click(screen.getByRole('button', { name: /Website/ }))
+  fireEvent.click(screen.getByRole('button', { name: /Templated Website/ }))
   fireEvent.click(screen.getByRole('button', { name: /Continue →/ }))
   // On company-assets
   fireEvent.click(screen.getByRole('button', { name: /full deck available/ }))
@@ -209,7 +209,7 @@ function navigateToTemplateSelect(industry: string) {
 
 describe('REV-03 — industry template filter', () => {
   it('shows filter indicator with correct industry label', () => {
-    navigateToTemplateSelect('E-Commerce')
+    navigateToTemplateSelect('dtc-ecommerce')
     expect(screen.getByText(/Showing starting points for: E-Commerce & Retail/)).toBeInTheDocument()
     expect(screen.getByText('Show all templates')).toBeInTheDocument()
     // Primary ecommerce templates should be visible.
@@ -219,7 +219,7 @@ describe('REV-03 — industry template filter', () => {
   })
 
   it('shows all templates with sections when override is toggled', () => {
-    navigateToTemplateSelect('E-Commerce')
+    navigateToTemplateSelect('dtc-ecommerce')
     fireEvent.click(screen.getByRole('button', { name: 'Show all templates' }))
     expect(screen.getByText('Showing all starting points')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Reset to E-Commerce & Retail/ })).toBeInTheDocument()
@@ -230,7 +230,7 @@ describe('REV-03 — industry template filter', () => {
   })
 
   it('reset to industry link returns to filtered view', () => {
-    navigateToTemplateSelect('E-Commerce')
+    navigateToTemplateSelect('dtc-ecommerce')
     fireEvent.click(screen.getByRole('button', { name: 'Show all templates' }))
     fireEvent.click(screen.getByRole('button', { name: /Reset to E-Commerce & Retail/ }))
     expect(screen.getByText(/Showing starting points for: E-Commerce & Retail/)).toBeInTheDocument()
@@ -238,7 +238,7 @@ describe('REV-03 — industry template filter', () => {
   })
 
   it('selects a non-matching template in override mode, triggering the audit note', () => {
-    navigateToTemplateSelect('E-Commerce')
+    navigateToTemplateSelect('dtc-ecommerce')
     fireEvent.click(screen.getByRole('button', { name: 'Show all templates' }))
     // Scroll to / find a non-primary template in "All other templates".
     // Studio has tags ['portfolio','creative','design'] — not ecommerce.
@@ -248,17 +248,17 @@ describe('REV-03 — industry template filter', () => {
   })
 
   it('recommended alternatives are shown for an industry with no primary matches', () => {
-    // Technology has no primary-match templates (none carry technology/saas/software/ai/fintech).
-    // But several carry 'corporate' / 'portfolio' / 'agency' → related matches.
-    navigateToTemplateSelect('Technology')
-    expect(screen.getByText(/Recommended alternatives for Technology/)).toBeInTheDocument()
+    // Manufacturing has no primary-match templates (none carry construction/contractor/etc tags).
+    // But several carry 'business' / 'corporate' / 'portfolio' → related matches.
+    navigateToTemplateSelect('manufacturing-fabrication')
+    expect(screen.getByText(/Recommended alternatives for Construction & Trades/)).toBeInTheDocument()
     expect(screen.getByText('Show all templates')).toBeInTheDocument()
-    // Verifi that the recommended templates is present.
-    expect(screen.getByText('Apex Business')).toBeInTheDocument() // corporate tag
+    // Verify that a recommended template is present.
+    expect(screen.getByText('Apex Business')).toBeInTheDocument() // corporate/business tag
   })
 
   it('resets override when industry is changed in client-details', () => {
-    navigateToTemplateSelect('E-Commerce')
+    navigateToTemplateSelect('dtc-ecommerce')
     fireEvent.click(screen.getByRole('button', { name: 'Show all templates' }))
     expect(screen.getByText('Showing all starting points')).toBeInTheDocument()
 
@@ -268,20 +268,20 @@ describe('REV-03 — industry template filter', () => {
     fireEvent.click(goBack()) // → company-assets
     fireEvent.click(goBack()) // → client-details
 
-    // Change the industry.
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Food & Beverage' } })
+    // Change the industry (still ecommerce family — override should still reset).
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'retail-multi-branch' } })
 
     // Resume forward.
     const goNext = () => screen.getByRole('button', { name: /Continue/ })
     fireEvent.click(goNext()) // → company-assets
     fireEvent.click(goNext()) // → template-select
 
-    // The filter should have reset to the new — Restaurant industry.
-    expect(screen.getByText(/Showing starting points for: Restaurant & Food/)).toBeInTheDocument()
+    // The filter should have reset to the new industry.
+    expect(screen.getByText(/Showing starting points for: E-Commerce & Retail/)).toBeInTheDocument()
     expect(screen.queryByText('Showing all starting points')).not.toBeInTheDocument()
-    // Primary restaurant-level templates: Dine and Saveur.
-    expect(screen.getByText('Dine')).toBeInTheDocument()
-    expect(screen.getByText('Saveur')).toBeInTheDocument()
+    // Primary ecommerce templates should be visible.
+    expect(screen.getByText('StoreX')).toBeInTheDocument()
+    expect(screen.getByText('Boutique')).toBeInTheDocument()
   })
 
   it('shows all templates without filtering when no industry is selected', () => {
@@ -294,15 +294,15 @@ describe('REV-03 — industry template filter', () => {
     fireEvent.change(screen.getByPlaceholderText('Alex Johnson'), { target: { value: 'Alex Johnson' } })
     fireEvent.change(screen.getByPlaceholderText('alex@acmecorp.com'), { target: { value: 'alex@acmecorp.com' } })
     fireEvent.change(screen.getByPlaceholderText('e.g. Acme Client Portal'), { target: { value: 'Client Portal' } })
-    fireEvent.click(screen.getByRole('button', { name: /Website/ }))
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Other' } })
+    fireEvent.click(screen.getByRole('button', { name: /Templated Website/ }))
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'warehousing-storage' } })
     fireEvent.click(screen.getByRole('button', { name: /Continue/ }))
     // On company-assets
     fireEvent.click(screen.getByRole('button', { name: /full deck available/ }))
     fireEvent.click(screen.getByRole('button', { name: /Continue/ }))
     // On template-select
 
-    // "Other" has empty compatibleTags — no filter indicator, all templates visible.
+    // 'warehousing-storage' has no alias → resolves to 'other' (empty compatibleTags) — no filter indicator, all templates visible.
     expect(screen.queryByText(/Showing starting points/)).not.toBeInTheDocument()
     expect(screen.getByText('Apex Business')).toBeInTheDocument()
     expect(screen.getByText('Property Pro')).toBeInTheDocument()

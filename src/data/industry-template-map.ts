@@ -207,6 +207,13 @@ const INDUSTRY_ALIASES: Record<string, string> = {
   'travel & hospitality': 'travel',
   automotive: 'automotive',
   other: 'other',
+  // v3.0 canonical industry slugs
+  'service-commerce': 'ecommerce',
+  'dtc-ecommerce': 'ecommerce',
+  'retail-multi-branch': 'ecommerce',
+  'wholesale-distribution': 'ecommerce',
+  'manufacturing-fabrication': 'construction',
+  'logistics-transportation': 'travel',
 }
 
 function normalize(value: string): string {
