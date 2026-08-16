@@ -28,6 +28,13 @@ import {
 } from './data/assets'
 import type { AssetReadiness } from './types/intake'
 import ClientPortal from './portal/ClientPortal'
+import {
+  QUESTIONNAIRE_FIELDS,
+  QUESTIONNAIRE_GROUP_ORDER,
+  QUESTIONNAIRE_GROUP_LABELS,
+  type QuestionnaireFieldDef,
+} from './data/questionnaire'
+import type { WebsiteQuestionnaire } from './types/intake'
 
 const EMPTY_FORM: FormData = {
   fullName: '', company: '', email: '', phone: '', projectName: '',
@@ -59,37 +66,37 @@ const EMPTY_FORM: FormData = {
 function getProjectTypes(tier: Tier): { id: string; label: string; icon: string }[] {
   if (tier === 'custom' || tier === 'template') {
     return [
-      { id: 'website', label: 'Website', icon: '◈' },
-      { id: 'mobile', label: 'Mobile App', icon: '◉' },
+      { id: 'templated-website', label: 'Templated Website', icon: '◈' },
+      { id: 'ai-assisted-website', label: 'AI-Assisted Website', icon: '◆' },
     ]
   }
   if (tier === 'enterprise') {
     return [
       { id: 'website', label: 'Website', icon: '◈' },
       { id: 'webapp', label: 'Web App', icon: '⚡' },
-      { id: 'mobile', label: 'Mobile App', icon: '◉' },
-      { id: 'ai-agent', label: 'AI Agent', icon: '◆' },
       { id: 'ecommerce', label: 'E-Commerce', icon: '◇' },
       { id: 'internal', label: 'Internal Tool', icon: '⊕' },
     ]
   }
-  return [
-    { id: 'website', label: 'Website', icon: '◈' },
-    { id: 'webapp', label: 'Web App', icon: '⚡' },
-    { id: 'mobile', label: 'Mobile App', icon: '◉' },
-    { id: 'ai-agent', label: 'AI Agent', icon: '◆' },
-    { id: 'saas', label: 'SaaS', icon: '☁' },
-    { id: 'ecommerce', label: 'E-Commerce', icon: '◇' },
-    { id: 'internal', label: 'Internal Tool', icon: '⊕' },
-    { id: 'custom', label: 'Custom Build', icon: '✦' },
-  ]
+  return []
 }
-const PROJECT_TYPES_FULL = getProjectTypes('')
+const PROJECT_TYPES_FULL = [
+  { id: 'templated-website', label: 'Templated Website', icon: '◈' },
+  { id: 'ai-assisted-website', label: 'AI-Assisted Website', icon: '◆' },
+  { id: 'website', label: 'Website', icon: '◈' },
+  { id: 'webapp', label: 'Web App', icon: '⚡' },
+  { id: 'ecommerce', label: 'E-Commerce', icon: '◇' },
+  { id: 'internal', label: 'Internal Tool', icon: '⊕' },
+]
 
 const INDUSTRIES = [
-  'Technology', 'Healthcare', 'Finance', 'E-Commerce', 'Education',
-  'Real Estate', 'Legal', 'Marketing', 'Logistics', 'Entertainment',
-  'Food & Beverage', 'Non-Profit', 'Government', 'Other',
+  { value: 'service-commerce', label: 'Service-Based Commerce' },
+  { value: 'dtc-ecommerce', label: 'Direct-to-Consumer E-Commerce' },
+  { value: 'retail-multi-branch', label: 'Retail & Multi-Branch Commerce' },
+  { value: 'wholesale-distribution', label: 'Wholesale & Distribution' },
+  { value: 'manufacturing-fabrication', label: 'Manufacturing & Fabrication' },
+  { value: 'warehousing-storage', label: 'Warehousing & Storage' },
+  { value: 'logistics-transportation', label: 'Logistics & Transportation' },
 ]
 
 const TEMPLATE_CATEGORIES = ['All', 'Business', 'E-Commerce', 'Portfolio', 'Restaurant', 'Real Estate', 'Booking']
@@ -1064,7 +1071,7 @@ export default function App() {
     return next
   }
 
-  const flow = getFlow(form.tier)
+  const flow = getFlow(form.tier, form.projectType)
   const currentStep: StepId = (flow[stepIndex] ?? 'intro') as StepId
   const progressTotal = flow.length - 2
   const progressPct = (currentStep === 'intro' || currentStep === 'build-card') ? 0 : Math.min((stepIndex / progressTotal) * 100, 100)
@@ -1079,6 +1086,33 @@ export default function App() {
         ? (prev[field] as string[]).filter(v => v !== val)
         : [...(prev[field] as string[]), val],
     }))
+
+  const setQField = (key: string, value: string | string[]) =>
+    setForm(prev => ({
+      ...prev,
+      websiteQuestionnaire: { ...(prev.websiteQuestionnaire ?? {}), [key]: value } as WebsiteQuestionnaire,
+    }))
+
+  const toggleQMulti = (key: string, val: string) => {
+    const current = (form.websiteQuestionnaire?.[key as keyof WebsiteQuestionnaire] ?? []) as string[]
+    setQField(key, current.includes(val) ? current.filter(v => v !== val) : [...current, val])
+  }
+
+  const handleProjectTypeChange = (newType: string) => {
+    setForm(prev => {
+      const updates: Partial<FormData> = { projectType: newType }
+      if (prev.projectType === 'templated-website' && newType !== 'templated-website') {
+        updates.templateId = ''
+        updates.templateCategory = ''
+        updates.projectVersion = ''
+        updates.colorPreset = ''
+      }
+      if (prev.projectType === 'ai-assisted-website' && newType !== 'ai-assisted-website') {
+        updates.websiteQuestionnaire = undefined
+      }
+      return { ...prev, ...updates }
+    })
+  }
 
   const setPageField = (page: string, fieldId: string, val: string) =>
     setPageContents(prev => ({ ...prev, [page]: { ...(prev[page] ?? {}), [fieldId]: val } }))
@@ -1520,7 +1554,7 @@ export default function App() {
                   {getProjectTypes(form.tier).map(type => {
                     const sel = form.projectType === type.id
                     return (
-                      <button key={type.id} onClick={() => set('projectType', type.id)} style={{ padding: '14px 8px', borderRadius: '10px', border: `1px solid ${sel ? '#39D6C7' : '#2A3441'}`, background: sel ? 'rgba(57,214,199,0.07)' : '#111827', cursor: 'pointer', color: sel ? '#39D6C7' : '#4B6278', fontSize: '12px', fontWeight: sel ? 600 : 400, textAlign: 'center', transition: 'all 0.15s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                      <button key={type.id} onClick={() => handleProjectTypeChange(type.id)} style={{ padding: '14px 8px', borderRadius: '10px', border: `1px solid ${sel ? '#39D6C7' : '#2A3441'}`, background: sel ? 'rgba(57,214,199,0.07)' : '#111827', cursor: 'pointer', color: sel ? '#39D6C7' : '#4B6278', fontSize: '12px', fontWeight: sel ? 600 : 400, textAlign: 'center', transition: 'all 0.15s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                         <span style={{ fontSize: '16px' }}>{type.icon}</span>{type.label}
                       </button>
                     )
@@ -1531,7 +1565,7 @@ export default function App() {
               <Field label="Industry">
                 <select id="field-industry" aria-describedby="field-industry-warning" value={form.industry} onChange={e => set('industry', e.target.value)} onBlur={() => touchField('field-industry')} style={{ ...fieldStyle('field-industry'), cursor: 'pointer' }}>
                   <option value="">Select your industry</option>
-                  {INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}
+                  {INDUSTRIES.map(ind => <option key={ind.value} value={ind.value}>{ind.label}</option>)}
                 </select>
                 <InlineWarning fieldId="field-industry" message={getWarning('field-industry')} />
               </Field>
@@ -1716,9 +1750,85 @@ export default function App() {
           </div>
         )}
 
-        {/* ══ TEMPLATE SELECTION ══ */}
+        {/* ══ TEMPLATE SELECTION / AI QUESTIONNAIRE ══ */}
         {currentStep === 'template-select' && (
           <div>
+            {form.projectType === 'ai-assisted-website' ? (() => {
+              const q: Partial<WebsiteQuestionnaire> = form.websiteQuestionnaire ?? {}
+              const isVisible = (f: QuestionnaireFieldDef): boolean => {
+                if (!f.conditionalOn) return true
+                const { field: dep, value, notValue } = f.conditionalOn
+                const depVal = q[dep as keyof WebsiteQuestionnaire]
+                if (value !== undefined) return Array.isArray(depVal) ? (depVal as string[]).includes(value) : depVal === value
+                if (notValue !== undefined) return Array.isArray(depVal) ? !(depVal as string[]).includes(notValue) : depVal !== notValue
+                return true
+              }
+              return (
+                <>
+                  <StepHeader tag="Step 4 — Website Questionnaire" title="Tell us about the website." desc="Answer these questions to help the M-THRYVE AI engine propose the right design direction, layout, and visual system for your project." />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    {QUESTIONNAIRE_GROUP_ORDER.map(group => {
+                      const groupFields = QUESTIONNAIRE_FIELDS.filter(f => f.group === group && isVisible(f))
+                      if (groupFields.length === 0) return null
+                      return (
+                        <div key={group}>
+                          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#39D6C7', marginBottom: '12px' }}>{QUESTIONNAIRE_GROUP_LABELS[group]}</div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                            {groupFields.map(field => {
+                              const raw = q[field.key as keyof WebsiteQuestionnaire]
+                              const qInputStyle = { width: '100%', background: '#111827', border: '1px solid #2A3441', borderRadius: '8px', padding: '10px 12px', color: '#D4E4F0', fontSize: '13px', fontFamily: "'Inter', system-ui, sans-serif", boxSizing: 'border-box' as const }
+                              if (field.control === 'textarea') {
+                                return (
+                                  <Field key={field.key} label={field.question}>
+                                    <textarea value={(raw as string) ?? ''} onChange={e => setQField(field.key, e.target.value)} rows={3} style={{ ...qInputStyle, resize: 'vertical' as const, lineHeight: 1.7 }} />
+                                  </Field>
+                                )
+                              }
+                              if (field.control === 'text') {
+                                return (
+                                  <Field key={field.key} label={field.question}>
+                                    <input value={(raw as string) ?? ''} onChange={e => setQField(field.key, e.target.value)} style={qInputStyle} />
+                                  </Field>
+                                )
+                              }
+                              if (field.control === 'radio' || field.control === 'multi-select') {
+                                const isMulti = field.control === 'multi-select'
+                                const selected: string[] = isMulti ? ((raw as string[]) ?? []) : (raw ? [raw as string] : [])
+                                return (
+                                  <div key={field.key}>
+                                    <div style={{ fontSize: '13px', fontWeight: 500, color: '#D4E4F0', marginBottom: '8px' }}>{field.question}</div>
+                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' as const }}>
+                                      {field.options?.map(opt => {
+                                        const sel = selected.includes(opt.value)
+                                        return (
+                                          <button key={opt.value} onClick={() => isMulti ? toggleQMulti(field.key, opt.value) : setQField(field.key, opt.value)} style={{ padding: '7px 14px', borderRadius: '100px', border: `1px solid ${sel ? '#39D6C7' : '#2A3441'}`, background: sel ? 'rgba(57,214,199,0.08)' : 'transparent', color: sel ? '#39D6C7' : '#4B6278', fontSize: '12px', cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif", transition: 'all 0.15s' }}>{opt.label}</button>
+                                        )
+                                      })}
+                                    </div>
+                                  </div>
+                                )
+                              }
+                              if (field.control === 'select') {
+                                return (
+                                  <Field key={field.key} label={field.question}>
+                                    <select value={(raw as string) ?? ''} onChange={e => setQField(field.key, e.target.value)} style={{ ...qInputStyle, cursor: 'pointer', color: (raw as string) ? '#D4E4F0' : '#4B6278' }}>
+                                      <option value="">Select...</option>
+                                      {field.options?.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                    </select>
+                                  </Field>
+                                )
+                              }
+                              return null
+                            })}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </>
+              )
+            })() : (
+            <>
             <StepHeader
               tag="Step 4 — Base Template"
               title="Choose your starting point."
@@ -2030,6 +2140,8 @@ export default function App() {
                 )}
               </div>
             )}
+            </>
+            )}
           </div>
         )}
 
@@ -2189,7 +2301,7 @@ export default function App() {
                 <ReviewRow label="Company" value={form.company || '—'} />
                 <ReviewRow label="Email" value={form.email || '—'} />
                 <ReviewRow label="Project Name" value={form.projectName || '—'} />
-                {form.industry && <ReviewRow label="Industry" value={form.industry} />}
+                {form.industry && <ReviewRow label="Industry" value={INDUSTRIES.find(i => i.value === form.industry)?.label || form.industry} />}
               </ReviewBlock>
 
               <ResourceReviewBlock form={form} onEdit={() => goToStep('company-assets')} />
@@ -2197,9 +2309,11 @@ export default function App() {
               <ReviewBlock title="Build Path" onEdit={() => goToStep('build-approach')}>
                 <ReviewRow label="Path" value={TIER_LABELS[form.tier] || '—'} />
                 {form.projectType && <ReviewRow label="Project Type" value={PROJECT_TYPES_FULL.find(t => t.id === form.projectType)?.label || '—'} />}
-                {selectedTemplate && <ReviewRow label="Template" value={selectedTemplate.name} />}
-                {form.projectVersion && <ReviewRow label="Platform" value={pricing.versionLabel} />}
-                {form.colorPreset && <ReviewRow label="Color Style" value={COLOR_OPTIONS.find(c => c.id === form.colorPreset)?.name || '—'} />}
+                {form.projectType === 'templated-website' && selectedTemplate && <ReviewRow label="Template" value={selectedTemplate.name} />}
+                {form.projectType === 'templated-website' && form.projectVersion && <ReviewRow label="Platform" value={pricing.versionLabel} />}
+                {form.projectType === 'templated-website' && form.colorPreset && <ReviewRow label="Color Style" value={COLOR_OPTIONS.find(c => c.id === form.colorPreset)?.name || '—'} />}
+                {form.projectType === 'ai-assisted-website' && form.websiteQuestionnaire?.primaryGoal && <ReviewRow label="Primary Goal" value={form.websiteQuestionnaire.primaryGoal} />}
+                {form.projectType === 'ai-assisted-website' && form.websiteQuestionnaire?.visitorAction && <ReviewRow label="Visitor Action" value={form.websiteQuestionnaire.visitorAction} />}
               </ReviewBlock>
 
               {missingReqSnapshot.length > 0 && (
@@ -2227,7 +2341,7 @@ export default function App() {
                 </ReviewBlock>
               )}
 
-              {(form.tier === 'template' || form.tier === 'custom') && selectedTemplate && form.projectVersion && (
+              {form.projectType === 'templated-website' && selectedTemplate && form.projectVersion && (
                 <div style={{ ...cardStyle, border: '1px solid rgba(57,214,199,0.25)' }}>
                   <div style={{ ...monoLabel, color: '#39D6C7' }}>Preliminary Project Receipt</div>
                   <ReviewRow label="Base template" value={formatPhp(pricing.base)} />
@@ -2601,7 +2715,7 @@ export default function App() {
           <div style={{ background: '#111827', border: '1px solid #2A3441', borderRadius: '14px', width: '100%', maxWidth: '480px', padding: '28px' }}>
             <div style={{ fontSize: '18px', fontWeight: 700, color: '#F0F6FF', marginBottom: '10px' }}>Switch to {TIER_LABELS[pendingTier] || pendingTier}?</div>
             <div style={{ fontSize: '14px', color: '#4B6278', lineHeight: 1.65, marginBottom: '16px' }}>
-              Switching tiers will clear your template selection, features, and vision fields. Your contact details and project name will be preserved.
+              Switching tiers will clear your template selection, questionnaire answers, features, and vision fields. Your contact details, project name, and company assets will be preserved.
             </div>
             {(() => {
               const validTypes = getProjectTypes(pendingTier).map(pt => pt.id)

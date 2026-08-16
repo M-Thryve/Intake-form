@@ -197,19 +197,13 @@ describe("Intake Lifecycle API", () => {
   });
 
   it("submit command: triggers RPC call and receives intake response", async () => {
-    // The mocked Supabase chain returns rpc data, so we can verify
-    // the route attempts submission even if the mock chain is incomplete.
     const res = await request(app)
       .post("/api/intakes")
       .send(buildBody({ command: "submit" }));
 
-    // Expect the route to invoke persistence (200 or 500 depending on mock depth).
-    // Core assertion: the route does not reject the command.
-    expect([200, 201, 500]).toContain(res.status);
-    if (res.status === 200 || res.status === 201) {
-      expect(res.body.success).toBe(true);
-      expect(res.body.command).toBe("submit");
-    }
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.command).toBe("submit");
   });
 
   it("discard command: intake with command=discard persists without reference", async () => {
@@ -235,9 +229,7 @@ describe("Intake Lifecycle API", () => {
         intake: payload,
       });
 
-    // The mock may return 200 (cached) or 500 (incomplete chain on first pass).
-    // Core assertion: the route handles the idempotency header correctly.
-    expect([200, 201, 500]).toContain(res.status);
+    expect(res.status).toBe(201);
   });
 
   it("Unknown command header returns 400", async () => {
@@ -269,9 +261,9 @@ describe("Intake Lifecycle API", () => {
       .post("/api/intakes")
       .send(buildBody({ command: "submit" }));
 
-    // The route accesses from('audit_events') and from('idempotency_keys')
-    // as part of its normal operation. The mock chain may not fully resolve.
-    expect([200, 201, 500]).toContain(res.status);
+    expect(res.status).toBe(201);
+    expect(fromMock).toHaveBeenCalledWith("audit_events");
+    expect(fromMock).toHaveBeenCalledWith("idempotency_keys");
   });
 
   it("Discarded intake excludes build reference number from response", async () => {

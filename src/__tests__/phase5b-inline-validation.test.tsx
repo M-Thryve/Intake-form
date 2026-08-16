@@ -91,8 +91,8 @@ describe('PHASE_5B_REV01 — draft save toast message', () => {
     fireEvent.change(screen.getByPlaceholderText('Alex Johnson'), { target: { value: 'Alex Johnson' } })
     fireEvent.change(screen.getByPlaceholderText('alex@acmecorp.com'), { target: { value: 'alex@acmecorp.com' } })
     fireEvent.change(screen.getByPlaceholderText('e.g. Acme Client Portal'), { target: { value: 'Client Portal' } })
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Technology' } })
-    fireEvent.click(screen.getByRole('button', { name: /Website/ }))
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'warehousing-storage' } })
+    fireEvent.click(screen.getByRole('button', { name: /Templated Website/ }))
     next() // → company-assets
 
     fireEvent.click(screen.getByRole('button', { name: /full deck available/ }))

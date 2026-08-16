@@ -34,6 +34,16 @@ describe('getMappingForIndustry', () => {
 })
 
 describe('resolveIndustryKey', () => {
+  it('maps every canonical v3.0 industry slug to a template family', () => {
+    expect(resolveIndustryKey('service-commerce')).toBe('ecommerce')
+    expect(resolveIndustryKey('dtc-ecommerce')).toBe('ecommerce')
+    expect(resolveIndustryKey('retail-multi-branch')).toBe('ecommerce')
+    expect(resolveIndustryKey('wholesale-distribution')).toBe('ecommerce')
+    expect(resolveIndustryKey('manufacturing-fabrication')).toBe('construction')
+    expect(resolveIndustryKey('warehousing-storage')).toBe('construction')
+    expect(resolveIndustryKey('logistics-transportation')).toBe('travel')
+  })
+
   it('maps a known display name to its key', () => {
     expect(resolveIndustryKey('E-Commerce')).toBe('ecommerce')
     expect(resolveIndustryKey('Food & Beverage')).toBe('restaurant')
