@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { fetchQueue, type QueueItem } from "../api/console";
 import { styles, statusLabel, analysisLabel, tierLabel } from "./styles";
+import { Icon } from "../components/icons/Icons";
 
 interface ReviewQueueProps {
   onSelectIntake: (id: string) => void;
@@ -76,7 +77,7 @@ export default function ReviewQueue({ onSelectIntake, selectedId }: ReviewQueueP
               {s || "All"}
             </button>
           ))}
-          <button onClick={load} style={{ marginLeft: "auto", padding: "4px 10px", background: "transparent", border: "1px solid #1E293B", color: "#64748B", borderRadius: "6px", cursor: "pointer", fontSize: "11px" }}>↻ Refresh</button>
+          <button onClick={load} style={{ marginLeft: "auto", padding: "4px 10px", background: "transparent", border: "1px solid #1E293B", color: "#64748B", borderRadius: "6px", cursor: "pointer", fontSize: "11px", display: "inline-flex", alignItems: "center", gap: "5px" }}><Icon name="refresh" size={12} /> Refresh</button>
         </div>
         <div style={{ display: "flex", gap: "6px" }}>
           <select value={filterTier} onChange={(e) => setFilterTier(e.target.value)} style={{ padding: "2px 8px", background: "#0F172A", border: "1px solid #1E293B", borderRadius: "4px", color: "#94A3B8", fontSize: "11px" }}>
@@ -91,24 +92,24 @@ export default function ReviewQueue({ onSelectIntake, selectedId }: ReviewQueueP
         <div style={{ padding: "28px", textAlign: "center", color: "#64748B" }}>Loading queue...</div>
       ) : queue.length === 0 ? (
         <div style={{ padding: "48px 28px", textAlign: "center", color: "#64748B" }}>
-          <div style={{ fontSize: "24px", marginBottom: "8px" }}>☐</div>
+          <div aria-hidden="true" style={{ display: "flex", justifyContent: "center", marginBottom: "8px", color: "#64748B" }}><Icon name="document" size={24} /></div>
           <div style={{ fontSize: "14px", fontWeight: 500 }}>No intakes are waiting for review.</div>
         </div>
       ) : (
         <table style={styles.queueTable}>
           <thead>
             <tr style={{ background: "#0F172A", position: "sticky", top: 0, zIndex: 1 }}>
-              <th onClick={() => toggleSort("submissionDate")} style={{ ...styles.queueCell, cursor: "pointer", color: sortBy === "submissionDate" ? "#A78BFA" : "#64748B" }}>Build Ref {sortBy === "submissionDate" ? (sortAsc ? "↑" : "↓") : ""}</th>
+              <th aria-sort={sortBy === "submissionDate" ? (sortAsc ? "ascending" : "descending") : "none"} style={{ ...styles.queueCell, color: sortBy === "submissionDate" ? "#A78BFA" : "#64748B" }}><button type="button" onClick={() => toggleSort("submissionDate")} style={{ all: "unset", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}>Build Ref {sortBy === "submissionDate" && <Icon name={sortAsc ? "arrow-up" : "arrow-down"} size={12} />}</button></th>
               <th style={styles.queueCell}>Client</th>
-              <th onClick={() => toggleSort("projectName")} style={{ ...styles.queueCell, cursor: "pointer", color: sortBy === "projectName" ? "#A78BFA" : "#64748B" }}>Project {sortBy === "projectName" ? (sortAsc ? "↑" : "↓") : ""}</th>
+              <th aria-sort={sortBy === "projectName" ? (sortAsc ? "ascending" : "descending") : "none"} style={{ ...styles.queueCell, color: sortBy === "projectName" ? "#A78BFA" : "#64748B" }}><button type="button" onClick={() => toggleSort("projectName")} style={{ all: "unset", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}>Project {sortBy === "projectName" && <Icon name={sortAsc ? "arrow-up" : "arrow-down"} size={12} />}</button></th>
               <th style={styles.queueCell}>Tier</th>
-              <th onClick={() => toggleSort("status")} style={{ ...styles.queueCell, cursor: "pointer", color: sortBy === "status" ? "#A78BFA" : "#64748B" }}>Status {sortBy === "status" ? (sortAsc ? "↑" : "↓") : ""}</th>
+              <th aria-sort={sortBy === "status" ? (sortAsc ? "ascending" : "descending") : "none"} style={{ ...styles.queueCell, color: sortBy === "status" ? "#A78BFA" : "#64748B" }}><button type="button" onClick={() => toggleSort("status")} style={{ all: "unset", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}>Status {sortBy === "status" && <Icon name={sortAsc ? "arrow-up" : "arrow-down"} size={12} />}</button></th>
               <th style={styles.queueCell}>Analysis</th>
             </tr>
           </thead>
           <tbody>
             {sorted.map((item) => (
-              <tr key={item.id} onClick={() => onSelectIntake(item.id)} style={{ ...styles.queueRow, background: selectedId === item.id ? "#1E293B" : "transparent" }}>
+              <tr key={item.id} tabIndex={0} aria-selected={selectedId === item.id} onClick={() => onSelectIntake(item.id)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelectIntake(item.id) } }} style={{ ...styles.queueRow, background: selectedId === item.id ? "#1E293B" : "transparent" }}>
                 <td style={styles.queueCell}>
                   <span style={{ fontWeight: 600, fontSize: "12px", fontFamily: "'JetBrains Mono', monospace" }}>{item.buildReferenceNumber}</span>
                 </td>

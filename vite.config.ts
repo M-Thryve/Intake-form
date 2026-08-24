@@ -5,6 +5,9 @@ import path from 'node:path'
 
 import siteConfiguration from './.figma/make/site.json'
 
+const AURORA_VIDEO_PATH = '/aurora/sky.mp4'
+const AURORA_VIDEO_CACHE_CONTROL = 'public, max-age=86400, stale-while-revalidate=604800'
+
 // Vite config — https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   // .figma/make/deploy-preview passes `--mode development` for cached-preview builds.
@@ -20,6 +23,7 @@ export default defineConfig(({ mode }) => {
       react(),
       tailwindcss(),
       figmaSiteConfiguration(siteConfiguration),
+      auroraAssetCacheHeaders(),
       figmaErrorOverlayReplay(),
       figmaReactRefreshBoundaryFallback(),
       figmaMakeKitPlugin({ storiesGlob: '/src/**/*.stories.{ts,tsx,js,jsx}' }),
@@ -47,6 +51,24 @@ export default defineConfig(({ mode }) => {
     },
   }
 })
+
+/** Keep the un-hashed decorative video reusable without making it immutable. */
+function auroraAssetCacheHeaders(): Plugin {
+  const applyHeaders = (server: { middlewares: { use: (handler: (req: { url?: string }, res: { setHeader: (name: string, value: string) => void }, next: () => void) => void) => void } }) => {
+    server.middlewares.use((req, res, next) => {
+      if (req.url?.split('?')[0] === AURORA_VIDEO_PATH) {
+        res.setHeader('Cache-Control', AURORA_VIDEO_CACHE_CONTROL)
+      }
+      next()
+    })
+  }
+
+  return {
+    name: 'aurora-asset-cache-headers',
+    configureServer: applyHeaders,
+    configurePreviewServer: applyHeaders,
+  }
+}
 
 type FigmaSiteConfiguration = {
   title?: string

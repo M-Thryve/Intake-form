@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { type McpRun, retryMcpRun, fetchAnalysisRuns } from "../api/console";
+import { Icon, type IconName } from "../components/icons/Icons";
 
 interface McpStatusPanelProps {
   runs: McpRun[];
@@ -84,17 +85,17 @@ export default function McpStatusPanel({ runs, intakeId, isOwner, onRunsUpdated 
 }
 
 function RunStatusIcon({ status, errorMessage }: { status: string; errorMessage?: string | null }) {
-  const iconMap: Record<string, { icon: string; color: string }> = {
-    completed: { icon: "\u2713", color: "#4ADE80" },
-    running: { icon: "\u25CC", color: "#3B82F6" },
-    queued: { icon: "\u29D6", color: "#64748B" },
-    failed: { icon: "\u2717", color: "#EF4444" },
-    timed_out: { icon: "\u23F1", color: "#F59E0B" },
+  const iconMap: Record<string, { icon: IconName; color: string }> = {
+    completed: { icon: "check", color: "#4ADE80" },
+    running: { icon: "refresh", color: "#3B82F6" },
+    queued: { icon: "info", color: "#64748B" },
+    failed: { icon: "x", color: "#EF4444" },
+    timed_out: { icon: "warning", color: "#F59E0B" },
   };
-  const info = iconMap[status] || { icon: "?", color: "#64748B" };
+  const info = iconMap[status] || { icon: "info" as IconName, color: "#64748B" };
   return (
     <span>
-      <span style={{ color: info.color, fontWeight: 600 }}>{info.icon}</span>
+      <span style={{ color: info.color, display: "inline-flex", verticalAlign: "middle" }}><Icon name={info.icon} size={14} /></span>
       <span style={{ marginLeft: "6px", color: info.color, textTransform: "capitalize" }}>{status.replace("_", " ")}</span>
       {errorMessage && <span style={{ display: "block", fontSize: "10px", color: "#F87171", marginTop: "2px" }}>{errorMessage}</span>}
     </span>
