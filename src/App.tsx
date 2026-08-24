@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
+import { useState, useEffect, useRef, type CSSProperties } from 'react'
 import type {
   FormData,
   Tier,
@@ -14,6 +14,9 @@ import { validateStep, collectMissingRequirements, canSubmit } from './data/vali
 import { getInlineWarnings, isValidEmail, slugify, type ValidationState } from './data/field-validators'
 import InlineWarning from './components/InlineWarning'
 import AssetUploader from './components/AssetUploader'
+import { Icon, type IconName } from './components/icons/Icons'
+import { Field, OperatorSpiel as AuroraOperatorSpiel, ReviewBlock, ReviewRow, StepHeader } from './components/aurora/AuroraPrimitives'
+import { auroraColors, auroraStyles, auroraTypography, ghostButtonStyle, operatorPalette, primaryButtonStyle, versionButtonStyle } from './styles/aurora'
 import {
   submitIntakeForReview,
   saveDraft,
@@ -43,10 +46,16 @@ import {
   QUESTIONNAIRE_FIELDS,
   QUESTIONNAIRE_GROUP_ORDER,
   QUESTIONNAIRE_GROUP_LABELS,
+  QUESTIONNAIRE_SUBMIT_REQUIRED,
   type QuestionnaireFieldDef,
 } from './data/questionnaire'
 import { CORE_FEATURES, EXTENSIONS, FEATURE_CATEGORIES } from './data/features'
 import type { WebsiteQuestionnaire } from './types/intake'
+
+const inputStyle = auroraStyles.input
+const labelStyle = auroraStyles.label
+const cardStyle = auroraStyles.card
+const monoLabel = auroraStyles.monoLabel
 
 const EMPTY_FORM: FormData = {
   fullName: '', company: '', email: '', phone: '', projectName: '',
@@ -75,30 +84,30 @@ const EMPTY_FORM: FormData = {
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-function getProjectTypes(tier: Tier): { id: string; label: string; icon: string }[] {
+function getProjectTypes(tier: Tier): { id: string; label: string; icon: IconName }[] {
   if (tier === 'custom' || tier === 'template') {
     return [
-      { id: 'templated-website', label: 'Templated Website', icon: '◈' },
-      { id: 'ai-assisted-website', label: 'AI-Assisted Website', icon: '◆' },
+      { id: 'templated-website', label: 'Templated Website', icon: 'template' },
+      { id: 'ai-assisted-website', label: 'AI-Assisted Website', icon: 'spark' },
     ]
   }
   if (tier === 'enterprise') {
     return [
-      { id: 'website', label: 'Website', icon: '◈' },
-      { id: 'webapp', label: 'Web App', icon: '⚡' },
-      { id: 'ecommerce', label: 'E-Commerce', icon: '◇' },
-      { id: 'internal', label: 'Internal Tool', icon: '⊕' },
+      { id: 'website', label: 'Website', icon: 'globe' },
+      { id: 'webapp', label: 'Web App', icon: 'spark' },
+      { id: 'ecommerce', label: 'E-Commerce', icon: 'document' },
+      { id: 'internal', label: 'Internal Tool', icon: 'tool' },
     ]
   }
   return []
 }
 const PROJECT_TYPES_FULL = [
-  { id: 'templated-website', label: 'Templated Website', icon: '◈' },
-  { id: 'ai-assisted-website', label: 'AI-Assisted Website', icon: '◆' },
-  { id: 'website', label: 'Website', icon: '◈' },
-  { id: 'webapp', label: 'Web App', icon: '⚡' },
-  { id: 'ecommerce', label: 'E-Commerce', icon: '◇' },
-  { id: 'internal', label: 'Internal Tool', icon: '⊕' },
+  { id: 'templated-website', label: 'Templated Website', icon: 'template' },
+  { id: 'ai-assisted-website', label: 'AI-Assisted Website', icon: 'spark' },
+  { id: 'website', label: 'Website', icon: 'globe' },
+  { id: 'webapp', label: 'Web App', icon: 'spark' },
+  { id: 'ecommerce', label: 'E-Commerce', icon: 'document' },
+  { id: 'internal', label: 'Internal Tool', icon: 'tool' },
 ]
 
 const INDUSTRIES = [
@@ -115,11 +124,11 @@ const TEMPLATE_CATEGORIES = ['All', 'Business', 'E-Commerce', 'Portfolio', 'Rest
 
 interface ColorOption { id: string; name: string; color: string }
 const COLOR_OPTIONS: ColorOption[] = [
-  { id: 'original', name: 'Original Template', color: '#39D6C7' },
+  { id: 'original', name: 'Original Template', color: '#46A873' },
   { id: 'dark', name: 'M-THRYVE Dark', color: '#334155' },
-  { id: 'ocean', name: 'Ocean Blue', color: '#0EA5E9' },
+  { id: 'ocean', name: 'Ocean Blue', color: '#AAB6C4' },
   { id: 'neutral', name: 'Modern Neutral', color: '#94A3B8' },
-  { id: 'emerald', name: 'Emerald', color: '#10B981' },
+  { id: 'emerald', name: 'Emerald', color: '#46A873' },
   { id: 'warm', name: 'Warm Commerce', color: '#F97316' },
 ]
 
@@ -277,12 +286,12 @@ function getTechStack(projectType: string, features: string[]) {
 }
 
 function getComplexity(features: string[], projectType: string, tier: Tier) {
-  if (tier === 'template') return { label: 'Low', color: '#39D6C7', level: 18 }
-  if (tier === 'custom') return { label: 'Moderate', color: '#F59E0B', level: 50 }
+  if (tier === 'template') return { label: 'Low', color: '#46A873', level: 18 }
+  if (tier === 'custom') return { label: 'Moderate', color: '#C9A34A', level: 50 }
   const score = features.length * (['saas', 'enterprise', 'ai-agent'].includes(projectType) ? 1.4 : 1)
-  if (score <= 4) return { label: 'Standard', color: '#39D6C7', level: 30 }
-  if (score <= 8) return { label: 'Moderate', color: '#F59E0B', level: 58 }
-  if (score <= 13) return { label: 'Complex', color: '#F97316', level: 78 }
+  if (score <= 4) return { label: 'Standard', color: '#46A873', level: 30 }
+  if (score <= 8) return { label: 'Moderate', color: '#C9A34A', level: 58 }
+  if (score <= 13) return { label: 'Complex', color: '#F5B400', level: 78 }
   return { label: 'Enterprise-Grade', color: '#EF4444', level: 95 }
 }
 
@@ -377,67 +386,200 @@ const FAQ_DATA: Record<string, Array<{ q: string; a: string }>> = {
 
 // ── Shared styles ──────────────────────────────────────────────────────────────
 
-const inputStyle: CSSProperties = {
-  width: '100%', padding: '12px 14px',
-  background: '#0D1620', border: '1px solid #2A3441',
-  borderRadius: '8px', color: '#E2E8F0', fontSize: '14px',
-  fontFamily: "'Inter', system-ui, sans-serif", transition: 'border-color 0.15s', outline: 'none',
-}
-
-const labelStyle: CSSProperties = {
-  display: 'block', fontSize: '12px', fontWeight: 500,
-  color: '#5A7A91', marginBottom: '8px', letterSpacing: '0.02em',
-}
-
-const cardStyle: CSSProperties = {
-  padding: '20px', background: '#111827',
-  border: '1px solid #2A3441', borderRadius: '12px',
-}
-
-const monoLabel: CSSProperties = {
-  fontFamily: "'JetBrains Mono', monospace", fontSize: '10px',
-  letterSpacing: '0.1em', color: '#4B6278', textTransform: 'uppercase' as const, marginBottom: '12px',
-}
-
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
-function StepHeader({ tag, title, desc }: { tag: string; title: string; desc: string }) {
+/**
+ * Ambient aurora layer. A generated aurora plate and wireframe terrain
+ * (Higgsfield soul_location) carry the organic detail; the three CSS
+ * curtains ride over them at reduced opacity to supply drift. Purely
+ * decorative and inert — it sits at z-index 0 behind `.aurora-content`
+ * and is what the glass cards frost. All motion is transform/opacity.
+ */
+/**
+ * Live aurora curtains.
+ *
+ * The CSS bands this replaces could only slide a fixed gradient sideways,
+ * which reads as movement but not as life. Here every column has its hanging
+ * edge, brightness and filament texture recomputed each frame from layered
+ * waves, so the curtains fold, surge and thin the way real ones do.
+ *
+ * Rendered at a low internal resolution and scaled up under a blur — aurora
+ * has no hard edges, so the upscale costs nothing visually and keeps the loop
+ * cheap. Capped near 30fps, frozen for reduced-motion, and parked while the
+ * tab is hidden so it never burns battery behind another window.
+ */
+/**
+ * The aurora plate. A real 10s clip of these curtains actually moving,
+ * generated from the still plate and looped as a palindrome so the seam is
+ * exact — aurora reversed still reads as aurora, which is what makes that
+ * trick work here. Falls back to the still frame when the visitor asks for
+ * reduced motion, and the same still is the poster so nothing pops in.
+ */
+function AuroraPlate() {
+  const [motionOK] = useState(() =>
+    typeof window === "undefined"
+      ? true
+      : !window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches)
+
+  if (!motionOK) {
+    return <div className="aurora-plate aurora-plate--still" aria-hidden="true" />
+  }
+
   return (
-    <div style={{ marginBottom: '28px' }}>
-      <div style={{ ...monoLabel, color: '#39D6C7', fontSize: '11px', marginBottom: '12px' }}>{tag}</div>
-      <h2 style={{ fontSize: '28px', fontWeight: 700, letterSpacing: '-0.025em', color: '#F0F6FF', margin: '0 0 10px' }}>{title}</h2>
-      <p style={{ fontSize: '15px', color: '#4B6278', lineHeight: 1.65, margin: 0 }}>{desc}</p>
-    </div>
+    <video
+      className="aurora-plate"
+      autoPlay
+      muted
+      loop
+      playsInline
+      preload="auto"
+      poster="/aurora/sky-a.webp"
+      aria-hidden="true"
+    >
+      <source src="/aurora/sky.mp4" type="video/mp4" />
+    </video>
   )
 }
+function AuroraCanvas() {
+  const ref = useRef<HTMLCanvasElement>(null)
+  const [compactViewport] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia?.("(max-width: 768px)")?.matches)
 
-function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
-  return (
-    <div>
-      <div style={labelStyle}>{label}</div>
-      {children}
-      {hint && <div style={{ fontSize: '12px', color: '#3D5468', marginTop: '6px', lineHeight: 1.5 }}>{hint}</div>}
-    </div>
-  )
+  useEffect(() => {
+    if (compactViewport) return
+    const cv = ref.current
+    if (!cv) return
+    const ctx = cv.getContext("2d")
+    if (!ctx) return
+
+    const W = 240
+    const H = 170
+    const N = 3
+    cv.width = W
+    cv.height = H
+
+    const BANDS = [
+      { r: 95,  g: 203, b: 140, top: 0.01, amp: 0.13, len: 0.66, a: 0.92, sp: 0.55, seed: 0.0 },
+      { r: 201, g: 163, b: 74,  top: 0.05, amp: 0.10, len: 0.46, a: 0.42, sp: 0.72, seed: 2.6 },
+      { r: 170, g: 182, b: 196, top: 0.00, amp: 0.15, len: 0.72, a: 0.30, sp: 0.38, seed: 4.9 },
+    ]
+
+    // Depth-into-the-curtain falloff is a table, not a per-pixel sine.
+    const FALL = new Float32Array(256)
+    for (let i = 0; i < 256; i++) {
+      const d = i / 255
+      FALL[i] = Math.sin(Math.PI * (d * 0.92)) * (1 - d * 0.55)
+    }
+
+    // Everything below varies per COLUMN, not per pixel. Hoisting it out of
+    // the row loop is what keeps a per-frame simulation affordable.
+    const EDGE = new Float32Array(N * W)
+    const STRI = new Float32Array(N * W)
+    const LEN  = new Float32Array(N * W)
+
+    const img = ctx.createImageData(W, H)
+    const buf = img.data
+
+    const render = (t: number) => {
+      for (let k = 0; k < N; k++) {
+        const b = BANDS[k]
+        const s = t * b.sp + b.seed
+        const o = k * W
+        for (let x = 0; x < W; x++) {
+          const u = x / W
+
+          // Folds travel ALONG the arc, and in opposing directions, so they
+          // interfere — the curtain creases and uncreases instead of sliding
+          // sideways as one rigid shape. This is the whole difference between
+          // "a moving gradient" and "an aurora".
+          const fold = Math.sin(u * 4.2 - s * 1.00) * 0.55
+                     + Math.sin(u * 7.9 + s * 0.62) * 0.30
+                     + Math.sin(u * 13.1 - s * 1.45) * 0.18
+          EDGE[o + x] = b.top + fold * b.amp
+
+          // Rays shimmer fast and are bundled into brighter groups that drift
+          // at their own rate, so light runs through the curtain.
+          const ray = (0.55 + 0.45 * Math.sin(u * 132 + fold * 5 - s * 3.10))
+                    * (0.62 + 0.38 * Math.sin(u * 41 + s * 1.70))
+
+          // Slow surges of brightness travelling along the arc.
+          const surge = 0.55 + 0.45 * Math.sin(u * 3.1 - s * 0.72)
+          STRI[o + x] = ray * surge
+
+          // Rays extend and retract, so the lower edge is never static.
+          LEN[o + x] = b.len * (0.72 + 0.38 * Math.sin(u * 6.3 + s * 0.95))
+        }
+      }
+
+      let i = 0
+      for (let y = 0; y < H; y++) {
+        const v = y / H
+        for (let x = 0; x < W; x++) {
+          let R = 0, G = 0, B = 0
+          for (let k = 0; k < N; k++) {
+            const b = BANDS[k]
+            const o = k * W + x
+            const d = (v - EDGE[o]) / LEN[o]
+            if (d < 0 || d >= 1) continue
+            const a = b.a * FALL[(d * 255) | 0] * STRI[o]
+            R += b.r * a; G += b.g * a; B += b.b * a
+          }
+          buf[i]     = R > 255 ? 255 : R
+          buf[i + 1] = G > 255 ? 255 : G
+          buf[i + 2] = B > 255 ? 255 : B
+          buf[i + 3] = 255
+          i += 4
+        }
+      }
+      ctx.putImageData(img, 0, 0)
+    }
+
+    // Paint once synchronously so the sky is never blank if the first frame
+    // is deferred (background tab, non-compositing window).
+    render(0)
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return
+
+    let raf = 0
+    let last = 0
+    const loop = (ms: number) => {
+      raf = requestAnimationFrame(loop)
+      if (ms - last < 24) return
+      last = ms
+      render(ms / 1000)
+    }
+    raf = requestAnimationFrame(loop)
+
+    const onVis = () => {
+      if (document.hidden) { cancelAnimationFrame(raf); raf = 0 }
+      else if (!raf) { last = 0; raf = requestAnimationFrame(loop) }
+    }
+    document.addEventListener("visibilitychange", onVis)
+
+    return () => {
+      cancelAnimationFrame(raf)
+      document.removeEventListener("visibilitychange", onVis)
+    }
+  }, [compactViewport])
+
+  if (compactViewport) return null
+  return <canvas ref={ref} className="aurora-canvas" aria-hidden="true" />
 }
-
-function ReviewBlock({ title, children, onEdit }: { title: string; children: ReactNode; onEdit?: () => void }) {
+function AuroraBackdrop() {
   return (
-    <div style={cardStyle}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-        <div style={monoLabel}>{title}</div>
-        {onEdit && <button onClick={onEdit} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#39D6C7', fontSize: '12px', fontFamily: "'Inter', system-ui, sans-serif", padding: 0 }}>Edit</button>}
-      </div>
-      {children}
-    </div>
-  )
-}
+    <div className="aurora-stage" aria-hidden="true">
+      <div className="aurora-sky" />
+      <AuroraPlate />
+      <div className="aurora-stars-far" />
+      <div className="aurora-stars" />
 
-function ReviewRow({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px', fontSize: '13px' }}>
-      <span style={{ color: '#4B6278' }}>{label}</span>
-      <span style={{ color: bold ? '#F0F6FF' : '#E2E8F0', fontWeight: bold ? 700 : 500, textAlign: 'right', maxWidth: '60%' }}>{value}</span>
+      <AuroraCanvas />
+
+      <div className="aurora-scrim" />
+      <div className="aurora-horizon" />
+      <div className="aurora-ridge-plate" />
+
+      <div className="aurora-vignette" />
+      <div className="aurora-grain" />
     </div>
   )
 }
@@ -446,22 +588,22 @@ function ReviewRow({ label, value, bold }: { label: string; value: string; bold?
 function RobotIcon({ size = 32 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="20" fill="#0D2035"/>
-      <rect x="13" y="22" width="14" height="11" rx="3" fill="#1A3A55" stroke="#39D6C7" strokeWidth="0.8"/>
-      <rect x="18" y="19" width="4" height="4" rx="1" fill="#1A3A55"/>
-      <rect x="11" y="9" width="18" height="13" rx="4" fill="#1A3A55" stroke="#39D6C7" strokeWidth="0.8"/>
-      <circle cx="16" cy="15" r="2.2" fill="#39D6C7" opacity="0.9"/>
-      <circle cx="24" cy="15" r="2.2" fill="#39D6C7" opacity="0.9"/>
+      <rect width="40" height="40" rx="20" fill="#0D0F12"/>
+      <rect x="13" y="22" width="14" height="11" rx="3" fill="#242830" stroke="#46A873" strokeWidth="0.8"/>
+      <rect x="18" y="19" width="4" height="4" rx="1" fill="#242830"/>
+      <rect x="11" y="9" width="18" height="13" rx="4" fill="#242830" stroke="#46A873" strokeWidth="0.8"/>
+      <circle cx="16" cy="15" r="2.2" fill="#46A873" opacity="0.9"/>
+      <circle cx="24" cy="15" r="2.2" fill="#46A873" opacity="0.9"/>
       <circle cx="17" cy="14.2" r="0.7" fill="white" opacity="0.6"/>
       <circle cx="25" cy="14.2" r="0.7" fill="white" opacity="0.6"/>
-      <line x1="20" y1="9" x2="20" y2="5" stroke="#39D6C7" strokeWidth="1.5" strokeLinecap="round"/>
-      <circle cx="20" cy="4" r="1.5" fill="#39D6C7"/>
-      <path d="M16.5 18 Q20 20 23.5 18" stroke="#39D6C7" strokeWidth="1" strokeLinecap="round" fill="none"/>
-      <circle cx="17" cy="26" r="1.5" fill="#39D6C7" opacity="0.6"/>
-      <circle cx="20" cy="26" r="1.5" fill="#39D6C7" opacity="0.3"/>
-      <circle cx="23" cy="26" r="1.5" fill="#39D6C7" opacity="0.6"/>
-      <rect x="7" y="22" width="5" height="8" rx="2.5" fill="#1A3A55" stroke="#39D6C7" strokeWidth="0.7"/>
-      <rect x="28" y="22" width="5" height="8" rx="2.5" fill="#1A3A55" stroke="#39D6C7" strokeWidth="0.7"/>
+      <line x1="20" y1="9" x2="20" y2="5" stroke="#46A873" strokeWidth="1.5" strokeLinecap="round"/>
+      <circle cx="20" cy="4" r="1.5" fill="#46A873"/>
+      <path d="M16.5 18 Q20 20 23.5 18" stroke="#46A873" strokeWidth="1" strokeLinecap="round" fill="none"/>
+      <circle cx="17" cy="26" r="1.5" fill="#46A873" opacity="0.6"/>
+      <circle cx="20" cy="26" r="1.5" fill="#46A873" opacity="0.3"/>
+      <circle cx="23" cy="26" r="1.5" fill="#46A873" opacity="0.6"/>
+      <rect x="7" y="22" width="5" height="8" rx="2.5" fill="#242830" stroke="#46A873" strokeWidth="0.7"/>
+      <rect x="28" y="22" width="5" height="8" rx="2.5" fill="#242830" stroke="#46A873" strokeWidth="0.7"/>
     </svg>
   )
 }
@@ -483,41 +625,47 @@ const READINESS_ORDER: AssetReadiness[] = [
 ]
 
 const READINESS_COLOR: Record<AssetReadiness, string> = {
-  available: '#39D6C7',
+  available: '#46A873',
   missing: '#EF4444',
-  provide_later: '#F59E0B',
-  not_applicable: '#4B6278',
-  m_thryve_add_on: '#B79CF9',
+  provide_later: '#F5B400',
+  not_applicable: '#333944',
+  m_thryve_add_on: '#AAB6C4',
 }
 
 function ReadinessPills({
   reqKey,
+  fieldId,
+  required,
   ctx,
   value,
   onChange,
 }: {
   reqKey: string
+  fieldId: string
+  required: boolean
   ctx: RequirementContext
   value: AssetReadiness | undefined
   onChange: (next: AssetReadiness) => void
 }) {
   return (
-    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+    <div role="group" aria-labelledby={`${fieldId}-label`} aria-required={required || undefined} style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
       {READINESS_ORDER.map(s => {
         const disabled = s === 'not_applicable' && !isNotApplicableAllowed(reqKey, ctx)
         const selected = value === s
         return (
           <button
+            type="button"
             key={s}
+            aria-pressed={selected}
             onClick={() => !disabled && onChange(s)}
             disabled={disabled}
             title={disabled ? '"Not applicable" is not valid for this resource' : undefined}
             style={{
               padding: '3px 9px',
               borderRadius: '100px',
-              border: `1px solid ${selected ? READINESS_COLOR[s] : '#2A3441'}`,
-              background: selected ? `${READINESS_COLOR[s]}18` : disabled ? '#0B0F14' : 'transparent',
-              color: selected ? READINESS_COLOR[s] : disabled ? '#2A3441' : '#4B6278',
+              border: `1px solid ${selected ? READINESS_COLOR[s] : '#242830'}`,
+              background: selected ? `${READINESS_COLOR[s]}18` : disabled ? '#0A0C0F' : 'transparent',
+              color: selected ? READINESS_COLOR[s] : disabled ? '#242830' : '#333944',
               fontSize: '10px',
               cursor: disabled ? 'not-allowed' : 'pointer',
               fontFamily: "'Inter', system-ui, sans-serif",
@@ -558,50 +706,53 @@ function ResourceRow({
   touchField: (id: string) => void
   warning: string | null
 }) {
-  const borderColor = status ? READINESS_COLOR[status] + '55' : '#2A3441'
-  const rowBorder = warning ? '#F59E0B' : borderColor
+  const borderColor = status ? READINESS_COLOR[status] + '55' : '#242830'
+  const rowBorder = warning ? '#F5B400' : borderColor
   const showNote =
     status === 'missing' ||
     status === 'provide_later' ||
     status === 'm_thryve_add_on' ||
     status === 'not_applicable'
   return (
-    <div id={fieldId} aria-describedby={`${fieldId}-warning`} onBlur={() => touchField(fieldId)} style={{ padding: '12px 14px', background: '#111827', border: `1px solid ${rowBorder}`, borderRadius: '8px' }}>
+    <div id={fieldId} aria-describedby={`${fieldId}-warning`} onBlur={() => touchField(fieldId)} style={{ padding: '12px 14px', background: '#12151A', border: `1px solid ${rowBorder}`, borderRadius: '8px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 500, color: '#D4E4F0' }}>{req.label}</span>
+            <span id={`${fieldId}-label`} style={{ fontSize: '13px', fontWeight: 500, color: '#AAB6C4' }}>{req.label}</span>
             {req.severity === 'required' && (
-              <span style={{ fontSize: '9px', color: '#EF4444', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.08em' }}>REQUIRED</span>
+              <span style={{ fontSize: '10px', color: '#EF4444', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.08em' }}>REQUIRED</span>
             )}
           </div>
           {req.description && (
-            <div style={{ fontSize: '11px', color: '#3D5468', marginTop: '2px', lineHeight: 1.5 }}>{req.description}</div>
+            <div style={{ fontSize: '11px', color: '#AAB6C4', marginTop: '2px', lineHeight: 1.5 }}>{req.description}</div>
           )}
         </div>
-        <ReadinessPills reqKey={req.key} ctx={ctx} value={status} onChange={onStatus} />
+        <ReadinessPills reqKey={req.key} fieldId={fieldId} required={req.severity === 'required'} ctx={ctx} value={status} onChange={onStatus} />
       </div>
 
       {status === 'm_thryve_add_on' && (
         <div style={{ marginTop: '10px', padding: '10px 12px', background: 'rgba(183,156,249,0.08)', border: '1px solid rgba(183,156,249,0.25)', borderRadius: '6px' }}>
-          <div style={{ fontSize: '11px', fontStyle: 'italic', color: '#B79CF9', lineHeight: 1.55, marginBottom: '8px' }}>“{ADD_ON_SPIEL}”</div>
+          <div style={{ fontSize: '11px', fontStyle: 'italic', color: '#AAB6C4', lineHeight: 1.55, marginBottom: '8px' }}>“{ADD_ON_SPIEL}”</div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', color: '#4B6278', fontFamily: "'JetBrains Mono', monospace", whiteSpace: 'nowrap' }}>Preliminary cost ₱</span>
+            <label htmlFor={`${fieldId}-cost`} style={{ fontSize: '11px', color: '#AAB6C4', fontFamily: "'JetBrains Mono', monospace", whiteSpace: 'nowrap' }}>Preliminary cost â‚±</label>
             <input
+              id={`${fieldId}-cost`}
               type="number"
               value={addOnCost ?? req.preliminaryAddOnCost ?? ''}
               onChange={e => onAddOnCost(e.target.value === '' ? undefined : Number(e.target.value))}
               placeholder="TBD"
-              style={{ ...inputStyle, padding: '6px 8px', fontSize: '12px', maxWidth: '140px', background: '#0D1620' }}
+              style={{ ...inputStyle, padding: '6px 8px', fontSize: '12px', maxWidth: '140px', background: '#0D0F12' }}
             />
-            <span style={{ fontSize: '10px', color: '#3D5468' }}>Preliminary · subject to owner review</span>
+            <span style={{ fontSize: '10px', color: '#AAB6C4' }}>Preliminary · subject to owner review</span>
           </div>
         </div>
       )}
 
       {showNote && (
         <div style={{ marginTop: '10px' }}>
+          <label htmlFor={`${fieldId}-note`} className="sr-only">{req.label} operator note</label>
           <input
+            id={`${fieldId}-note`}
             value={note}
             onChange={e => onNote(e.target.value)}
             placeholder={
@@ -613,7 +764,7 @@ function ResourceRow({
                     ? 'Scope of the add-on request…'
                     : 'Operator note (why missing, next action)…'
             }
-            style={{ ...inputStyle, padding: '8px 10px', fontSize: '12px', background: '#0D1620' }}
+            style={{ ...inputStyle, padding: '8px 10px', fontSize: '12px', background: '#0D0F12' }}
           />
         </div>
       )}
@@ -686,15 +837,15 @@ function CompanyAssetsStep({
         title="What's ready, what's missing?"
         desc={`Requirements below are derived from the ${ctx.buildPath === 'enterprise' ? 'Enterprise Level' : 'Custom Build'} path${ctx.projectType ? ` and a ${ctx.projectType} project` : ''}. Missing items don't block a draft — they're recorded as follow-ups or M-THRYVE add-ons.`}
       />
-      <OperatorSpiel text={SPIELS.missingResource} tone="warning" />
+      <AuroraOperatorSpiel text={SPIELS.missingResource} tone="warning" />
 
       {/* ── Company deck existence ──────────────────────────────────── */}
       <div style={{ marginBottom: '20px' }}>
-        <div style={{ ...monoLabel, color: '#39D6C7', marginBottom: '10px' }}>Company Deck</div>
-        <div style={{ fontSize: '13px', color: '#C4D8EA', marginBottom: '10px', lineHeight: 1.55 }}>
+        <div style={{ ...monoLabel, color: '#46A873', marginBottom: '10px' }}>Company Deck</div>
+        <div style={{ fontSize: '13px', color: '#AAB6C4', marginBottom: '10px', lineHeight: 1.55 }}>
           Does the client have a company deck we can reference?
         </div>
-        <div id="field-deckExists" aria-describedby="field-deckExists-warning" onBlur={() => touchField('field-deckExists')} style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px', ...(getWarning('field-deckExists') ? { outline: '1px solid rgba(245,158,11,0.45)', borderRadius: '10px' } : {}) }}>
+        <div id="field-deckExists" aria-describedby="field-deckExists-warning" onBlur={() => touchField('field-deckExists')} style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px', ...(getWarning('field-deckExists') ? { outline: '1px solid rgba(245,180,0,0.45)', borderRadius: '10px' } : {}) }}>
           {[
             { id: 'yes', label: 'Yes — full deck available', desc: 'We\'ll review section coverage below. Every section must be confirmed before submission.' },
             { id: 'partial', label: 'Partial — some sections available', desc: 'Mark each section\'s status below. Unconfirmed sections become follow-ups.' },
@@ -707,15 +858,15 @@ function CompanyAssetsStep({
                 style={{
                   padding: '12px 14px',
                   borderRadius: '8px',
-                  border: `1px solid ${sel ? '#39D6C7' : '#2A3441'}`,
-                  background: sel ? 'rgba(57,214,199,0.06)' : '#111827',
+                  border: `1px solid ${sel ? '#46A873' : '#242830'}`,
+                  background: sel ? 'rgba(70,168,115,0.06)' : '#12151A',
                   cursor: 'pointer',
                   textAlign: 'left',
                   transition: 'all 0.15s',
                 }}
               >
-                <div style={{ fontSize: '13px', fontWeight: 600, color: sel ? '#F0F6FF' : '#C4D8EA', marginBottom: '3px' }}>{opt.label}</div>
-                <div style={{ fontSize: '12px', color: '#4B6278', lineHeight: 1.5 }}>{opt.desc}</div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: sel ? '#E5E7EB' : '#AAB6C4', marginBottom: '3px' }}>{opt.label}</div>
+                <div style={{ fontSize: '12px', color: '#AAB6C4', lineHeight: 1.5 }}>{opt.desc}</div>
               </button>
             )
           })}
@@ -755,7 +906,7 @@ function CompanyAssetsStep({
       {/* ── Required resources ──────────────────────────────────────── */}
       <div style={{ marginBottom: '20px' }}>
         <div style={{ ...monoLabel, color: '#EF4444', marginBottom: '10px' }}>Required Resources · {required.length}</div>
-        <div style={{ fontSize: '12px', color: '#4B6278', marginBottom: '10px', lineHeight: 1.55 }}>
+        <div style={{ fontSize: '12px', color: '#AAB6C4', marginBottom: '10px', lineHeight: 1.55 }}>
           These resources are needed to complete the build accurately for this path and project type.
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -783,8 +934,8 @@ function CompanyAssetsStep({
 
       {/* ── Optional resources ──────────────────────────────────────── */}
       <div style={{ marginBottom: '20px' }}>
-        <div style={{ ...monoLabel, color: '#F59E0B', marginBottom: '10px' }}>Optional / Improvement Resources · {optional.length}</div>
-        <div style={{ fontSize: '12px', color: '#4B6278', marginBottom: '10px', lineHeight: 1.55 }}>
+        <div style={{ ...monoLabel, color: '#F5B400', marginBottom: '10px' }}>Optional / Improvement Resources · {optional.length}</div>
+        <div style={{ fontSize: '12px', color: '#AAB6C4', marginBottom: '10px', lineHeight: 1.55 }}>
           Nice-to-have items. Missing entries here do not block submission but improve the resulting build.
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -819,7 +970,7 @@ function CompanyAssetsStep({
         hint="Upload brand, deck, content, and reference files. The first file automatically saves this intake as a draft."
       />
 
-      <div style={{ padding: '10px 14px', background: '#0D1620', border: '1px solid #1E2E3D', borderRadius: '8px', fontSize: '11px', color: '#3D5468', lineHeight: 1.6 }}>
+      <div style={{ padding: '10px 14px', background: '#0D0F12', border: '1px solid #1A1C22', borderRadius: '8px', fontSize: '11px', color: '#AAB6C4', lineHeight: 1.6 }}>
         Files upload directly to secure storage and are scanned separately. Intake JSON stores metadata references only. Do not upload credentials, secrets, or private keys.
       </div>
     </div>
@@ -871,12 +1022,12 @@ function ResourceReviewBlock({ form, onEdit }: { form: FormData; onEdit: () => v
   }
 
   const bucketMeta = [
-    { key: 'available', label: 'Available', color: '#39D6C7' },
+    { key: 'available', label: 'Available', color: '#46A873' },
     { key: 'missing', label: 'Missing', color: '#EF4444' },
-    { key: 'provide_later', label: 'Provide later (follow-up)', color: '#F59E0B' },
-    { key: 'm_thryve_add_on', label: 'M-THRYVE add-on requested', color: '#B79CF9' },
-    { key: 'not_applicable', label: 'Not applicable', color: '#4B6278' },
-    { key: 'unset', label: 'Not yet reviewed', color: '#4B6278' },
+    { key: 'provide_later', label: 'Provide later (follow-up)', color: '#F5B400' },
+    { key: 'm_thryve_add_on', label: 'M-THRYVE add-on requested', color: '#AAB6C4' },
+    { key: 'not_applicable', label: 'Not applicable', color: '#AAB6C4' },
+    { key: 'unset', label: 'Not yet reviewed', color: '#AAB6C4' },
   ] as const
 
   const deckLabel: Record<string, string> = {
@@ -886,25 +1037,25 @@ function ResourceReviewBlock({ form, onEdit }: { form: FormData; onEdit: () => v
   }
 
   return (
-    <div style={{ padding: '20px', background: '#111827', border: '1px solid #2A3441', borderRadius: '12px' }}>
+    <div style={{ padding: '20px', background: '#12151A', border: '1px solid #242830', borderRadius: '12px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
         <div style={{ ...monoLabel, margin: 0 }}>Assets & Resources</div>
-        <button onClick={onEdit} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#39D6C7', fontSize: '12px', fontFamily: "'Inter', system-ui, sans-serif", padding: 0 }}>Edit</button>
+        <button onClick={onEdit} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#46A873', fontSize: '12px', fontFamily: "'Inter', system-ui, sans-serif", padding: 0 }}>Edit</button>
       </div>
 
-      <div style={{ marginBottom: '14px', padding: '10px 12px', background: '#0D1620', border: '1px solid #1E2E3D', borderRadius: '8px' }}>
+      <div style={{ marginBottom: '14px', padding: '10px 12px', background: '#0D0F12', border: '1px solid #1A1C22', borderRadius: '8px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <span style={{ fontSize: '11px', fontFamily: "'JetBrains Mono', monospace", color: '#4B6278', letterSpacing: '0.06em' }}>COMPANY DECK</span>
-          <span style={{ fontSize: '13px', color: '#D4E4F0' }}>{deckLabel[form.deckExists] || 'Not confirmed'}</span>
+          <span style={{ fontSize: '11px', fontFamily: "'JetBrains Mono', monospace", color: '#AAB6C4', letterSpacing: '0.06em' }}>COMPANY DECK</span>
+          <span style={{ fontSize: '13px', color: '#AAB6C4' }}>{deckLabel[form.deckExists] || 'Not confirmed'}</span>
         </div>
         {(form.deckExists === 'yes' || form.deckExists === 'partial') && (
-          <div style={{ marginTop: '8px', fontSize: '11px', color: '#3D5468', lineHeight: 1.55 }}>
-            {deckSummary.available.length > 0 && <div><strong style={{ color: '#39D6C7' }}>Available:</strong> {deckSummary.available.join(', ')}</div>}
+          <div style={{ marginTop: '8px', fontSize: '11px', color: '#AAB6C4', lineHeight: 1.55 }}>
+            {deckSummary.available.length > 0 && <div><strong style={{ color: '#46A873' }}>Available:</strong> {deckSummary.available.join(', ')}</div>}
             {deckSummary.missing.length > 0 && <div><strong style={{ color: '#EF4444' }}>Missing:</strong> {deckSummary.missing.join(', ')}</div>}
-            {deckSummary.provide_later.length > 0 && <div><strong style={{ color: '#F59E0B' }}>Provide later:</strong> {deckSummary.provide_later.join(', ')}</div>}
-            {deckSummary.m_thryve_add_on.length > 0 && <div><strong style={{ color: '#B79CF9' }}>Add-on:</strong> {deckSummary.m_thryve_add_on.join(', ')}</div>}
-            {deckSummary.not_applicable.length > 0 && <div><strong style={{ color: '#4B6278' }}>N/A:</strong> {deckSummary.not_applicable.join(', ')}</div>}
-            {deckSummary.unset.length > 0 && <div><strong style={{ color: '#4B6278' }}>Not yet reviewed:</strong> {deckSummary.unset.join(', ')}</div>}
+            {deckSummary.provide_later.length > 0 && <div><strong style={{ color: '#F5B400' }}>Provide later:</strong> {deckSummary.provide_later.join(', ')}</div>}
+            {deckSummary.m_thryve_add_on.length > 0 && <div><strong style={{ color: '#AAB6C4' }}>Add-on:</strong> {deckSummary.m_thryve_add_on.join(', ')}</div>}
+            {deckSummary.not_applicable.length > 0 && <div><strong style={{ color: '#AAB6C4' }}>N/A:</strong> {deckSummary.not_applicable.join(', ')}</div>}
+            {deckSummary.unset.length > 0 && <div><strong style={{ color: '#AAB6C4' }}>Not yet reviewed:</strong> {deckSummary.unset.join(', ')}</div>}
           </div>
         )}
       </div>
@@ -914,10 +1065,10 @@ function ResourceReviewBlock({ form, onEdit }: { form: FormData; onEdit: () => v
           const items = buckets[key]
           if (!items || items.length === 0) return null
           return (
-            <div key={key} style={{ padding: '10px 12px', background: '#0D1620', border: `1px solid ${color}40`, borderRadius: '8px' }}>
+            <div key={key} style={{ padding: '10px 12px', background: '#0D0F12', border: `1px solid ${color}40`, borderRadius: '8px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '6px' }}>
                 <span style={{ fontSize: '11px', fontFamily: "'JetBrains Mono', monospace", color, letterSpacing: '0.06em' }}>{label.toUpperCase()}</span>
-                <span style={{ fontSize: '11px', color: '#4B6278' }}>{items.length}</span>
+                <span style={{ fontSize: '11px', color: '#AAB6C4' }}>{items.length}</span>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                 {items.map(item => (
@@ -929,12 +1080,12 @@ function ResourceReviewBlock({ form, onEdit }: { form: FormData; onEdit: () => v
                       background: item.severity === 'required' ? `${color}12` : 'transparent',
                       border: `1px solid ${color}30`,
                       fontSize: '11px',
-                      color: '#C4D8EA',
+                      color: '#AAB6C4',
                     }}
                   >
                     {item.label}
                     {item.severity === 'required' && (
-                      <span style={{ marginLeft: '4px', fontSize: '9px', color: '#EF4444', fontFamily: "'JetBrains Mono', monospace" }}>REQ</span>
+                      <span style={{ marginLeft: '4px', fontSize: '10px', color: '#EF4444', fontFamily: "'JetBrains Mono', monospace" }}>REQ</span>
                     )}
                   </span>
                 ))}
@@ -971,18 +1122,13 @@ const DISCARD_REASON_OPTIONS: Array<{ code: DiscardReasonCode; label: string }> 
   { code: 'other', label: 'Other' },
 ]
 
-function OperatorSpiel({ text, tone = 'default' }: { text: string; tone?: 'default' | 'warning' | 'accent' }) {
-  const palette =
-    tone === 'warning'
-      ? { border: 'rgba(245,158,11,0.28)', bg: 'rgba(245,158,11,0.06)', accent: '#F59E0B' }
-      : tone === 'accent'
-        ? { border: 'rgba(139,92,246,0.28)', bg: 'rgba(139,92,246,0.06)', accent: '#B79CF9' }
-        : { border: 'rgba(57,214,199,0.22)', bg: 'rgba(57,214,199,0.04)', accent: '#39D6C7' }
+function LegacyOperatorSpiel({ text, tone = 'default' }: { text: string; tone?: 'default' | 'warning' | 'accent' }) {
+  const palette = operatorPalette[tone]
   return (
     <div
       style={{
         padding: '14px 16px',
-        background: palette.bg,
+        background: palette.background,
         border: `1px solid ${palette.border}`,
         borderRadius: '10px',
         marginBottom: '22px',
@@ -993,8 +1139,8 @@ function OperatorSpiel({ text, tone = 'default' }: { text: string; tone?: 'defau
     >
       <span
         style={{
-          fontFamily: "'JetBrains Mono', monospace",
-          fontSize: '9px',
+          fontFamily: auroraTypography.mono,
+          fontSize: '10px',
           letterSpacing: '0.14em',
           color: palette.accent,
           textTransform: 'uppercase',
@@ -1010,7 +1156,7 @@ function OperatorSpiel({ text, tone = 'default' }: { text: string; tone?: 'defau
       <span
         style={{
           fontSize: '13px',
-          color: '#C4D8EA',
+          color: auroraColors.textSecondary,
           lineHeight: 1.65,
           fontStyle: 'italic',
         }}
@@ -1086,7 +1232,10 @@ export default function App() {
 
   const flow = getFlow(form.tier, form.projectType)
   const currentStep: StepId = (flow[stepIndex] ?? 'intro') as StepId
-  const progressTotal = flow.length - 2
+  // Both build paths resolve to the same length, so the total is known
+  // before the tier is chosen. Deriving it from the not-yet-branched flow
+  // reported "Step 1 of 1" and a full progress bar on the first step.
+  const progressTotal = (form.tier ? flow.length : getFlow('custom').length) - 2
   const progressPct = (currentStep === 'intro' || currentStep === 'build-card') ? 0 : Math.min((stepIndex / progressTotal) * 100, 100)
 
   const set = (field: keyof FormData, value: unknown) =>
@@ -1273,12 +1422,12 @@ export default function App() {
 
   const fieldStyle = (fieldId: string): CSSProperties => ({
     ...inputStyle,
-    border: getWarning(fieldId) ? `1px solid #F59E0B` : inputStyle.border,
+    border: getWarning(fieldId) ? `1px solid ${auroraColors.warning}` : inputStyle.border,
   })
 
   const groupWarningStyle = (fieldId: string): CSSProperties =>
     getWarning(fieldId)
-      ? { outline: '1px solid rgba(245,158,11,0.45)', borderRadius: '10px' }
+      ? { outline: '1px solid rgba(245,180,0,0.45)', borderRadius: '10px' }
       : { outline: 'none' }
 
   // Snapshot of current gaps used by review, outcome, and draft flows.
@@ -1544,39 +1693,22 @@ export default function App() {
     submitting
   )
 
-  const primaryBtn: CSSProperties = {
-    padding: '12px 24px', background: canContinue ? '#39D6C7' : '#1A2E3A',
-    border: 'none', borderRadius: '8px', color: canContinue ? '#060C10' : '#2A4455',
-    fontWeight: 700, fontSize: '14px', cursor: canContinue ? 'pointer' : 'not-allowed',
-    letterSpacing: '-0.01em', fontFamily: "'Inter', system-ui, sans-serif", transition: 'all 0.15s',
-  }
-
-  const ghostBtn: CSSProperties = {
-    padding: '12px 20px', background: 'transparent', border: '1px solid #2A3441', borderRadius: '8px',
-    color: '#4B6278', fontWeight: 500, fontSize: '14px', cursor: 'pointer',
-    fontFamily: "'Inter', system-ui, sans-serif",
-  }
-
-  const versionBtn = (v: string): CSSProperties => ({
-    padding: '10px 18px', borderRadius: '8px',
-    border: `1px solid ${form.projectVersion === v ? '#39D6C7' : '#2A3441'}`,
-    background: form.projectVersion === v ? 'rgba(57,214,199,0.08)' : '#0D1620',
-    color: form.projectVersion === v ? '#39D6C7' : '#4B6278',
-    fontWeight: form.projectVersion === v ? 600 : 400,
-    fontSize: '13px', cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif", transition: 'all 0.15s',
-  })
-
   const faqs = FAQ_DATA[currentStep] ?? FAQ_DATA['intro']
   const conciergeAnswer = conciergeQ ? (faqs.find(f => f.q === conciergeQ)?.a ?? null) : null
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0B0F14', fontFamily: "'Inter', system-ui, sans-serif", color: '#E2E8F0' }}>
+    <div style={{ minHeight: '100vh', fontFamily: "'Inter', system-ui, sans-serif", color: '#E5E7EB' }}>
+
+      <AuroraBackdrop />
+
+      <div className="aurora-content">
 
       {/* ── Top bar ── */}
-      <div style={{ height: '56px', borderBottom: '1px solid #161F2B', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 28px', position: 'sticky', top: 0, zIndex: 50, background: '#0B0F14' }}>
+      <header>
+      <div style={{ height: '56px', borderBottom: '1px solid rgba(170,182,196,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 28px', position: 'sticky', top: 0, zIndex: 50, background: 'rgba(10,12,15,0.85)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ width: '28px', height: '28px', background: '#39D6C7', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ color: '#060C10', fontWeight: 800, fontSize: '14px' }}>M</span>
+          <div style={{ width: '28px', height: '28px', background: '#2E6F46', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ color: '#FFFFFF', fontWeight: 800, fontSize: '14px' }}>M</span>
           </div>
           <span style={{ fontWeight: 600, fontSize: '15px', letterSpacing: '-0.01em' }}>M-THRYVE</span>
         </div>
@@ -1606,24 +1738,27 @@ export default function App() {
       </div>
 
       {/* ── Progress bar ── */}
+      </header>
+
       {currentStep !== 'intro' && currentStep !== 'build-card' && (
-        <div style={{ height: '2px', background: '#161F2B' }}>
-          <div style={{ height: '100%', width: `${progressPct}%`, background: '#39D6C7', transition: 'width 0.5s cubic-bezier(0.4,0,0.2,1)' }} />
-        </div>
+        <nav aria-label="Wizard progress" style={{ height: '2px', background: '#1A1C22' }}>
+          <div className="wizard-progress-fill" style={{ height: '100%', width: '100%', background: '#46A873', transform: `scaleX(${progressPct / 100})`, transformOrigin: 'left center', transition: 'transform 0.5s cubic-bezier(0.4,0,0.2,1)' }} />
+        </nav>
       )}
 
       {/* ── Main content ── */}
-      <div data-testid={`wizard-step-${currentStep}`} style={{ maxWidth: currentStep === 'build-card' ? '860px' : '680px', margin: '0 auto', padding: '52px 28px 160px', transition: 'max-width 0.3s' }}>
+      <main id="main-content" aria-label="M-THRYVE intake wizard">
+      <div role="form" aria-label="Intake details" data-testid={`wizard-step-${currentStep}`} style={{ maxWidth: currentStep === 'build-card' ? '860px' : '680px', margin: '0 auto', padding: '52px 28px 160px' }}>
 
         {resumeState === 'loading' && (
-          <div role="status" aria-live="polite" style={{ ...cardStyle, border: '1px solid rgba(57,214,199,0.25)', marginBottom: '20px', color: '#39D6C7', fontSize: '13px' }}>
+          <div role="status" aria-live="polite" style={{ ...cardStyle, border: '1px solid rgba(70,168,115,0.25)', marginBottom: '20px', color: '#46A873', fontSize: '13px' }}>
             Reopening the saved intakeâ€¦ The current form will change only after the complete draft is loaded.
           </div>
         )}
         {resumeState === 'error' && (
           <div role="alert" style={{ ...cardStyle, border: '1px solid rgba(239,68,68,0.35)', marginBottom: '20px' }}>
             <div style={{ color: '#EF4444', fontWeight: 700, marginBottom: '6px' }}>Draft could not be reopened</div>
-            <div style={{ color: '#C4D8EA', fontSize: '13px', lineHeight: 1.55 }}>{resumeError}</div>
+            <div style={{ color: '#AAB6C4', fontSize: '13px', lineHeight: 1.55 }}>{resumeError}</div>
             <button type="button" onClick={() => setResumeAttempt(value => value + 1)} style={{ marginTop: '10px', padding: '7px 12px', borderRadius: '7px', border: '1px solid rgba(239,68,68,0.35)', background: 'transparent', color: '#EF4444', cursor: 'pointer' }}>
               Retry reopen
             </button>
@@ -1634,33 +1769,35 @@ export default function App() {
         {currentStep === 'intro' && (
           <div>
             <div style={{ marginBottom: '48px' }}>
-              <div style={{ ...monoLabel, color: '#39D6C7', fontSize: '11px', marginBottom: '20px' }}>Private intake authorized by M-THRYVE</div>
-              <h1 style={{ fontSize: '46px', fontWeight: 700, lineHeight: 1.08, letterSpacing: '-0.035em', color: '#F0F6FF', margin: '0 0 20px' }}>
-                {"Let's Build Your"}<br />Software.
+              <div style={{ ...monoLabel, color: '#46A873', fontSize: '11px', marginBottom: '20px' }}>Private intake authorized by M-THRYVE</div>
+              <h1 className="aurora-bloom" style={{ fontSize: '46px', fontWeight: 700, lineHeight: 1.08, letterSpacing: '-0.035em', color: '#E5E7EB', margin: '0 0 20px' }}>
+                {"Let's Build Your"}<br /><span className="aurora-lit">Software.</span>
               </h1>
-              <p style={{ fontSize: '17px', color: '#4B6278', lineHeight: 1.7, maxWidth: '480px', margin: 0 }}>
+              <p style={{ fontSize: '17px', color: '#AAB6C4', lineHeight: 1.7, maxWidth: '480px', margin: 0 }}>
                 This private intake helps us understand your project, calculate a preliminary price and timeline, and prepare your Build Card for owner review.
               </p>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '48px' }}>
               {[
-                { icon: '◈', title: 'Discovery complete — you were invited', desc: 'This intake is the next step after your discovery appointment. We use your answers to prepare a preliminary Build Card and project brief.' },
-                { icon: '◉', title: 'Your preliminary Build Card', desc: "We generate a tailored project brief — recommended stack, team, timeline, and budget in one document, ready for owner review." },
-                { icon: '◆', title: 'Owner review before build begins', desc: "Your Build Card goes to the M-THRYVE owner for review and approval. Development begins only after the final agreement is confirmed." },
+                { icon: 'spark', title: 'Discovery complete — you were invited', desc: 'This intake is the next step after your discovery appointment. We use your answers to prepare a preliminary Build Card and project brief.' },
+                { icon: 'document', title: 'Your preliminary Build Card', desc: "We generate a tailored project brief — recommended stack, team, timeline, and budget in one document, ready for owner review." },
+                { icon: 'star', title: 'Owner review before build begins', desc: "Your Build Card goes to the M-THRYVE owner for review and approval. Development begins only after the final agreement is confirmed." },
               ].map(item => (
-                <div key={item.title} style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', padding: '16px', background: '#0D1620', border: '1px solid #1A2535', borderRadius: '10px' }}>
-                  <span style={{ color: '#39D6C7', fontSize: '15px', marginTop: '2px', flexShrink: 0 }}>{item.icon}</span>
+                <div key={item.title} style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', padding: '16px', background: '#0D0F12', border: '1px solid #1A1C22', borderRadius: '10px' }}>
+                  <span style={{ color: '#46A873', marginTop: '2px', flexShrink: 0 }}>
+                    <Icon name={item.icon as IconName} size={16} />
+                  </span>
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '2px', color: '#D4E4F0' }}>{item.title}</div>
-                    <div style={{ fontSize: '13px', color: '#3D5468' }}>{item.desc}</div>
+                    <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '2px', color: '#AAB6C4' }}>{item.title}</div>
+                    <div style={{ fontSize: '13px', color: '#AAB6C4' }}>{item.desc}</div>
                   </div>
                 </div>
               ))}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '40px' }}>
-              <span style={{ fontSize: '13px', color: '#3D5468' }}>Takes about 10–15 minutes</span>
-              <span style={{ width: '3px', height: '3px', borderRadius: '50%', background: '#2A3441', display: 'inline-block' }} />
-              <span style={{ fontSize: '13px', color: '#3D5468' }}>Private & confidential</span>
+              <span style={{ fontSize: '13px', color: '#AAB6C4' }}>Takes about 10–15 minutes</span>
+              <span style={{ width: '3px', height: '3px', borderRadius: '50%', background: '#242830', display: 'inline-block' }} />
+              <span style={{ fontSize: '13px', color: '#AAB6C4' }}>Private & confidential</span>
             </div>
           </div>
         )}
@@ -1673,55 +1810,55 @@ export default function App() {
               title="Who are we building for?"
               desc="Confirm the contact and project basics for this discovery call so notes, follow-ups, and the owner-review record stay tied to the right company and opportunity."
             />
-            <OperatorSpiel text={SPIELS.clientDetails} />
+            <AuroraOperatorSpiel text={SPIELS.clientDetails} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <Field label="Full Name">
-                  <input id="field-fullName" aria-describedby="field-fullName-warning" value={form.fullName} onChange={e => set('fullName', e.target.value)} onBlur={() => touchField('field-fullName')} placeholder="Alex Johnson" style={fieldStyle('field-fullName')} />
+                <Field id="field-fullName" label="Full Name" required>
+                  <input id="field-fullName" required aria-required="true" aria-describedby="field-fullName-warning" value={form.fullName} onChange={e => set('fullName', e.target.value)} onBlur={() => touchField('field-fullName')} placeholder="Alex Johnson" style={fieldStyle('field-fullName')} />
                   <InlineWarning fieldId="field-fullName" message={getWarning('field-fullName')} />
                 </Field>
-                <Field label="Company or Organization Name">
+                <Field id="field-company" label="Company or Organization Name">
                   <input id="field-company" aria-describedby="field-company-warning" value={form.company} onChange={e => set('company', e.target.value)} onBlur={() => touchField('field-company')} placeholder="Acme Corp" style={fieldStyle('field-company')} />
                   <InlineWarning fieldId="field-company" message={getWarning('field-company')} />
                 </Field>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <Field label="Business Email">
-                  <input id="field-email" aria-describedby="field-email-warning" value={form.email} onChange={e => set('email', e.target.value)} onBlur={() => touchField('field-email')} placeholder="alex@acmecorp.com" type="email" style={fieldStyle('field-email')} />
+                <Field id="field-email" label="Business Email" required>
+                  <input id="field-email" type="email" required aria-required="true" aria-describedby="field-email-warning" value={form.email} onChange={e => set('email', e.target.value)} onBlur={() => touchField('field-email')} placeholder="alex@acmecorp.com" style={fieldStyle('field-email')} />
                   <InlineWarning fieldId="field-email" message={getWarning('field-email')} />
                 </Field>
-                <Field label="Contact Number">
+                <Field id="field-phone" label="Contact Number">
                   <input id="field-phone" aria-describedby="field-phone-warning" value={form.phone} onChange={e => set('phone', e.target.value)} onBlur={() => touchField('field-phone')} placeholder="+63 917 000 0000" type="tel" style={fieldStyle('field-phone')} />
                   <InlineWarning fieldId="field-phone" message={getWarning('field-phone')} />
                 </Field>
               </div>
-              <Field label="Project Name" hint="A working name for your project. You can refine this before launch.">
-                <input id="field-projectName" aria-describedby="field-projectName-warning" value={form.projectName} onChange={e => set('projectName', e.target.value)} onBlur={() => touchField('field-projectName')} placeholder="e.g. Acme Client Portal" style={fieldStyle('field-projectName')} />
+              <Field id="field-projectName" label="Project Name" required hint="A working name for your project. You can refine this before launch.">
+                <input id="field-projectName" required aria-required="true" aria-describedby="field-projectName-warning field-projectName-hint" value={form.projectName} onChange={e => set('projectName', e.target.value)} onBlur={() => touchField('field-projectName')} placeholder="e.g. Acme Client Portal" style={fieldStyle('field-projectName')} />
                 <InlineWarning fieldId="field-projectName" message={getWarning('field-projectName')} />
               </Field>
-              <div id="field-projectType" aria-describedby="field-projectType-warning" onBlur={() => touchField('field-projectType')} style={groupWarningStyle('field-projectType')}>
-                <div style={labelStyle}>Project Type</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+              <div id="field-projectType" role="group" aria-labelledby="field-projectType-label" aria-required="true" aria-describedby="field-projectType-warning" onBlur={() => touchField('field-projectType')} style={groupWarningStyle('field-projectType')}>
+                <div id="field-projectType-label" style={labelStyle}>Project Type <span aria-hidden="true" style={{ color: '#EF4444', marginLeft: '4px' }}>Required</span></div>
+                <div className="wizard-project-type-grid">
                   {getProjectTypes(form.tier).map(type => {
                     const sel = form.projectType === type.id
                     return (
-                      <button key={type.id} onClick={() => handleProjectTypeChange(type.id)} style={{ padding: '14px 8px', borderRadius: '10px', border: `1px solid ${sel ? '#39D6C7' : '#2A3441'}`, background: sel ? 'rgba(57,214,199,0.07)' : '#111827', cursor: 'pointer', color: sel ? '#39D6C7' : '#4B6278', fontSize: '12px', fontWeight: sel ? 600 : 400, textAlign: 'center', transition: 'all 0.15s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '16px' }}>{type.icon}</span>{type.label}
+                      <button type="button" key={type.id} aria-pressed={sel} onClick={() => handleProjectTypeChange(type.id)} style={{ padding: '14px 8px', borderRadius: '10px', border: `1px solid ${sel ? '#46A873' : '#242830'}`, background: sel ? 'rgba(70,168,115,0.07)' : '#12151A', cursor: 'pointer', color: sel ? '#46A873' : '#333944', fontSize: '12px', fontWeight: sel ? 600 : 400, textAlign: 'center', transition: 'all 0.15s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ display: 'inline-flex' }}><Icon name={type.icon} size={18} /></span>{type.label}
                       </button>
                     )
                   })}
                 </div>
               </div>
               <InlineWarning fieldId="field-projectType" message={getWarning('field-projectType')} />
-              <Field label="Industry">
-                <select id="field-industry" aria-describedby="field-industry-warning" value={form.industry} onChange={e => set('industry', e.target.value)} onBlur={() => touchField('field-industry')} style={{ ...fieldStyle('field-industry'), cursor: 'pointer' }}>
+              <Field id="field-industry" label="Industry" required>
+                <select id="field-industry" required aria-required="true" aria-describedby="field-industry-warning" value={form.industry} onChange={e => set('industry', e.target.value)} onBlur={() => touchField('field-industry')} style={{ ...fieldStyle('field-industry'), cursor: 'pointer' }}>
                   <option value="">Select your industry</option>
                   {INDUSTRIES.map(ind => <option key={ind.value} value={ind.value}>{ind.label}</option>)}
                 </select>
                 <InlineWarning fieldId="field-industry" message={getWarning('field-industry')} />
               </Field>
-              <Field label="Brief Business Description" hint="A sentence or two describing what your business does and who it serves.">
-                <textarea id="field-businessDesc" aria-describedby="field-businessDesc-warning" value={form.businessDesc} onChange={e => set('businessDesc', e.target.value)} onBlur={() => touchField('field-businessDesc')} placeholder="e.g. We are a logistics company helping SMEs across Metro Manila track and manage their deliveries in real time..." rows={3} style={{ ...fieldStyle('field-businessDesc'), resize: 'vertical', lineHeight: 1.7 }} />
+              <Field id="field-businessDesc" label="Brief Business Description" hint="A sentence or two describing what your business does and who it serves.">
+                <textarea id="field-businessDesc" aria-describedby="field-businessDesc-warning field-businessDesc-hint" value={form.businessDesc} onChange={e => set('businessDesc', e.target.value)} onBlur={() => touchField('field-businessDesc')} placeholder="e.g. We are a logistics company helping SMEs across Metro Manila track and manage their deliveries in real time..." rows={3} style={{ ...fieldStyle('field-businessDesc'), resize: 'vertical', lineHeight: 1.7 }} />
                 <InlineWarning fieldId="field-businessDesc" message={getWarning('field-businessDesc')} />
               </Field>
             </div>
@@ -1743,23 +1880,23 @@ export default function App() {
         {/* Legacy assetQualification renderer — kept out of flow, deprecated in v2. */}
         {false && (
           <div>
-            <div style={{ marginBottom: '6px', fontSize: '14px', fontWeight: 600, color: '#D4E4F0' }}>Are your company deck and complete brand materials already available?</div>
-            <div style={{ fontSize: '13px', color: '#4B6278', marginBottom: '16px', lineHeight: 1.55 }}>This helps us determine what we need from you now. You can always provide additional assets later if needed.</div>
+            <div style={{ marginBottom: '6px', fontSize: '14px', fontWeight: 600, color: '#AAB6C4' }}>Are your company deck and complete brand materials already available?</div>
+            <div style={{ fontSize: '13px', color: '#AAB6C4', marginBottom: '16px', lineHeight: 1.55 }}>This helps us determine what we need from you now. You can always provide additional assets later if needed.</div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '24px' }}>
               {[
-                { id: 'provided', title: 'Yes — already provided during discovery', desc: "We have received your materials. They will be used throughout your project. You can replace or update files at any time.", icon: '✓', iconBg: 'rgba(57,214,199,0.15)', iconColor: '#39D6C7' },
-                { id: 'ready', title: 'Yes — available, but not yet provided', desc: "You have everything ready. We will ask you to upload your files in the checklist below.", icon: '↑', iconBg: 'rgba(57,214,199,0.1)', iconColor: '#39D6C7' },
-                { id: 'incomplete', title: 'Yes — but some materials are incomplete', desc: "No problem. Tell us which assets you have and which are still missing. We can continue with what is available now.", icon: '◑', iconBg: 'rgba(245,158,11,0.12)', iconColor: '#F59E0B' },
-                { id: 'no-assets', title: 'No — we need help creating them', desc: "Many great projects start with just an idea. We offer branding and content services to get you ready.", icon: '○', iconBg: 'rgba(75,98,120,0.15)', iconColor: '#4B6278' },
+                { id: 'provided', title: 'Yes — already provided during discovery', desc: "We have received your materials. They will be used throughout your project. You can replace or update files at any time.", icon: '✓', iconBg: 'rgba(70,168,115,0.15)', iconColor: '#46A873' },
+                { id: 'ready', title: 'Yes — available, but not yet provided', desc: "You have everything ready. We will ask you to upload your files in the checklist below.", icon: '↑', iconBg: 'rgba(70,168,115,0.1)', iconColor: '#46A873' },
+                { id: 'incomplete', title: 'Yes — but some materials are incomplete', desc: "No problem. Tell us which assets you have and which are still missing. We can continue with what is available now.", icon: '◑', iconBg: 'rgba(245,180,0,0.12)', iconColor: '#F5B400' },
+                { id: 'no-assets', title: 'No — we need help creating them', desc: "Many great projects start with just an idea. We offer branding and content services to get you ready.", icon: '○', iconBg: 'rgba(75,98,120,0.15)', iconColor: '#333944' },
               ].map(opt => {
                 const sel = form.assetQualification === opt.id
                 return (
-                  <button key={opt.id} onClick={() => set('assetQualification', opt.id)} style={{ padding: '18px 20px', borderRadius: '12px', border: `1px solid ${sel ? '#39D6C7' : '#2A3441'}`, background: sel ? 'rgba(57,214,199,0.05)' : '#111827', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s', width: '100%', display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: sel ? opt.iconBg : '#0D1620', border: `1px solid ${sel ? opt.iconColor + '30' : '#1E2E3D'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: sel ? opt.iconColor : '#3D5468', fontSize: '14px', flexShrink: 0, transition: 'all 0.15s' }}>{opt.icon}</div>
+                  <button key={opt.id} onClick={() => set('assetQualification', opt.id)} style={{ padding: '18px 20px', borderRadius: '12px', border: `1px solid ${sel ? '#46A873' : '#242830'}`, background: sel ? 'rgba(70,168,115,0.05)' : '#12151A', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s', width: '100%', display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: sel ? opt.iconBg : '#0D0F12', border: `1px solid ${sel ? opt.iconColor + '30' : '#1A1C22'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: sel ? opt.iconColor : '#333944', fontSize: '14px', flexShrink: 0, transition: 'all 0.15s' }}>{opt.icon}</div>
                     <div>
-                      <div style={{ fontWeight: 600, fontSize: '14px', color: sel ? '#F0F6FF' : '#C4D8EA', marginBottom: '4px' }}>{opt.title}</div>
-                      <div style={{ fontSize: '13px', color: '#4B6278', lineHeight: 1.55 }}>{opt.desc}</div>
+                      <div style={{ fontWeight: 600, fontSize: '14px', color: sel ? '#E5E7EB' : '#AAB6C4', marginBottom: '4px' }}>{opt.title}</div>
+                      <div style={{ fontSize: '13px', color: '#AAB6C4', lineHeight: 1.55 }}>{opt.desc}</div>
                     </div>
                   </button>
                 )
@@ -1767,16 +1904,16 @@ export default function App() {
             </div>
 
             {form.assetQualification === 'provided' && (
-              <div style={{ padding: '16px 18px', background: 'rgba(57,214,199,0.05)', border: '1px solid rgba(57,214,199,0.2)', borderRadius: '10px', fontSize: '13px', color: '#39D6C7', lineHeight: 1.6 }}>
+              <div style={{ padding: '16px 18px', background: 'rgba(70,168,115,0.05)', border: '1px solid rgba(70,168,115,0.2)', borderRadius: '10px', fontSize: '13px', color: '#46A873', lineHeight: 1.6 }}>
                 Great — we already have your materials. They will be used throughout your project. You can still upload updated files at any stage.
               </div>
             )}
 
             {(form.assetQualification === 'ready' || form.assetQualification === 'incomplete') && (
               <div>
-                <div style={{ ...monoLabel, color: '#39D6C7', marginBottom: '14px' }}>Company Asset Checklist</div>
+                <div style={{ ...monoLabel, color: '#46A873', marginBottom: '14px' }}>Company Asset Checklist</div>
                 {form.assetQualification === 'incomplete' && (
-                  <div style={{ padding: '12px 16px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '8px', marginBottom: '16px', fontSize: '12px', color: '#F59E0B', lineHeight: 1.6 }}>
+                  <div style={{ padding: '12px 16px', background: 'rgba(245,180,0,0.06)', border: '1px solid rgba(245,180,0,0.2)', borderRadius: '8px', marginBottom: '16px', fontSize: '12px', color: '#F5B400', lineHeight: 1.6 }}>
                     Mark each item status. Our team can continue reviewing while you gather remaining materials.
                   </div>
                 )}
@@ -1784,22 +1921,22 @@ export default function App() {
                   {ASSET_CHECKLIST.map(item => {
                     const status = form.assetStatuses[item.id] || ''
                     return (
-                      <div key={item.id} style={{ padding: '12px 16px', background: '#111827', border: `1px solid ${status === 'Available' ? '#39D6C740' : '#2A3441'}`, borderRadius: '8px' }}>
+                      <div key={item.id} style={{ padding: '12px 16px', background: '#12151A', border: `1px solid ${status === 'Available' ? '#46A87340' : '#242830'}`, borderRadius: '8px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontSize: '12px', fontWeight: 500, color: '#D4E4F0' }}>{item.label}</span>
+                            <span style={{ fontSize: '12px', fontWeight: 500, color: '#AAB6C4' }}>{item.label}</span>
                             {item.required && <span style={{ fontSize: '10px', color: '#EF4444', fontFamily: "'JetBrains Mono', monospace" }}>Required</span>}
                           </div>
                           {form.assetQualification === 'incomplete' ? (
                             <div style={{ display: 'flex', gap: '4px', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                               {ASSET_STATUS_OPTIONS.map(s => (
-                                <button key={s} onClick={() => set('assetStatuses', { ...form.assetStatuses, [item.id]: s })} style={{ padding: '3px 8px', borderRadius: '100px', border: `1px solid ${status === s ? '#39D6C7' : '#2A3441'}`, background: status === s ? 'rgba(57,214,199,0.1)' : 'transparent', color: status === s ? '#39D6C7' : '#4B6278', fontSize: '10px', cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif", transition: 'all 0.12s', whiteSpace: 'nowrap' }}>{s}</button>
+                                <button key={s} onClick={() => set('assetStatuses', { ...form.assetStatuses, [item.id]: s })} style={{ padding: '3px 8px', borderRadius: '100px', border: `1px solid ${status === s ? '#46A873' : '#242830'}`, background: status === s ? 'rgba(70,168,115,0.1)' : 'transparent', color: status === s ? '#46A873' : '#333944', fontSize: '10px', cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif", transition: 'all 0.12s', whiteSpace: 'nowrap' }}>{s}</button>
                               ))}
                             </div>
                           ) : (
                             <div style={{ display: 'flex', gap: '4px' }}>
                               {['Available', 'N/A'].map(s => (
-                                <button key={s} onClick={() => set('assetStatuses', { ...form.assetStatuses, [item.id]: s })} style={{ padding: '3px 8px', borderRadius: '100px', border: `1px solid ${status === s ? '#39D6C7' : '#2A3441'}`, background: status === s ? 'rgba(57,214,199,0.1)' : 'transparent', color: status === s ? '#39D6C7' : '#4B6278', fontSize: '10px', cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif", transition: 'all 0.12s' }}>{s}</button>
+                                <button key={s} onClick={() => set('assetStatuses', { ...form.assetStatuses, [item.id]: s })} style={{ padding: '3px 8px', borderRadius: '100px', border: `1px solid ${status === s ? '#46A873' : '#242830'}`, background: status === s ? 'rgba(70,168,115,0.1)' : 'transparent', color: status === s ? '#46A873' : '#333944', fontSize: '10px', cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif", transition: 'all 0.12s' }}>{s}</button>
                               ))}
                             </div>
                           )}
@@ -1814,24 +1951,24 @@ export default function App() {
             {(form.assetQualification === 'no-assets' || form.assetQualification === 'incomplete') && (
               <div>
                 {form.assetQualification === 'no-assets' && (
-                  <div style={{ padding: '18px 20px', background: '#0D1620', border: '1px solid #1E2E3D', borderRadius: '12px', marginBottom: '20px' }}>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#D4E4F0', marginBottom: '8px' }}>{"Don't worry — you're in good company."}</div>
-                    <div style={{ fontSize: '13px', color: '#4B6278', lineHeight: 1.65, marginBottom: '8px' }}>Many successful projects begin with only an idea. Our team can help you build your branding alongside your software. Template builds require prepared content — we recommend starting with Custom Made or Enterprise, which include asset support.</div>
+                  <div style={{ padding: '18px 20px', background: '#0D0F12', border: '1px solid #1A1C22', borderRadius: '12px', marginBottom: '20px' }}>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#AAB6C4', marginBottom: '8px' }}>{"Don't worry — you're in good company."}</div>
+                    <div style={{ fontSize: '13px', color: '#AAB6C4', lineHeight: 1.65, marginBottom: '8px' }}>Many successful projects begin with only an idea. Our team can help you build your branding alongside your software. Template builds require prepared content — we recommend starting with Custom Made or Enterprise, which include asset support.</div>
                     <div style={{ fontSize: '12px', color: '#EF4444', marginTop: '6px' }}>Drag & Drop unavailable without brand materials.</div>
                   </div>
                 )}
-                <div style={{ ...monoLabel, color: '#39D6C7', marginBottom: '12px' }}>Add Asset Services (Optional)</div>
+                <div style={{ ...monoLabel, color: '#46A873', marginBottom: '12px' }}>Add Asset Services (Optional)</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {ASSET_SERVICES.map(svc => {
                     const added = form.selectedAssetServices.includes(svc.id)
                     return (
-                      <div key={svc.id} style={{ padding: '14px 16px', background: '#111827', border: `1px solid ${added ? '#39D6C740' : '#2A3441'}`, borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                      <div key={svc.id} style={{ padding: '14px 16px', background: '#12151A', border: `1px solid ${added ? '#46A87340' : '#242830'}`, borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
                         <div>
-                          <div style={{ fontWeight: 600, fontSize: '13px', color: '#D4E4F0', marginBottom: '2px' }}>{svc.name}</div>
-                          <div style={{ fontSize: '12px', color: '#4B6278' }}>{svc.desc}</div>
-                          <div style={{ fontSize: '11px', color: '#3D5468', marginTop: '4px', fontFamily: "'JetBrains Mono', monospace" }}>Price pending configuration · Timeline pending analysis</div>
+                          <div style={{ fontWeight: 600, fontSize: '13px', color: '#AAB6C4', marginBottom: '2px' }}>{svc.name}</div>
+                          <div style={{ fontSize: '12px', color: '#AAB6C4' }}>{svc.desc}</div>
+                          <div style={{ fontSize: '11px', color: '#AAB6C4', marginTop: '4px', fontFamily: "'JetBrains Mono', monospace" }}>Price pending configuration · Timeline pending analysis</div>
                         </div>
-                        <button onClick={() => set('selectedAssetServices', added ? form.selectedAssetServices.filter(s => s !== svc.id) : [...form.selectedAssetServices, svc.id])} style={{ padding: '6px 14px', borderRadius: '6px', border: `1px solid ${added ? '#39D6C7' : '#2A3441'}`, background: added ? 'rgba(57,214,199,0.1)' : 'transparent', cursor: 'pointer', color: added ? '#39D6C7' : '#4B6278', fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap', fontFamily: "'Inter', system-ui, sans-serif", transition: 'all 0.15s', flexShrink: 0 }}>
+                        <button onClick={() => set('selectedAssetServices', added ? form.selectedAssetServices.filter(s => s !== svc.id) : [...form.selectedAssetServices, svc.id])} style={{ padding: '6px 14px', borderRadius: '6px', border: `1px solid ${added ? '#46A873' : '#242830'}`, background: added ? 'rgba(70,168,115,0.1)' : 'transparent', cursor: 'pointer', color: added ? '#46A873' : '#333944', fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap', fontFamily: "'Inter', system-ui, sans-serif", transition: 'all 0.15s', flexShrink: 0 }}>
                           {added ? '✓ Added' : '+ Add'}
                         </button>
                       </div>
@@ -1851,15 +1988,16 @@ export default function App() {
               title="How would you like to build?"
               desc="Two active build paths: Custom Build starts from an existing template and adds supported extensions; Enterprise Level is a from-scratch product with wider scope. Prices remain preliminary until owner review."
             />
-            <OperatorSpiel text={SPIELS.customBuild} />
-            <OperatorSpiel text={SPIELS.enterprise} tone="accent" />
-            <div id="field-tier" aria-describedby="field-tier-warning" onBlur={() => touchField('field-tier')} style={{ display: 'flex', flexDirection: 'column', gap: '12px', ...groupWarningStyle('field-tier') }}>
+            <AuroraOperatorSpiel text={SPIELS.customBuild} />
+            <AuroraOperatorSpiel text={SPIELS.enterprise} tone="accent" />
+            <div id="field-tier-label" style={{ ...labelStyle, marginBottom: '8px' }}>Build approach <span aria-hidden="true" style={{ color: '#EF4444', marginLeft: '4px' }}>Required</span></div>
+            <div id="field-tier" role="group" aria-labelledby="field-tier-label" aria-required="true" aria-describedby="field-tier-warning" onBlur={() => touchField('field-tier')} style={{ display: 'flex', flexDirection: 'column', gap: '12px', ...groupWarningStyle('field-tier') }}>
               {[
                 {
                   id: 'custom' as Tier,
                   name: 'Custom Build',
                   badge: 'Template-based',
-                  badgeColor: '#39D6C7',
+                  badgeColor: '#46A873',
                   desc: 'Start from an existing template and layer in the features and content the template already supports. Requests outside the supported catalog are flagged for owner review.',
                   price: 'Preliminary — configured per template',
                   priceNote: 'Base template price plus supported extensions',
@@ -1870,7 +2008,7 @@ export default function App() {
                   id: 'enterprise' as Tier,
                   name: 'Enterprise Level',
                   badge: 'From scratch',
-                  badgeColor: '#8B5CF6',
+                  badgeColor: '#AAB6C4',
                   desc: 'Full discovery of vision, workflows, roles, integrations, and design direction for a from-scratch product. Preliminary scope and cost are confirmed only after owner review.',
                   price: 'Preliminary — confirmed after owner review',
                   priceNote: 'Depends on scope, integrations, and design discovery',
@@ -1880,24 +2018,24 @@ export default function App() {
               ].map(tier => {
                 const sel = form.tier === tier.id
                 return (
-                  <button key={tier.id} onClick={() => !tier.disabled && handleTierSelect(tier.id)} style={{ padding: '20px', borderRadius: '12px', border: `1px solid ${sel ? '#39D6C7' : tier.disabled ? '#161F2B' : '#2A3441'}`, background: sel ? 'rgba(57,214,199,0.06)' : tier.disabled ? '#0D1115' : '#111827', cursor: tier.disabled ? 'not-allowed' : 'pointer', textAlign: 'left', transition: 'all 0.18s', width: '100%', opacity: tier.disabled ? 0.5 : 1 }}>
+                  <button type="button" key={tier.id} aria-pressed={sel} onClick={() => !tier.disabled && handleTierSelect(tier.id)} style={{ padding: '20px', borderRadius: '12px', border: `1px solid ${sel ? '#46A873' : tier.disabled ? '#1A1C22' : '#242830'}`, background: sel ? 'rgba(70,168,115,0.06)' : tier.disabled ? '#0D0F12' : '#12151A', cursor: tier.disabled ? 'not-allowed' : 'pointer', textAlign: 'left', transition: 'all 0.18s', width: '100%', opacity: tier.disabled ? 0.5 : 1 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: sel ? 'none' : '1px solid #2A3441', background: sel ? '#39D6C7' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#060C10', fontWeight: 800, flexShrink: 0 }}>{sel ? '✓' : ''}</div>
-                        <div style={{ fontWeight: 700, fontSize: '16px', color: sel ? '#39D6C7' : '#D4E4F0', letterSpacing: '-0.01em' }}>{tier.name}</div>
+                        <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: sel ? 'none' : '1px solid #242830', background: sel ? '#46A873' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0A0C0F', fontWeight: 800, flexShrink: 0 }}>{sel && <Icon name="check" size={12} strokeWidth={2.5} />}</div>
+                        <div style={{ fontWeight: 700, fontSize: '16px', color: sel ? '#46A873' : '#AAB6C4', letterSpacing: '-0.01em' }}>{tier.name}</div>
                         {tier.disabled && <span style={{ fontSize: '11px', color: '#EF4444', padding: '2px 8px', borderRadius: '100px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>Assets required</span>}
                       </div>
                       <span style={{ padding: '3px 10px', borderRadius: '100px', background: `${tier.badgeColor}18`, border: `1px solid ${tier.badgeColor}40`, fontSize: '11px', fontWeight: 600, color: tier.badgeColor, whiteSpace: 'nowrap', flexShrink: 0 }}>{tier.badge}</span>
                     </div>
-                    <div style={{ fontSize: '13px', color: '#4B6278', lineHeight: 1.6, marginBottom: '14px', marginLeft: '28px' }}>{tier.desc}</div>
-                    <div style={{ marginLeft: '28px', padding: '14px 16px', background: '#0D1620', borderRadius: '8px', border: '1px solid #1E2E3D' }}>
+                    <div style={{ fontSize: '13px', color: '#AAB6C4', lineHeight: 1.6, marginBottom: '14px', marginLeft: '28px' }}>{tier.desc}</div>
+                    <div style={{ marginLeft: '28px', padding: '14px 16px', background: '#0D0F12', borderRadius: '8px', border: '1px solid #1A1C22' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '6px' }}>
-                        <span style={{ fontSize: '11px', color: '#4B6278', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.06em' }}>Starting Price</span>
+                        <span style={{ fontSize: '11px', color: '#AAB6C4', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.06em' }}>Starting Price</span>
                         <span style={{ fontSize: '16px', fontWeight: 700, color: tier.badgeColor, letterSpacing: '-0.02em' }}>{tier.price}</span>
                       </div>
-                      <div style={{ fontSize: '11px', color: '#3D5468', marginBottom: '10px' }}>{tier.priceNote}</div>
+                      <div style={{ fontSize: '11px', color: '#AAB6C4', marginBottom: '10px' }}>{tier.priceNote}</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                        {tier.bullets.map(b => <span key={b} style={{ fontSize: '11px', color: '#3D5468', padding: '2px 8px', borderRadius: '100px', background: '#111827', border: '1px solid #1E2E3D' }}>{b}</span>)}
+                        {tier.bullets.map(b => <span key={b} style={{ fontSize: '11px', color: '#AAB6C4', padding: '2px 8px', borderRadius: '100px', background: '#12151A', border: '1px solid #1A1C22' }}>{b}</span>)}
                       </div>
                     </div>
                   </button>
@@ -1913,16 +2051,16 @@ export default function App() {
           <div>
             {/* ── Factory Core Features panel (both Custom Build types) ── */}
             {(form.projectType === 'templated-website' || form.projectType === 'ai-assisted-website') && (
-              <div style={{ padding: '16px 18px', background: 'rgba(57,214,199,0.03)', border: '1px solid rgba(57,214,199,0.18)', borderRadius: '10px', marginBottom: '24px' }}>
-                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#39D6C7', marginBottom: '6px' }}>Factory Core Features</div>
-                <div style={{ fontSize: '13px', color: '#4B6278', marginBottom: '12px' }}>Every M-THRYVE website includes these — no selection needed.</div>
+              <div style={{ padding: '16px 18px', background: 'rgba(70,168,115,0.03)', border: '1px solid rgba(70,168,115,0.18)', borderRadius: '10px', marginBottom: '24px' }}>
+                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#46A873', marginBottom: '6px' }}>Factory Core Features</div>
+                <div style={{ fontSize: '13px', color: '#AAB6C4', marginBottom: '12px' }}>Every M-THRYVE website includes these — no selection needed.</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {CORE_FEATURES.map(cf => (
                     <div key={cf.code} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', color: '#39D6C7', paddingTop: '3px', minWidth: '52px' }}>{cf.code}</span>
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', color: '#46A873', paddingTop: '3px', minWidth: '52px' }}>{cf.code}</span>
                       <div>
-                        <div style={{ fontSize: '12px', fontWeight: 500, color: '#D4E4F0' }}>{cf.name}</div>
-                        <div style={{ fontSize: '11px', color: '#3D5468', lineHeight: 1.5 }}>{cf.operatorExplanation}</div>
+                        <div style={{ fontSize: '12px', fontWeight: 500, color: '#AAB6C4' }}>{cf.name}</div>
+                        <div style={{ fontSize: '11px', color: '#AAB6C4', lineHeight: 1.5 }}>{cf.operatorExplanation}</div>
                       </div>
                     </div>
                   ))}
@@ -1949,22 +2087,22 @@ export default function App() {
                       if (groupFields.length === 0) return null
                       return (
                         <div key={group}>
-                          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#39D6C7', marginBottom: '12px' }}>{QUESTIONNAIRE_GROUP_LABELS[group]}</div>
+                          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#46A873', marginBottom: '12px' }}>{QUESTIONNAIRE_GROUP_LABELS[group]}</div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                             {groupFields.map(field => {
                               const raw = q[field.key as keyof WebsiteQuestionnaire]
-                              const qInputStyle = { width: '100%', background: '#111827', border: '1px solid #2A3441', borderRadius: '8px', padding: '10px 12px', color: '#D4E4F0', fontSize: '13px', fontFamily: "'Inter', system-ui, sans-serif", boxSizing: 'border-box' as const }
+                              const qInputStyle = { width: '100%', background: '#12151A', border: '1px solid #242830', borderRadius: '8px', padding: '10px 12px', color: '#AAB6C4', fontSize: '13px', fontFamily: "'Inter', system-ui, sans-serif", boxSizing: 'border-box' as const }
                               if (field.control === 'textarea') {
                                 return (
-                                  <Field key={field.key} label={field.question}>
-                                    <textarea value={(raw as string) ?? ''} onChange={e => setQField(field.key, e.target.value)} rows={3} style={{ ...qInputStyle, resize: 'vertical' as const, lineHeight: 1.7 }} />
+                                  <Field key={field.key} id={`field-question-${field.key}`} label={field.question} required={QUESTIONNAIRE_SUBMIT_REQUIRED.has(field.key)}>
+                                    <textarea id={`field-question-${field.key}`} required={QUESTIONNAIRE_SUBMIT_REQUIRED.has(field.key)} aria-required={QUESTIONNAIRE_SUBMIT_REQUIRED.has(field.key) || undefined} value={(raw as string) ?? ''} onChange={e => setQField(field.key, e.target.value)} rows={3} style={{ ...qInputStyle, resize: 'vertical' as const, lineHeight: 1.7 }} />
                                   </Field>
                                 )
                               }
                               if (field.control === 'text') {
                                 return (
-                                  <Field key={field.key} label={field.question}>
-                                    <input value={(raw as string) ?? ''} onChange={e => setQField(field.key, e.target.value)} style={qInputStyle} />
+                                  <Field key={field.key} id={`field-question-${field.key}`} label={field.question} required={QUESTIONNAIRE_SUBMIT_REQUIRED.has(field.key)}>
+                                    <input id={`field-question-${field.key}`} required={QUESTIONNAIRE_SUBMIT_REQUIRED.has(field.key)} aria-required={QUESTIONNAIRE_SUBMIT_REQUIRED.has(field.key) || undefined} value={(raw as string) ?? ''} onChange={e => setQField(field.key, e.target.value)} style={qInputStyle} />
                                   </Field>
                                 )
                               }
@@ -1972,13 +2110,13 @@ export default function App() {
                                 const isMulti = field.control === 'multi-select'
                                 const selected: string[] = isMulti ? ((raw as string[]) ?? []) : (raw ? [raw as string] : [])
                                 return (
-                                  <div key={field.key}>
-                                    <div style={{ fontSize: '13px', fontWeight: 500, color: '#D4E4F0', marginBottom: '8px' }}>{field.question}</div>
+                                  <div key={field.key} role="group" aria-labelledby={`field-question-${field.key}-label`} aria-required={QUESTIONNAIRE_SUBMIT_REQUIRED.has(field.key) || undefined}>
+                                    <div id={`field-question-${field.key}-label`} style={{ fontSize: '13px', fontWeight: 500, color: '#AAB6C4', marginBottom: '8px' }}>{field.question}{QUESTIONNAIRE_SUBMIT_REQUIRED.has(field.key) && <span aria-hidden="true" style={{ color: '#EF4444', marginLeft: '4px' }}>Required</span>}</div>
                                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' as const }}>
                                       {field.options?.map(opt => {
                                         const sel = selected.includes(opt.value)
                                         return (
-                                          <button key={opt.value} onClick={() => isMulti ? toggleQMulti(field.key, opt.value) : setQField(field.key, opt.value)} style={{ padding: '7px 14px', borderRadius: '100px', border: `1px solid ${sel ? '#39D6C7' : '#2A3441'}`, background: sel ? 'rgba(57,214,199,0.08)' : 'transparent', color: sel ? '#39D6C7' : '#4B6278', fontSize: '12px', cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif", transition: 'all 0.15s' }}>{opt.label}</button>
+                                          <button type="button" key={opt.value} aria-pressed={sel} onClick={() => isMulti ? toggleQMulti(field.key, opt.value) : setQField(field.key, opt.value)} style={{ padding: '7px 14px', borderRadius: '100px', border: `1px solid ${sel ? '#46A873' : '#242830'}`, background: sel ? 'rgba(70,168,115,0.08)' : 'transparent', color: sel ? '#46A873' : '#333944', fontSize: '12px', cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif", transition: 'all 0.15s' }}>{opt.label}</button>
                                         )
                                       })}
                                     </div>
@@ -1987,8 +2125,8 @@ export default function App() {
                               }
                               if (field.control === 'select') {
                                 return (
-                                  <Field key={field.key} label={field.question}>
-                                    <select value={(raw as string) ?? ''} onChange={e => setQField(field.key, e.target.value)} style={{ ...qInputStyle, cursor: 'pointer', color: (raw as string) ? '#D4E4F0' : '#4B6278' }}>
+                                  <Field key={field.key} id={`field-question-${field.key}`} label={field.question} required={QUESTIONNAIRE_SUBMIT_REQUIRED.has(field.key)}>
+                                    <select id={`field-question-${field.key}`} required={QUESTIONNAIRE_SUBMIT_REQUIRED.has(field.key)} aria-required={QUESTIONNAIRE_SUBMIT_REQUIRED.has(field.key) || undefined} value={(raw as string) ?? ''} onChange={e => setQField(field.key, e.target.value)} style={{ ...qInputStyle, cursor: 'pointer', color: (raw as string) ? '#AAB6C4' : '#333944' }}>
                                       <option value="">Select...</option>
                                       {field.options?.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                                     </select>
@@ -2011,12 +2149,12 @@ export default function App() {
               title="Choose your starting point."
               desc="Custom Build uses a template as its foundation. Select the template whose supported structure best matches the project; the template catalog defines available colorways, sizes, platforms, and extension points."
             />
-            <OperatorSpiel text={SPIELS.customBuild} />
-            <OperatorSpiel text={SPIELS.followUp} tone="warning" />
+            <AuroraOperatorSpiel text={SPIELS.customBuild} />
+            <AuroraOperatorSpiel text={SPIELS.followUp} tone="warning" />
             {/* ── REV-03: industry filter indicator ─────────────────────── */}
             {industryActive && (
               <div style={{ marginBottom: '14px' }}>
-                <div style={{ fontSize: '12px', color: '#4B6278', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '6px' }}>
+                <div style={{ fontSize: '12px', color: '#AAB6C4', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '6px' }}>
                   {override
                     ? 'Showing all starting points'
                     : hasPrimary
@@ -2030,9 +2168,9 @@ export default function App() {
                   style={{
                     padding: '4px 10px',
                     borderRadius: '100px',
-                    border: '1px solid #2A3441',
+                    border: '1px solid #242830',
                     background: 'transparent',
-                    color: override ? '#F59E0B' : '#39D6C7',
+                    color: override ? '#F5B400' : '#46A873',
                     fontSize: '11px',
                     cursor: 'pointer',
                     fontFamily: "'Inter', system-ui, sans-serif",
@@ -2047,7 +2185,7 @@ export default function App() {
 
             <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap', marginBottom: '16px' }}>
               {TEMPLATE_CATEGORIES.map(cat => (
-                <button key={cat} onClick={() => setTemplateCatFilter(cat)} style={{ padding: '6px 14px', borderRadius: '100px', border: `1px solid ${templateCatFilter === cat ? '#39D6C7' : '#2A3441'}`, background: templateCatFilter === cat ? 'rgba(57,214,199,0.09)' : 'transparent', cursor: 'pointer', color: templateCatFilter === cat ? '#39D6C7' : '#4B6278', fontSize: '12px', fontWeight: templateCatFilter === cat ? 600 : 400, transition: 'all 0.15s', fontFamily: "'Inter', system-ui, sans-serif" }}>{cat}</button>
+                <button key={cat} onClick={() => setTemplateCatFilter(cat)} style={{ padding: '6px 14px', borderRadius: '100px', border: `1px solid ${templateCatFilter === cat ? '#46A873' : '#242830'}`, background: templateCatFilter === cat ? 'rgba(70,168,115,0.09)' : 'transparent', cursor: 'pointer', color: templateCatFilter === cat ? '#46A873' : '#333944', fontSize: '12px', fontWeight: templateCatFilter === cat ? 600 : 400, transition: 'all 0.15s', fontFamily: "'Inter', system-ui, sans-serif" }}>{cat}</button>
               ))}
             </div>
 
@@ -2056,7 +2194,7 @@ export default function App() {
                 fontFamily: "'JetBrains Mono', monospace",
                 fontSize: '10px',
                 letterSpacing: '0.08em',
-                color: '#4B6278',
+                color: '#AAB6C4',
                 textTransform: 'uppercase',
                 marginBottom: '8px',
                 marginTop: '8px',
@@ -2065,17 +2203,19 @@ export default function App() {
               const isOverrideOrRecommendedView = isOverrideView || (industryActive && !override && !hasPrimary && hasRecommended)
 
               const renderGrid = (list: TemplateDefinition[], showBadge?: boolean) => (
+                <div role="group" aria-labelledby="field-templateId-label" aria-required="true">
+                <div id="field-templateId-label" style={labelStyle}>Starting template <span aria-hidden="true" style={{ color: '#EF4444', marginLeft: '4px' }}>Required</span></div>
                 <div id="field-templateId" aria-describedby="field-templateId-warning" onBlur={() => touchField('field-templateId')} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '14px' }}>
                   {list.map(t => {
                     const sel = form.templateId === t.id
                     return (
-                      <button key={t.id} onClick={() => handleTemplateSelect(t)} style={{ borderRadius: '10px', border: `1.5px solid ${sel ? '#39D6C7' : '#2A3441'}`, background: sel ? 'rgba(57,214,199,0.06)' : '#111827', cursor: 'pointer', padding: 0, overflow: 'hidden', textAlign: 'left', transition: 'all 0.15s', position: 'relative' }}>
+                      <button key={t.id} onClick={() => handleTemplateSelect(t)} style={{ borderRadius: '10px', border: `1.5px solid ${sel ? '#46A873' : '#242830'}`, background: sel ? 'rgba(70,168,115,0.06)' : '#12151A', cursor: 'pointer', padding: 0, overflow: 'hidden', textAlign: 'left', transition: 'all 0.15s', position: 'relative' }}>
                         {showBadge && (
                           <span style={{
                             position: 'absolute', top: '6px', right: '6px', zIndex: 2,
                             padding: '1px 7px', borderRadius: '100px',
-                            background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)',
-                            fontSize: '9px', color: '#F59E0B', fontWeight: 600,
+                            background: 'rgba(245,180,0,0.12)', border: '1px solid rgba(245,180,0,0.3)',
+                            fontSize: '10px', color: '#F5B400', fontWeight: 600,
                             fontFamily: "'JetBrains Mono', monospace",
                           }}>
                             Recommended alternative
@@ -2087,16 +2227,17 @@ export default function App() {
                           <div style={{ position: 'absolute', bottom: '10px', right: '10px', width: '24px', height: '2px', borderRadius: '1px', background: `${t.accent}50` }} />
                         </div>
                         <div style={{ padding: '10px 12px' }}>
-                          <div style={{ fontSize: '12px', fontWeight: 600, color: sel ? '#39D6C7' : '#D4E4F0', marginBottom: '2px' }}>{t.name}</div>
-                          <div style={{ fontSize: '10px', color: '#3D5468', marginBottom: '5px' }}>{t.purpose}</div>
+                          <div style={{ fontSize: '12px', fontWeight: 600, color: sel ? '#46A873' : '#AAB6C4', marginBottom: '2px' }}>{t.name}</div>
+                          <div style={{ fontSize: '10px', color: '#AAB6C4', marginBottom: '5px' }}>{t.purpose}</div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', fontWeight: 600, color: sel ? '#39D6C7' : '#6B8099' }}>{formatPhp(t.desktopPrice)}</span>
-                            <span style={{ fontSize: '10px', color: '#3D5468' }}>{t.deliveryDesktop}d</span>
+                            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', fontWeight: 600, color: sel ? '#46A873' : '#7C8794' }}>{formatPhp(t.desktopPrice)}</span>
+                            <span style={{ fontSize: '10px', color: '#AAB6C4' }}>{t.deliveryDesktop}d</span>
                           </div>
                         </div>
                       </button>
                     )
                   })}
+                </div>
                 </div>
               )
 
@@ -2152,20 +2293,20 @@ export default function App() {
 
             {selectedTemplate && (
               <div>
-                <div style={{ height: '1px', background: '#1E2E3D', marginBottom: '24px' }} />
+                <div style={{ height: '1px', background: '#1A1C22', marginBottom: '24px' }} />
 
                 <div style={{ marginBottom: '20px' }}>
-                  <div style={labelStyle}>Choose Your Platform</div>
-                  <div id="field-projectVersion" aria-describedby="field-projectVersion-warning" onBlur={() => touchField('field-projectVersion')} style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px', ...groupWarningStyle('field-projectVersion') }}>
+                  <div id="field-projectVersion-label" style={labelStyle}>Choose Your Platform <span aria-hidden="true" style={{ color: '#EF4444', marginLeft: '4px' }}>Required</span></div>
+                  <div id="field-projectVersion" role="group" aria-labelledby="field-projectVersion-label" aria-required="true" aria-describedby="field-projectVersion-warning" onBlur={() => touchField('field-projectVersion')} style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px', ...groupWarningStyle('field-projectVersion') }}>
                     {[['desktop', 'Website'], ['mobile', 'Mobile App'], ['both', 'Website + Mobile App']].map(([v, label]) => (
-                      <button key={v} onClick={() => { set('projectVersion', v); touchField('field-projectVersion') }} style={versionBtn(v)}>{label}</button>
+                      <button type="button" key={v} aria-pressed={form.projectVersion === v} onClick={() => { set('projectVersion', v); touchField('field-projectVersion') }} style={versionButtonStyle(form.projectVersion === v)}>{label}</button>
                     ))}
                   </div>
                   <InlineWarning fieldId="field-projectVersion" message={getWarning('field-projectVersion')} />
 
                   {form.tier === 'template' && (
-                    <div style={{ padding: '14px 16px', background: '#0D1620', border: '1px solid #1E2E3D', borderRadius: '10px', marginBottom: '12px' }}>
-                      <div style={{ ...monoLabel, marginBottom: '10px', color: '#4B6278' }}>Optional Add-Ons</div>
+                    <div style={{ padding: '14px 16px', background: '#0D0F12', border: '1px solid #1A1C22', borderRadius: '10px', marginBottom: '12px' }}>
+                      <div style={{ ...monoLabel, marginBottom: '10px', color: '#AAB6C4' }}>Optional Add-Ons</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {[
                           { field: 'customSizes' as const, label: 'Custom Sizes', desc: 'Appropriate when your content requires non-standard breakpoints or device targets beyond the default responsive template.' },
@@ -2173,12 +2314,12 @@ export default function App() {
                         ].map(addon => {
                           const active = form[addon.field]
                           return (
-                            <button key={addon.field} onClick={() => set(addon.field, !active)} style={{ padding: '12px 14px', borderRadius: '8px', border: `1px solid ${active ? '#39D6C7' : '#1E2E3D'}`, background: active ? 'rgba(57,214,199,0.05)' : 'transparent', cursor: 'pointer', textAlign: 'left', width: '100%', display: 'flex', gap: '12px', alignItems: 'flex-start', transition: 'all 0.15s' }}>
-                              <div style={{ width: '18px', height: '18px', borderRadius: '4px', border: `1px solid ${active ? '#39D6C7' : '#2A3441'}`, background: active ? '#39D6C7' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#060C10', fontSize: '10px', fontWeight: 800, flexShrink: 0, marginTop: '1px', transition: 'all 0.15s' }}>{active ? '✓' : ''}</div>
+                            <button key={addon.field} onClick={() => set(addon.field, !active)} style={{ padding: '12px 14px', borderRadius: '8px', border: `1px solid ${active ? '#46A873' : '#1A1C22'}`, background: active ? 'rgba(70,168,115,0.05)' : 'transparent', cursor: 'pointer', textAlign: 'left', width: '100%', display: 'flex', gap: '12px', alignItems: 'flex-start', transition: 'all 0.15s' }}>
+                              <div style={{ width: '18px', height: '18px', borderRadius: '4px', border: `1px solid ${active ? '#46A873' : '#242830'}`, background: active ? '#46A873' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0A0C0F', fontWeight: 800, flexShrink: 0, marginTop: '1px', transition: 'all 0.15s' }}>{active && <Icon name="check" size={12} strokeWidth={2.5} />}</div>
                               <div>
-                                <div style={{ fontSize: '13px', fontWeight: 600, color: active ? '#39D6C7' : '#D4E4F0', marginBottom: '2px' }}>{addon.label}</div>
-                                <div style={{ fontSize: '12px', color: '#4B6278', lineHeight: 1.5 }}>{addon.desc}</div>
-                                <div style={{ fontSize: '11px', color: '#3D5468', marginTop: '4px', fontFamily: "'JetBrains Mono', monospace" }}>Price pending configuration</div>
+                                <div style={{ fontSize: '13px', fontWeight: 600, color: active ? '#46A873' : '#AAB6C4', marginBottom: '2px' }}>{addon.label}</div>
+                                <div style={{ fontSize: '12px', color: '#AAB6C4', lineHeight: 1.5 }}>{addon.desc}</div>
+                                <div style={{ fontSize: '11px', color: '#AAB6C4', marginTop: '4px', fontFamily: "'JetBrains Mono', monospace" }}>Price pending configuration</div>
                               </div>
                             </button>
                           )
@@ -2188,25 +2329,25 @@ export default function App() {
                   )}
 
                   {form.projectVersion && (
-                    <div style={{ padding: '10px 14px', background: '#0D1620', border: '1px solid #1E2E3D', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                      <span style={{ color: '#4B6278' }}>{pricing.versionLabel} · {pricing.delivery} working days</span>
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: '#39D6C7' }}>{formatPhp(pricing.base)}</span>
+                    <div style={{ padding: '10px 14px', background: '#0D0F12', border: '1px solid #1A1C22', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                      <span style={{ color: '#AAB6C4' }}>{pricing.versionLabel} · {pricing.delivery} working days</span>
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: '#46A873' }}>{formatPhp(pricing.base)}</span>
                     </div>
                   )}
                 </div>
 
-                <div style={{ marginBottom: '28px' }}>
+                <div role="group" aria-labelledby="field-colorPreset-label" style={{ marginBottom: '28px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px' }}>
-                    <div style={labelStyle}>Color Style</div>
-                    <span style={{ fontSize: '11px', color: '#39D6C7', fontFamily: "'JetBrains Mono', monospace" }}>All styles included at no additional cost</span>
+                    <div id="field-colorPreset-label" style={labelStyle}>Color Style</div>
+                    <span style={{ fontSize: '11px', color: '#46A873', fontFamily: "'JetBrains Mono', monospace" }}>All styles included at no additional cost</span>
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     {COLOR_OPTIONS.map(c => {
                       const sel = form.colorPreset === c.id
                       return (
-                        <button key={c.id} onClick={() => set('colorPreset', c.id)} aria-label={c.name} aria-pressed={sel} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderRadius: '100px', border: `1px solid ${sel ? '#39D6C7' : '#2A3441'}`, background: sel ? 'rgba(57,214,199,0.08)' : 'transparent', cursor: 'pointer', transition: 'all 0.15s', fontFamily: "'Inter', system-ui, sans-serif" }}>
-                          <div style={{ width: '11px', height: '11px', borderRadius: '50%', background: c.color, flexShrink: 0, boxShadow: sel ? `0 0 0 2px rgba(57,214,199,0.4)` : 'none', transition: 'box-shadow 0.15s' }} />
-                          <span style={{ fontSize: '12px', color: sel ? '#39D6C7' : '#4B6278', fontWeight: sel ? 600 : 400 }}>{c.name}</span>
+                        <button key={c.id} onClick={() => set('colorPreset', c.id)} aria-label={c.name} aria-pressed={sel} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderRadius: '100px', border: `1px solid ${sel ? '#46A873' : '#242830'}`, background: sel ? 'rgba(70,168,115,0.08)' : 'transparent', cursor: 'pointer', transition: 'all 0.15s', fontFamily: "'Inter', system-ui, sans-serif" }}>
+                          <div style={{ width: '11px', height: '11px', borderRadius: '50%', background: c.color, flexShrink: 0, boxShadow: sel ? `0 0 0 2px rgba(70,168,115,0.4)` : 'none', transition: 'box-shadow 0.15s' }} />
+                          <span style={{ fontSize: '12px', color: sel ? '#46A873' : '#333944', fontWeight: sel ? 600 : 400 }}>{c.name}</span>
                         </button>
                       )
                     })}
@@ -2222,27 +2363,27 @@ export default function App() {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                         <div>
                           <div style={{ ...monoLabel, margin: 0, fontSize: '10px' }}>Page {currentPageIndex + 1} of {templatePages.length}</div>
-                          <div style={{ fontSize: '15px', fontWeight: 600, color: '#D4E4F0', marginTop: '2px' }}>{currentPageName}</div>
+                          <div style={{ fontSize: '15px', fontWeight: 600, color: '#AAB6C4', marginTop: '2px' }}>{currentPageName}</div>
                         </div>
                         <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                          <button onClick={() => setCurrentPageIndex(i => (i - 1 + templatePages.length) % templatePages.length)} disabled={!multiPage} style={{ width: '30px', height: '30px', borderRadius: '7px', border: '1px solid #2A3441', background: '#0D1620', cursor: multiPage ? 'pointer' : 'not-allowed', color: multiPage ? '#6B8099' : '#2A3441', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>←</button>
+                          <button aria-label="Previous template page" onClick={() => setCurrentPageIndex(i => (i - 1 + templatePages.length) % templatePages.length)} disabled={!multiPage} style={{ width: '30px', height: '30px', borderRadius: '7px', border: '1px solid #242830', background: '#0D0F12', cursor: multiPage ? 'pointer' : 'not-allowed', color: multiPage ? '#7C8794' : '#242830', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="arrow-left" size={14} /></button>
                           <div style={{ display: 'flex', gap: '4px' }}>
-                            {templatePages.map((_, i) => <button key={i} onClick={() => setCurrentPageIndex(i)} style={{ width: '6px', height: '6px', borderRadius: '50%', border: 'none', background: i === currentPageIndex ? '#39D6C7' : '#2A3441', cursor: 'pointer', padding: 0, transition: 'background 0.15s' }} />)}
+                            {templatePages.map((_, i) => <button key={i} onClick={() => setCurrentPageIndex(i)} style={{ width: '6px', height: '6px', borderRadius: '50%', border: 'none', background: i === currentPageIndex ? '#46A873' : '#242830', cursor: 'pointer', padding: 0, transition: 'background 0.15s' }} />)}
                           </div>
-                          <button onClick={() => setCurrentPageIndex(i => (i + 1) % templatePages.length)} disabled={!multiPage} style={{ width: '30px', height: '30px', borderRadius: '7px', border: '1px solid #2A3441', background: '#0D1620', cursor: multiPage ? 'pointer' : 'not-allowed', color: multiPage ? '#6B8099' : '#2A3441', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>→</button>
+                          <button aria-label="Next template page" onClick={() => setCurrentPageIndex(i => (i + 1) % templatePages.length)} disabled={!multiPage} style={{ width: '30px', height: '30px', borderRadius: '7px', border: '1px solid #242830', background: '#0D0F12', cursor: multiPage ? 'pointer' : 'not-allowed', color: multiPage ? '#7C8794' : '#242830', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="arrow-right" size={14} /></button>
                         </div>
                       </div>
                       {form.projectVersion === 'both' && (
                         <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
-                          {['desktop', 'mobile'].map(v => <button key={v} onClick={() => setPreviewVersion(v as 'desktop' | 'mobile')} style={{ padding: '4px 12px', borderRadius: '6px', border: `1px solid ${previewVersion === v ? '#39D6C7' : '#2A3441'}`, background: previewVersion === v ? 'rgba(57,214,199,0.08)' : 'transparent', color: previewVersion === v ? '#39D6C7' : '#4B6278', fontSize: '11px', cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif", textTransform: 'capitalize' }}>{v} Preview</button>)}
+                          {['desktop', 'mobile'].map(v => <button key={v} onClick={() => setPreviewVersion(v as 'desktop' | 'mobile')} style={{ padding: '4px 12px', borderRadius: '6px', border: `1px solid ${previewVersion === v ? '#46A873' : '#242830'}`, background: previewVersion === v ? 'rgba(70,168,115,0.08)' : 'transparent', color: previewVersion === v ? '#46A873' : '#333944', fontSize: '11px', cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif", textTransform: 'capitalize' }}>{v} Preview</button>)}
                         </div>
                       )}
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: showMobile ? 'center' : 'stretch', marginBottom: '20px' }}>
                         {showMobile ? (
                           <>
-                            <div style={{ width: '160px', height: '347px', background: '#0D1825', borderRadius: '24px', border: '2px solid #2A3441', boxShadow: '0 0 0 6px #111827, 0 8px 24px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', overflow: 'hidden', transition: 'all 0.3s' }}>
+                            <div style={{ width: '160px', height: '347px', background: '#12151A', borderRadius: '24px', border: '2px solid #242830', boxShadow: '0 0 0 6px #12151A, 0 8px 24px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', overflow: 'hidden', transition: 'all 0.3s' }}>
                               <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '8px', paddingBottom: '4px' }}>
-                                <div style={{ width: '40px', height: '5px', background: '#1E2E3D', borderRadius: '3px' }} />
+                                <div style={{ width: '40px', height: '5px', background: '#1A1C22', borderRadius: '3px' }} />
                               </div>
                               <div style={{ flex: 1, background: selectedTemplate.bg, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                                 <div style={{ padding: '6px 10px', display: 'flex', alignItems: 'center', borderBottom: `1px solid ${accent}18` }}>
@@ -2254,14 +2395,14 @@ export default function App() {
                                   <div style={{ width: '38%', height: '7px', borderRadius: '4px', background: accent, marginTop: '4px', opacity: 0.7, transition: 'background 0.3s' }} />
                                 </div>
                                 <div style={{ padding: '5px 10px', borderTop: `1px solid ${accent}15` }}>
-                                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '7px', color: '#3D5468', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{currentPageName} · Mobile App</div>
+                                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', color: '#AAB6C4', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{currentPageName} · Mobile App</div>
                                 </div>
                               </div>
                               <div style={{ display: 'flex', justifyContent: 'center', padding: '5px 0' }}>
-                                <div style={{ width: '32px', height: '3px', background: '#2A3441', borderRadius: '2px' }} />
+                                <div style={{ width: '32px', height: '3px', background: '#242830', borderRadius: '2px' }} />
                               </div>
                             </div>
-                            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', color: '#3D5468', letterSpacing: '0.06em', textTransform: 'uppercase', marginTop: '6px' }}>Mobile preview · 390 × 844</div>
+                            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', color: '#AAB6C4', letterSpacing: '0.06em', textTransform: 'uppercase', marginTop: '6px' }}>Mobile preview · 390 × 844</div>
                           </>
                         ) : (
                           <div style={{ width: '100%', height: '130px', background: selectedTemplate.bg, borderRadius: '10px', overflow: 'hidden', border: `1px solid ${accent}30`, display: 'flex', flexDirection: 'column', transition: 'all 0.3s' }}>
@@ -2282,18 +2423,18 @@ export default function App() {
 })()}
             <InlineWarning fieldId="field-templateId" message={getWarning('field-templateId')} />
 
-                <div style={{ padding: '20px', background: '#0D1620', border: '1px solid #1E2E3D', borderRadius: '12px', marginBottom: '16px' }}>
-                  <div style={{ ...monoLabel, color: '#39D6C7', marginBottom: '14px' }}>Content & Asset Notes — {currentPageName}</div>
+                <div style={{ padding: '20px', background: '#0D0F12', border: '1px solid #1A1C22', borderRadius: '12px', marginBottom: '16px' }}>
+                  <div style={{ ...monoLabel, color: '#46A873', marginBottom: '14px' }}>Content & Asset Notes — {currentPageName}</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '18px' }}>
                     {pageDef.fields.map(f => (
                       <div key={f.id}>
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '6px' }}>
-                          <label style={{ ...labelStyle, margin: 0 }}>{f.label}</label>
-                          {f.required && <span style={{ fontSize: '10px', color: '#EF4444' }}>Required</span>}
+                          <label htmlFor={`field-page-${slugify(currentPageName)}-${f.id}`} style={{ ...labelStyle, margin: 0 }}>{f.label}</label>
+                          {f.required && <span aria-hidden="true" style={{ fontSize: '10px', color: '#EF4444' }}>Required</span>}
                         </div>
                         {f.type === 'textarea'
-                          ? <textarea value={getPageField(currentPageName, f.id)} onChange={e => setPageField(currentPageName, f.id, e.target.value)} placeholder={f.placeholder} rows={3} style={{ ...inputStyle, background: '#111827', resize: 'vertical', lineHeight: 1.7 }} />
-                          : <input value={getPageField(currentPageName, f.id)} onChange={e => setPageField(currentPageName, f.id, e.target.value)} placeholder={f.placeholder} style={{ ...inputStyle, background: '#111827' }} />
+                          ? <textarea id={`field-page-${slugify(currentPageName)}-${f.id}`} required={f.required} aria-required={f.required || undefined} value={getPageField(currentPageName, f.id)} onChange={e => setPageField(currentPageName, f.id, e.target.value)} placeholder={f.placeholder} rows={3} style={{ ...inputStyle, background: '#12151A', resize: 'vertical', lineHeight: 1.7 }} />
+                          : <input id={`field-page-${slugify(currentPageName)}-${f.id}`} required={f.required} aria-required={f.required || undefined} value={getPageField(currentPageName, f.id)} onChange={e => setPageField(currentPageName, f.id, e.target.value)} placeholder={f.placeholder} style={{ ...inputStyle, background: '#12151A' }} />
                         }
                       </div>
                     ))}
@@ -2313,18 +2454,18 @@ export default function App() {
                     />
                   ))}
                   <div style={{ marginTop: '14px' }}>
-                    <div style={labelStyle}>Additional Notes for this Page</div>
-                    <textarea value={getPageField(currentPageName, '_notes')} onChange={e => setPageField(currentPageName, '_notes', e.target.value)} placeholder="Any additional context or instructions for this page..." rows={2} style={{ ...inputStyle, background: '#111827', resize: 'vertical', lineHeight: 1.7 }} />
+                    <label htmlFor={`field-page-${slugify(currentPageName)}-notes`} style={labelStyle}>Additional Notes for this Page</label>
+                    <textarea id={`field-page-${slugify(currentPageName)}-notes`} value={getPageField(currentPageName, '_notes')} onChange={e => setPageField(currentPageName, '_notes', e.target.value)} placeholder="Any additional context or instructions for this page..." rows={2} style={{ ...inputStyle, background: '#12151A', resize: 'vertical', lineHeight: 1.7 }} />
                   </div>
                 </div>
 
                 {form.projectVersion && (
-                  <div style={{ padding: '14px 18px', background: 'rgba(57,214,199,0.04)', border: '1px solid rgba(57,214,199,0.18)', borderRadius: '10px' }}>
+                  <div style={{ padding: '14px 18px', background: 'rgba(70,168,115,0.04)', border: '1px solid rgba(70,168,115,0.18)', borderRadius: '10px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                       <span style={{ ...monoLabel, margin: 0 }}>Preliminary Total</span>
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '18px', fontWeight: 700, color: '#39D6C7' }}>{formatPhp(pricing.total)}</span>
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '18px', fontWeight: 700, color: '#46A873' }}>{formatPhp(pricing.total)}</span>
                     </div>
-                    <div style={{ fontSize: '12px', color: '#3D5468' }}>{selectedTemplate.name} · {pricing.versionLabel} · {pricing.delivery} working days · Subject to owner review</div>
+                    <div style={{ fontSize: '12px', color: '#AAB6C4' }}>{selectedTemplate.name} · {pricing.versionLabel} · {pricing.delivery} working days · Subject to owner review</div>
                   </div>
                 )}
               </div>
@@ -2342,57 +2483,57 @@ export default function App() {
               title="Tell us what you're building."
               desc="Enterprise Level is a from-scratch build. Capture the product experience, target users, workflows, integrations, and design direction so the owner review has the full discovery record."
             />
-            <OperatorSpiel text={SPIELS.enterprise} tone="accent" />
-            <OperatorSpiel text={SPIELS.followUp} tone="warning" />
+            <AuroraOperatorSpiel text={SPIELS.enterprise} tone="accent" />
+            <AuroraOperatorSpiel text={SPIELS.followUp} tone="warning" />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <Field label="Product Vision" hint="What are you building and why? What problem does it solve?">
-                <textarea id="field-projectVision" aria-describedby="field-projectVision-warning" value={form.projectVision} onChange={e => set('projectVision', e.target.value)} onBlur={() => touchField('field-projectVision')} placeholder="We are building a platform that helps logistics companies track shipments in real time. Our target users are operations managers who need instant visibility into delivery status and exception handling..." rows={5} style={{ ...fieldStyle('field-projectVision'), resize: 'vertical', lineHeight: 1.7 }} />
+              <Field id="field-projectVision" label="Product Vision" required hint="What are you building and why? What problem does it solve?">
+                <textarea id="field-projectVision" required aria-required="true" aria-describedby="field-projectVision-warning field-projectVision-hint" value={form.projectVision} onChange={e => set('projectVision', e.target.value)} onBlur={() => touchField('field-projectVision')} placeholder="We are building a platform that helps logistics companies track shipments in real time. Our target users are operations managers who need instant visibility into delivery status and exception handling..." rows={5} style={{ ...fieldStyle('field-projectVision'), resize: 'vertical', lineHeight: 1.7 }} />
                 <InlineWarning fieldId="field-projectVision" message={getWarning('field-projectVision')} />
               </Field>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <Field label="Target Users">
-                  <input id="field-targetUsers" aria-describedby="field-targetUsers-warning" value={form.targetUsers} onChange={e => set('targetUsers', e.target.value)} onBlur={() => touchField('field-targetUsers')} placeholder="e.g. Operations managers, field technicians" style={fieldStyle('field-targetUsers')} />
+                <Field id="field-targetUsers" label="Target Users" required>
+                  <input id="field-targetUsers" required aria-required="true" aria-describedby="field-targetUsers-warning" value={form.targetUsers} onChange={e => set('targetUsers', e.target.value)} onBlur={() => touchField('field-targetUsers')} placeholder="e.g. Operations managers, field technicians" style={fieldStyle('field-targetUsers')} />
                   <InlineWarning fieldId="field-targetUsers" message={getWarning('field-targetUsers')} />
                 </Field>
-                <Field label="User Roles">
+                <Field id="field-userRoles" label="User Roles">
                   <input id="field-userRoles" aria-describedby="field-userRoles-warning" value={form.userRoles} onChange={e => set('userRoles', e.target.value)} onBlur={() => touchField('field-userRoles')} placeholder="e.g. Admin, Manager, Viewer, Agent" style={fieldStyle('field-userRoles')} />
                   <InlineWarning fieldId="field-userRoles" message={getWarning('field-userRoles')} />
                 </Field>
               </div>
-              <Field label="Key Business Workflows">
+              <Field id="field-businessWorkflows" label="Key Business Workflows">
                 <textarea id="field-businessWorkflows" aria-describedby="field-businessWorkflows-warning" value={form.businessWorkflows} onChange={e => set('businessWorkflows', e.target.value)} onBlur={() => touchField('field-businessWorkflows')} placeholder="Walk us through how a user would accomplish the most important task in the system..." rows={4} style={{ ...fieldStyle('field-businessWorkflows'), resize: 'vertical', lineHeight: 1.7 }} />
                 <InlineWarning fieldId="field-businessWorkflows" message={getWarning('field-businessWorkflows')} />
               </Field>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <Field label="Required Integrations">
+                <Field id="field-integrations" label="Required Integrations">
                   <input id="field-integrations" aria-describedby="field-integrations-warning" value={form.integrations} onChange={e => set('integrations', e.target.value)} onBlur={() => touchField('field-integrations')} placeholder="e.g. Salesforce, QuickBooks, Twilio" style={fieldStyle('field-integrations')} />
                   <InlineWarning fieldId="field-integrations" message={getWarning('field-integrations')} />
                 </Field>
-                <Field label="Existing Systems to Connect">
+                <Field id="field-existingSystems" label="Existing Systems to Connect">
                   <input id="field-existingSystems" aria-describedby="field-existingSystems-warning" value={form.existingSystems} onChange={e => set('existingSystems', e.target.value)} onBlur={() => touchField('field-existingSystems')} placeholder="e.g. SAP ERP, legacy SQL database" style={fieldStyle('field-existingSystems')} />
                   <InlineWarning fieldId="field-existingSystems" message={getWarning('field-existingSystems')} />
                 </Field>
               </div>
-              <Field label="Data & Security Requirements">
+              <Field id="field-dataSecurityReqs" label="Data & Security Requirements">
                 <textarea id="field-dataSecurityReqs" aria-describedby="field-dataSecurityReqs-warning" value={form.dataSecurityReqs} onChange={e => set('dataSecurityReqs', e.target.value)} onBlur={() => touchField('field-dataSecurityReqs')} placeholder="SOC 2, HIPAA, GDPR compliance, SSO, end-to-end encryption, data residency requirements..." rows={3} style={{ ...fieldStyle('field-dataSecurityReqs'), resize: 'vertical', lineHeight: 1.7 }} />
                 <InlineWarning fieldId="field-dataSecurityReqs" message={getWarning('field-dataSecurityReqs')} />
               </Field>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <Field label="Scalability Requirements">
+                <Field id="field-scalabilityReqs" label="Scalability Requirements">
                   <input id="field-scalabilityReqs" aria-describedby="field-scalabilityReqs-warning" value={form.scalabilityReqs} onChange={e => set('scalabilityReqs', e.target.value)} onBlur={() => touchField('field-scalabilityReqs')} placeholder="e.g. 10,000 DAU, 1M records, multi-region" style={fieldStyle('field-scalabilityReqs')} />
                   <InlineWarning fieldId="field-scalabilityReqs" message={getWarning('field-scalabilityReqs')} />
                 </Field>
-                <Field label="Design Inspiration">
+                <Field id="field-designInspiration" label="Design Inspiration">
                   <input id="field-designInspiration" aria-describedby="field-designInspiration-warning" value={form.designInspiration} onChange={e => set('designInspiration', e.target.value)} onBlur={() => touchField('field-designInspiration')} placeholder="URLs or Figma references" style={fieldStyle('field-designInspiration')} />
                   <InlineWarning fieldId="field-designInspiration" message={getWarning('field-designInspiration')} />
                 </Field>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <Field label="Comparable Products">
+                <Field id="field-competitors" label="Comparable Products">
                   <input id="field-competitors" aria-describedby="field-competitors-warning" value={form.competitors} onChange={e => set('competitors', e.target.value)} onBlur={() => touchField('field-competitors')} placeholder="e.g. Linear, Notion, Airtable" style={fieldStyle('field-competitors')} />
                   <InlineWarning fieldId="field-competitors" message={getWarning('field-competitors')} />
                 </Field>
-                <Field label="Success Criteria">
+                <Field id="field-successCriteria" label="Success Criteria">
                   <input id="field-successCriteria" aria-describedby="field-successCriteria-warning" value={form.successCriteria} onChange={e => set('successCriteria', e.target.value)} onBlur={() => touchField('field-successCriteria')} placeholder="e.g. 1,000 active users in 3 months" style={fieldStyle('field-successCriteria')} />
                   <InlineWarning fieldId="field-successCriteria" message={getWarning('field-successCriteria')} />
                 </Field>
@@ -2412,11 +2553,12 @@ export default function App() {
 
             {/* ── Category filter ── */}
             <div style={{ marginBottom: '20px' }}>
-              <div style={{ ...monoLabel, marginBottom: '8px' }}>Browse by category</div>
+              <label htmlFor="field-extension-category" style={{ ...monoLabel, marginBottom: '8px' }}>Browse by category</label>
               <select
+                id="field-extension-category"
                 value={extensionCategoryFilter}
                 onChange={e => setExtensionCategoryFilter(e.target.value)}
-                style={{ width: '100%', background: '#111827', border: '1px solid #2A3441', borderRadius: '8px', padding: '10px 12px', color: '#D4E4F0', fontSize: '13px', fontFamily: "'Inter', system-ui, sans-serif", cursor: 'pointer' }}
+                style={{ width: '100%', background: '#12151A', border: '1px solid #242830', borderRadius: '8px', padding: '10px 12px', color: '#AAB6C4', fontSize: '13px', fontFamily: "'Inter', system-ui, sans-serif", cursor: 'pointer' }}
               >
                 <option value="all">All categories</option>
                 {FEATURE_CATEGORIES.map(cat => (
@@ -2430,7 +2572,7 @@ export default function App() {
               const filtered = EXTENSIONS.filter(e => extensionCategoryFilter === 'all' || e.category === extensionCategoryFilter)
               if (filtered.length === 0) {
                 return (
-                  <div style={{ padding: '20px', background: '#111827', border: '1px solid #2A3441', borderRadius: '10px', marginBottom: '20px', textAlign: 'center', fontSize: '13px', color: '#4B6278' }}>
+                  <div style={{ padding: '20px', background: '#12151A', border: '1px solid #242830', borderRadius: '10px', marginBottom: '20px', textAlign: 'center', fontSize: '13px', color: '#AAB6C4' }}>
                     No extensions available for this category.
                   </div>
                 )
@@ -2440,17 +2582,17 @@ export default function App() {
                   {filtered.map(ext => {
                     const sel = form.selectedExtensions.includes(ext.code)
                     return (
-                      <div key={ext.code} onClick={() => setForm(prev => ({ ...prev, selectedExtensions: sel ? prev.selectedExtensions.filter(c => c !== ext.code) : [...prev.selectedExtensions, ext.code] }))} style={{ padding: '14px 16px', background: sel ? 'rgba(57,214,199,0.04)' : '#111827', border: `1px solid ${sel ? 'rgba(57,214,199,0.35)' : '#2A3441'}`, borderRadius: '10px', cursor: 'pointer', transition: 'all 0.15s' }}>
+                      <button type="button" key={ext.code} aria-pressed={sel} onClick={() => setForm(prev => ({ ...prev, selectedExtensions: sel ? prev.selectedExtensions.filter(c => c !== ext.code) : [...prev.selectedExtensions, ext.code] }))} style={{ width: '100%', padding: '14px 16px', background: sel ? 'rgba(70,168,115,0.04)' : '#12151A', border: `1px solid ${sel ? 'rgba(70,168,115,0.35)' : '#242830'}`, borderRadius: '10px', cursor: 'pointer', transition: 'all 0.15s', textAlign: 'left', fontFamily: "'Inter', system-ui, sans-serif" }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', marginBottom: '4px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{ width: '16px', height: '16px', borderRadius: '4px', border: `1px solid ${sel ? '#39D6C7' : '#2A3441'}`, background: sel ? '#39D6C7' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '10px', color: '#0D1620' }}>{sel ? '✓' : ''}</div>
-                            <span style={{ fontSize: '13px', fontWeight: 600, color: sel ? '#39D6C7' : '#D4E4F0' }}>{ext.name}</span>
+                            <div style={{ width: '16px', height: '16px', borderRadius: '4px', border: `1px solid ${sel ? '#46A873' : '#242830'}`, background: sel ? '#46A873' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#0D0F12' }}>{sel && <Icon name="check" size={11} strokeWidth={2.5} />}</div>
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: sel ? '#46A873' : '#AAB6C4' }}>{ext.name}</span>
                           </div>
-                          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', letterSpacing: '0.06em', color: '#3D5468', whiteSpace: 'nowrap', paddingTop: '2px' }}>{ext.code}</span>
+                          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', letterSpacing: '0.06em', color: '#AAB6C4', whiteSpace: 'nowrap', paddingTop: '2px' }}>{ext.code}</span>
                         </div>
-                        <div style={{ fontSize: '12px', color: '#4B6278', lineHeight: 1.55, marginLeft: '26px', marginBottom: '4px' }}>{ext.description}</div>
-                        <div style={{ fontSize: '11px', color: '#3D5468', fontFamily: "'JetBrains Mono', monospace", marginLeft: '26px' }}>{ext.includedCapabilities}</div>
-                      </div>
+                        <div style={{ fontSize: '12px', color: '#AAB6C4', lineHeight: 1.55, marginLeft: '26px', marginBottom: '4px' }}>{ext.description}</div>
+                        <div style={{ fontSize: '11px', color: '#AAB6C4', fontFamily: "'JetBrains Mono', monospace", marginLeft: '26px' }}>{ext.includedCapabilities}</div>
+                      </button>
                     )
                   })}
                 </div>
@@ -2460,24 +2602,25 @@ export default function App() {
             {/* ── Custom requests (always visible for Custom Build) ── */}
             <div style={{ marginBottom: '20px' }}>
               <div style={{ ...monoLabel, marginBottom: '6px' }}>Custom Requests</div>
-              <div style={{ fontSize: '12px', color: '#4B6278', marginBottom: '10px' }}>Describe any requests not covered by the extension catalog. These are <span style={{ color: '#F59E0B' }}>unconfirmed</span> — routed to owner review before scope is finalized.</div>
+              <div style={{ fontSize: '12px', color: '#AAB6C4', marginBottom: '10px' }}>Describe any requests not covered by the extension catalog. These are <span style={{ color: '#F5B400' }}>unconfirmed</span> — routed to owner review before scope is finalized.</div>
               {form.customFeatures.length > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px', marginBottom: '12px' }}>
                   {form.customFeatures.map((f, i) => (
-                    <div key={i} style={{ padding: '7px 13px', borderRadius: '100px', border: '1px solid rgba(245,158,11,0.4)', background: 'rgba(245,158,11,0.06)', color: '#F59E0B', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      {f}<button onClick={() => setForm(prev => ({ ...prev, customFeatures: prev.customFeatures.filter((_, idx) => idx !== i) }))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#F59E0B', padding: 0, fontSize: '16px', lineHeight: 1 }}>×</button>
+                    <div key={i} style={{ padding: '7px 13px', borderRadius: '100px', border: '1px solid rgba(245,180,0,0.4)', background: 'rgba(245,180,0,0.06)', color: '#F5B400', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {f}<button aria-label={`Remove ${f}`} onClick={() => setForm(prev => ({ ...prev, customFeatures: prev.customFeatures.filter((_, idx) => idx !== i) }))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#F5B400', padding: '2px', lineHeight: 1, display: 'inline-flex' }}><Icon name="close" size={13} strokeWidth={2} /></button>
                     </div>
                   ))}
                 </div>
               )}
               <div style={{ display: 'flex', gap: '8px' }}>
-                <input value={customInput} onChange={e => setCustomInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && customInput.trim()) { setForm(prev => ({ ...prev, customFeatures: [...prev.customFeatures, customInput.trim()] })); setCustomInput('') } }} placeholder="Describe a custom request..." style={{ ...inputStyle, flex: 1 }} />
-                <button onClick={() => { if (customInput.trim()) { setForm(prev => ({ ...prev, customFeatures: [...prev.customFeatures, customInput.trim()] })); setCustomInput('') } }} style={{ padding: '0 18px', borderRadius: '8px', border: '1px solid #2A3441', background: '#111827', cursor: 'pointer', color: '#E2E8F0', fontSize: '13px', fontFamily: "'Inter', system-ui, sans-serif" }}>Add</button>
+                <label htmlFor="field-custom-request" className="sr-only">Custom request</label>
+                <input id="field-custom-request" value={customInput} onChange={e => setCustomInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && customInput.trim()) { setForm(prev => ({ ...prev, customFeatures: [...prev.customFeatures, customInput.trim()] })); setCustomInput('') } }} placeholder="Describe a custom request..." style={{ ...inputStyle, flex: 1 }} />
+                <button onClick={() => { if (customInput.trim()) { setForm(prev => ({ ...prev, customFeatures: [...prev.customFeatures, customInput.trim()] })); setCustomInput('') } }} style={{ padding: '0 18px', borderRadius: '8px', border: '1px solid #242830', background: '#12151A', cursor: 'pointer', color: '#E5E7EB', fontSize: '13px', fontFamily: "'Inter', system-ui, sans-serif" }}>Add</button>
               </div>
             </div>
 
             {form.selectedExtensions.length > 0 && (
-              <div style={{ padding: '10px 16px', background: 'rgba(57,214,199,0.05)', border: '1px solid rgba(57,214,199,0.18)', borderRadius: '8px', fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', color: '#39D6C7' }}>
+              <div style={{ padding: '10px 16px', background: 'rgba(70,168,115,0.05)', border: '1px solid rgba(70,168,115,0.18)', borderRadius: '8px', fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', color: '#46A873' }}>
                 {form.selectedExtensions.length} extension{form.selectedExtensions.length !== 1 ? 's' : ''} selected — included in your preliminary Build Card
               </div>
             )}
@@ -2547,7 +2690,7 @@ export default function App() {
                       if (answeredFields.length === 0) return null
                       return (
                         <div key={group} style={{ marginBottom: '10px' }}>
-                          <div style={{ fontSize: '10px', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.08em', textTransform: 'uppercase', color: '#39D6C7', marginBottom: '6px' }}>{QUESTIONNAIRE_GROUP_LABELS[group]}</div>
+                          <div style={{ fontSize: '10px', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.08em', textTransform: 'uppercase', color: '#46A873', marginBottom: '6px' }}>{QUESTIONNAIRE_GROUP_LABELS[group]}</div>
                           {answeredFields.map(f => {
                             const v = q[f.key as keyof WebsiteQuestionnaire]
                              const display = displayValue(f, v)
@@ -2566,8 +2709,8 @@ export default function App() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     {CORE_FEATURES.map(cf => (
                       <div key={cf.code} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', color: '#39D6C7', minWidth: '52px' }}>{cf.code}</span>
-                        <span style={{ fontSize: '12px', color: '#D4E4F0' }}>{cf.name}</span>
+                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', color: '#46A873', minWidth: '52px' }}>{cf.code}</span>
+                        <span style={{ fontSize: '12px', color: '#AAB6C4' }}>{cf.name}</span>
                       </div>
                     ))}
                   </div>
@@ -2582,8 +2725,8 @@ export default function App() {
                       const ext = EXTENSIONS.find(e => e.code === code)
                       return (
                         <div key={code} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', color: '#39D6C7', minWidth: '52px' }}>{code}</span>
-                          <span style={{ fontSize: '12px', color: '#D4E4F0' }}>{ext?.name || code}</span>
+                          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', color: '#46A873', minWidth: '52px' }}>{code}</span>
+                          <span style={{ fontSize: '12px', color: '#AAB6C4' }}>{ext?.name || code}</span>
                         </div>
                       )
                     })}
@@ -2594,24 +2737,24 @@ export default function App() {
               {/* ── Custom requests ── */}
               {(form.projectType === 'templated-website' || form.projectType === 'ai-assisted-website') && form.customFeatures.length > 0 && (
                 <ReviewBlock title={`Custom Requests · ${form.customFeatures.length} Unconfirmed`} onEdit={() => goToStep('pages-features')}>
-                  <div style={{ fontSize: '11px', color: '#F59E0B', marginBottom: '8px' }}>Routed to owner review — not confirmed scope</div>
+                  <div style={{ fontSize: '11px', color: '#F5B400', marginBottom: '8px' }}>Routed to owner review — not confirmed scope</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-                    {form.customFeatures.map((f, i) => <span key={i} style={{ padding: '3px 9px', borderRadius: '100px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.28)', fontSize: '11px', color: '#F59E0B' }}>{f}</span>)}
+                    {form.customFeatures.map((f, i) => <span key={i} style={{ padding: '3px 9px', borderRadius: '100px', background: 'rgba(245,180,0,0.06)', border: '1px solid rgba(245,180,0,0.28)', fontSize: '11px', color: '#F5B400' }}>{f}</span>)}
                   </div>
                 </ReviewBlock>
               )}
 
               {missingReqSnapshot.length > 0 && (
-                <div style={{ ...cardStyle, border: '1px solid rgba(245,158,11,0.28)' }}>
-                  <div style={{ ...monoLabel, color: '#F59E0B' }}>Missing / Incomplete — {missingReqSnapshot.length}</div>
-                  <div style={{ fontSize: '13px', color: '#4B6278', lineHeight: 1.55, marginBottom: '12px' }}>
+                <div style={{ ...cardStyle, border: '1px solid rgba(245,180,0,0.28)' }}>
+                  <div style={{ ...monoLabel, color: '#F5B400' }}>Missing / Incomplete — {missingReqSnapshot.length}</div>
+                  <div style={{ fontSize: '13px', color: '#AAB6C4', lineHeight: 1.55, marginBottom: '12px' }}>
                     These items are not blocking a draft. Submission requires the items marked <strong style={{ color: '#EF4444' }}>required</strong>.
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {missingReqSnapshot.map(req => (
-                      <div key={req.key} style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', padding: '8px 10px', background: '#0D1620', border: '1px solid #1E2E3D', borderRadius: '6px' }}>
-                        <span style={{ fontSize: '12px', color: '#D4E4F0' }}>{req.label}</span>
-                        <span style={{ fontSize: '10px', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.08em', textTransform: 'uppercase', color: req.severity === 'required' ? '#EF4444' : req.severity === 'recommended' ? '#F59E0B' : '#4B6278' }}>{req.severity}</span>
+                      <div key={req.key} style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', padding: '8px 10px', background: '#0D0F12', border: '1px solid #1A1C22', borderRadius: '6px' }}>
+                        <span style={{ fontSize: '12px', color: '#AAB6C4' }}>{req.label}</span>
+                        <span style={{ fontSize: '10px', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.08em', textTransform: 'uppercase', color: req.severity === 'required' ? '#EF4444' : req.severity === 'recommended' ? '#F5B400' : '#333944' }}>{req.severity}</span>
                       </div>
                     ))}
                   </div>
@@ -2619,29 +2762,29 @@ export default function App() {
               )}
 
               {form.projectType === 'templated-website' && selectedTemplate && form.projectVersion && (
-                <div style={{ ...cardStyle, border: '1px solid rgba(57,214,199,0.25)' }}>
-                  <div style={{ ...monoLabel, color: '#39D6C7' }}>Preliminary Project Receipt</div>
+                <div style={{ ...cardStyle, border: '1px solid rgba(70,168,115,0.25)' }}>
+                  <div style={{ ...monoLabel, color: '#46A873' }}>Preliminary Project Receipt</div>
                   <ReviewRow label="Base template" value={formatPhp(pricing.base)} />
                   <ReviewRow label="Platform" value={`${pricing.versionLabel} — Included`} />
                   {form.colorPreset && <ReviewRow label="Color style" value={`${COLOR_OPTIONS.find(c => c.id === form.colorPreset)?.name || '—'} — Included`} />}
                   {form.selectedAssetServices.length > 0 && <ReviewRow label="Asset services" value="Price pending configuration" />}
-                  <div style={{ height: '1px', background: '#2A3441', margin: '12px 0' }} />
+                  <div style={{ height: '1px', background: '#242830', margin: '12px 0' }} />
                   <ReviewRow label="Preliminary Total" value={formatPhp(pricing.total)} bold />
-                  <div style={{ height: '1px', background: '#2A3441', margin: '12px 0' }} />
+                  <div style={{ height: '1px', background: '#242830', margin: '12px 0' }} />
                   <ReviewRow label="Build duration" value={`${pricing.delivery} working days`} />
                   <ReviewRow label="Est. completion" value={deliveryDate(pricing.delivery)} />
-                  <div style={{ marginTop: '10px', fontSize: '12px', color: '#3D5468', lineHeight: 1.6 }}>Subject to M-THRYVE owner review and final approval. Delivery begins after approval, payment, and receipt of all required assets.</div>
+                  <div style={{ marginTop: '10px', fontSize: '12px', color: '#AAB6C4', lineHeight: 1.6 }}>Subject to M-THRYVE owner review and final approval. Delivery begins after approval, payment, and receipt of all required assets.</div>
                 </div>
               )}
 
               {form.tier === 'enterprise' && (
-                <div style={{ ...cardStyle, border: '1px solid rgba(139,92,246,0.25)' }}>
-                  <div style={{ ...monoLabel, color: '#8B5CF6' }}>Enterprise Preliminary Estimate</div>
-                  <div style={{ fontSize: '13px', color: '#4B6278', lineHeight: 1.6 }}>Your preliminary price and timeline will be confirmed by the M-THRYVE owner after intake analysis. A formal agreement will be prepared before any billing begins.</div>
+                <div style={{ ...cardStyle, border: '1px solid rgba(170,182,196,0.25)' }}>
+                  <div style={{ ...monoLabel, color: '#AAB6C4' }}>Enterprise Preliminary Estimate</div>
+                  <div style={{ fontSize: '13px', color: '#AAB6C4', lineHeight: 1.6 }}>Your preliminary price and timeline will be confirmed by the M-THRYVE owner after intake analysis. A formal agreement will be prepared before any billing begins.</div>
                 </div>
               )}
 
-              <div style={{ padding: '14px 18px', background: '#0D1620', border: '1px solid #1E2E3D', borderRadius: '10px', fontSize: '12px', color: '#3D5468', lineHeight: 1.7 }}>
+              <div style={{ padding: '14px 18px', background: '#0D0F12', border: '1px solid #1A1C22', borderRadius: '10px', fontSize: '12px', color: '#AAB6C4', lineHeight: 1.7 }}>
                 Your unique Build Reference Number is generated only after successful submission. It will appear on your submitted Build Card.
               </div>
             </div>
@@ -2660,7 +2803,7 @@ export default function App() {
             {submitAttempted && !canSubmit(form).ok && (
               <div style={{ padding: '14px 16px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.28)', borderRadius: '10px', marginBottom: '18px' }}>
                 <div style={{ fontSize: '13px', color: '#EF4444', fontWeight: 600, marginBottom: '6px' }}>Cannot submit — required information is missing</div>
-                <div style={{ fontSize: '12px', color: '#9B6A6A', lineHeight: 1.6, marginBottom: '10px' }}>
+                <div style={{ fontSize: '12px', color: '#F2B8B8', lineHeight: 1.6, marginBottom: '10px' }}>
                   Save as Draft to preserve what's captured, or return to the flagged section to fill it in.
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
@@ -2668,10 +2811,10 @@ export default function App() {
                     <button
                       key={req.key}
                       onClick={() => goToStep(req.section as StepId)}
-                      style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', padding: '8px 10px', background: '#0D1620', border: '1px solid #2A3441', borderRadius: '6px', cursor: 'pointer', textAlign: 'left', fontFamily: "'Inter', system-ui, sans-serif" }}
+                      style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', padding: '8px 10px', background: '#0D0F12', border: '1px solid #242830', borderRadius: '6px', cursor: 'pointer', textAlign: 'left', fontFamily: "'Inter', system-ui, sans-serif" }}
                     >
-                      <span style={{ fontSize: '12px', color: '#D4E4F0' }}>{req.label}</span>
-                      <span style={{ fontSize: '11px', color: '#39D6C7' }}>Open {req.section} →</span>
+                      <span style={{ fontSize: '12px', color: '#AAB6C4' }}>{req.label}</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: '#46A873' }}>Open {req.section}<Icon name="arrow-right" size={13} /></span>
                     </button>
                   ))}
                 </div>
@@ -2684,7 +2827,7 @@ export default function App() {
                   id: 'submitted' as IntakeOutcome,
                   title: 'Submitted',
                   badge: 'Ready for owner review',
-                  badgeColor: '#39D6C7',
+                  badgeColor: '#46A873',
                   desc: 'Discovery is complete. Validates against the discovery contract, generates a preliminary Build Card, and places the intake in the owner-review queue.',
                   action: 'Submit intake',
                   onClick: handleSubmitIntake,
@@ -2693,7 +2836,7 @@ export default function App() {
                   id: 'draft' as IntakeOutcome,
                   title: 'Draft',
                   badge: 'Save without submitting',
-                  badgeColor: '#F59E0B',
+                  badgeColor: '#F5B400',
                   desc: 'Preserves everything captured so far. Missing requirements are recorded as follow-ups. Not placed in the owner-review queue and no Build Card is generated.',
                   action: 'Save as draft',
                   onClick: handleSaveDraft,
@@ -2708,12 +2851,12 @@ export default function App() {
                   onClick: openDiscardModal,
                 },
               ].map(opt => (
-                <div key={opt.id} style={{ padding: '20px', borderRadius: '12px', border: `1px solid ${opt.badgeColor}40`, background: '#111827' }}>
+                <div key={opt.id} style={{ padding: '20px', borderRadius: '12px', border: `1px solid ${opt.badgeColor}40`, background: '#12151A' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                    <div style={{ fontSize: '16px', fontWeight: 700, color: '#F0F6FF', letterSpacing: '-0.01em' }}>{opt.title}</div>
+                    <div style={{ fontSize: '16px', fontWeight: 700, color: '#E5E7EB', letterSpacing: '-0.01em' }}>{opt.title}</div>
                     <span style={{ padding: '3px 10px', borderRadius: '100px', background: `${opt.badgeColor}18`, border: `1px solid ${opt.badgeColor}40`, fontSize: '11px', fontWeight: 600, color: opt.badgeColor, whiteSpace: 'nowrap' }}>{opt.badge}</span>
                   </div>
-                  <div style={{ fontSize: '13px', color: '#4B6278', lineHeight: 1.6, marginBottom: '14px' }}>{opt.desc}</div>
+                  <div style={{ fontSize: '13px', color: '#AAB6C4', lineHeight: 1.6, marginBottom: '14px' }}>{opt.desc}</div>
                   <button
                     onClick={opt.onClick}
                     disabled={submitting}
@@ -2738,21 +2881,21 @@ export default function App() {
             </div>
 
             {outcomeFinalized === 'draft' && (
-              <div style={{ marginTop: '20px', padding: '18px 20px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.28)', borderRadius: '10px' }}>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: '#F59E0B', marginBottom: '4px' }}>Draft saved. Review warnings before submit.</div>
-                <div style={{ fontSize: '13px', color: '#C4D8EA', lineHeight: 1.6 }}>
+              <div style={{ marginTop: '20px', padding: '18px 20px', background: 'rgba(245,180,0,0.06)', border: '1px solid rgba(245,180,0,0.28)', borderRadius: '10px' }}>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: '#F5B400', marginBottom: '4px' }}>Draft saved. Review warnings before submit.</div>
+                <div style={{ fontSize: '13px', color: '#AAB6C4', lineHeight: 1.6 }}>
                   All captured discovery information is preserved. {missingReqSnapshot.length > 0 && `${missingReqSnapshot.length} follow-up item${missingReqSnapshot.length === 1 ? ' is' : 's are'} recorded on the intake.`} No Build Card was generated and the intake is not in the owner-review queue.
                 </div>
-                <div style={{ fontSize: '11px', color: '#3D5468', marginTop: '10px', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.06em' }}>
+                <div style={{ fontSize: '11px', color: '#AAB6C4', marginTop: '10px', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.06em' }}>
                   Draft saved to the server.
                 </div>
               </div>
             )}
 
             {submitting && (
-              <div style={{ marginTop: '20px', padding: '18px', background: '#0D1620', border: '1px solid rgba(57,214,199,0.2)', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{ width: '20px', height: '20px', border: '2px solid #1A2535', borderTop: '2px solid #39D6C7', borderRadius: '50%', flexShrink: 0 }} />
-                <span style={{ fontSize: '13px', color: '#39D6C7' }}>Submitting your intake…</span>
+              <div style={{ marginTop: '20px', padding: '18px', background: '#0D0F12', border: '1px solid rgba(70,168,115,0.2)', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{ width: '20px', height: '20px', border: '2px solid #1A1C22', borderTop: '2px solid #46A873', borderRadius: '50%', flexShrink: 0 }} />
+                <span style={{ fontSize: '13px', color: '#46A873' }}>Submitting your intake…</span>
               </div>
             )}
 
@@ -2770,51 +2913,51 @@ export default function App() {
         {currentStep === 'draft-saved' && outcomeFinalized === 'draft' && (
           <div>
             <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 16px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '100px', marginBottom: '20px' }}>
-                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#F59E0B' }} />
-                <span style={{ fontSize: '12px', fontWeight: 600, color: '#F59E0B', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.06em' }}>Draft Saved</span>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 16px', background: 'rgba(245,180,0,0.08)', border: '1px solid rgba(245,180,0,0.25)', borderRadius: '100px', marginBottom: '20px' }}>
+                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#F5B400' }} />
+                <span style={{ fontSize: '12px', fontWeight: 600, color: '#F5B400', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.06em' }}>Draft Saved</span>
               </div>
-              <h1 style={{ fontSize: '32px', fontWeight: 700, letterSpacing: '-0.025em', color: '#F0F6FF', margin: '0 0 10px' }}>Intake Saved as Draft</h1>
-              <p style={{ fontSize: '15px', color: '#4B6278', lineHeight: 1.65 }}>Your discovery information has been preserved. No Build Card was generated and this intake is not yet in the owner-review queue.</p>
+              <h1 style={{ fontSize: '32px', fontWeight: 700, letterSpacing: '-0.025em', color: '#E5E7EB', margin: '0 0 10px' }}>Intake Saved as Draft</h1>
+              <p style={{ fontSize: '15px', color: '#AAB6C4', lineHeight: 1.65 }}>Your discovery information has been preserved. No Build Card was generated and this intake is not yet in the owner-review queue.</p>
             </div>
 
             {/* Client ID */}
             {(savedIntakeId || savedReferenceNumber) && (
-              <div style={{ ...cardStyle, border: '1px solid rgba(245,158,11,0.3)', marginBottom: '12px' }}>
-                <div style={{ ...monoLabel, color: '#F59E0B', marginBottom: '12px' }}>Draft Identifiers</div>
+              <div style={{ ...cardStyle, border: '1px solid rgba(245,180,0,0.3)', marginBottom: '12px' }}>
+                <div style={{ ...monoLabel, color: '#F5B400', marginBottom: '12px' }}>Draft Identifiers</div>
                 {savedReferenceNumber && (
                   <div style={{ marginBottom: '10px' }}>
-                    <div style={{ fontSize: '11px', color: '#3D5468', letterSpacing: '0.06em', fontFamily: "'JetBrains Mono', monospace", marginBottom: '4px' }}>REFERENCE NUMBER</div>
+                    <div style={{ fontSize: '11px', color: '#AAB6C4', letterSpacing: '0.06em', fontFamily: "'JetBrains Mono', monospace", marginBottom: '4px' }}>REFERENCE NUMBER</div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '20px', fontWeight: 700, color: '#F59E0B', letterSpacing: '0.08em' }}>{savedReferenceNumber}</div>
-                      <button onClick={() => copyToClipboard(savedReferenceNumber, 'ref')} style={{ padding: '6px 12px', borderRadius: '7px', border: '1px solid rgba(245,158,11,0.3)', background: copiedRef ? 'rgba(245,158,11,0.15)' : 'transparent', cursor: 'pointer', color: copiedRef ? '#F59E0B' : '#4B6278', fontSize: '12px', fontWeight: 600, fontFamily: "'Inter', system-ui, sans-serif" }}>
-                        {copiedRef ? '✓ Copied' : 'Copy'}
+                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '20px', fontWeight: 700, color: '#F5B400', letterSpacing: '0.08em' }}>{savedReferenceNumber}</div>
+                      <button onClick={() => copyToClipboard(savedReferenceNumber, 'ref')} style={{ padding: '6px 12px', borderRadius: '7px', border: '1px solid rgba(245,180,0,0.3)', background: copiedRef ? 'rgba(245,180,0,0.15)' : 'transparent', cursor: 'pointer', color: copiedRef ? '#F5B400' : '#333944', fontSize: '12px', fontWeight: 600, fontFamily: "'Inter', system-ui, sans-serif" }}>
+                        {copiedRef ? <><Icon name="check" size={12} strokeWidth={2.2} /> Copied</> : 'Copy'}
                       </button>
                     </div>
                   </div>
                 )}
                 {savedClientId && (
                   <div style={{ marginBottom: '10px' }}>
-                    <div style={{ fontSize: '11px', color: '#3D5468', letterSpacing: '0.06em', fontFamily: "'JetBrains Mono', monospace", marginBottom: '4px' }}>CLIENT ID</div>
-                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '13px', color: '#C4D8EA', wordBreak: 'break-all' }}>{savedClientId}</div>
+                    <div style={{ fontSize: '11px', color: '#AAB6C4', letterSpacing: '0.06em', fontFamily: "'JetBrains Mono', monospace", marginBottom: '4px' }}>CLIENT ID</div>
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '13px', color: '#AAB6C4', wordBreak: 'break-all' }}>{savedClientId}</div>
                   </div>
                 )}
                 {savedIntakeId && (
                   <div>
-                    <div style={{ fontSize: '11px', color: '#3D5468', letterSpacing: '0.06em', fontFamily: "'JetBrains Mono', monospace", marginBottom: '4px' }}>INTAKE ID</div>
-                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '13px', color: '#4B6278', wordBreak: 'break-all' }}>{savedIntakeId}</div>
+                    <div style={{ fontSize: '11px', color: '#AAB6C4', letterSpacing: '0.06em', fontFamily: "'JetBrains Mono', monospace", marginBottom: '4px' }}>INTAKE ID</div>
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '13px', color: '#AAB6C4', wordBreak: 'break-all' }}>{savedIntakeId}</div>
                   </div>
                 )}
-                <div style={{ fontSize: '12px', color: '#3D5468', marginTop: '12px', lineHeight: 1.5 }}>Use this reference when contacting M-THRYVE about this draft. No Build Card has been generated yet.</div>
+                <div style={{ fontSize: '12px', color: '#AAB6C4', marginTop: '12px', lineHeight: 1.5 }}>Use this reference when contacting M-THRYVE about this draft. No Build Card has been generated yet.</div>
               </div>
             )}
 
             <div style={{ ...cardStyle, marginBottom: '12px' }}>
-              <div style={{ ...monoLabel, color: '#39D6C7', marginBottom: '10px' }}>Captured Data & Assets</div>
-              <div style={{ fontSize: '13px', color: '#C4D8EA', lineHeight: 1.6 }}>
+              <div style={{ ...monoLabel, color: '#46A873', marginBottom: '10px' }}>Captured Data & Assets</div>
+              <div style={{ fontSize: '13px', color: '#AAB6C4', lineHeight: 1.6 }}>
                 Client, project, path, scope, questionnaire/template details, resource notes, and page contents were captured with this draft.
               </div>
-              <div role="status" style={{ fontSize: '12px', color: '#7F95A8', marginTop: '8px' }}>
+              <div role="status" style={{ fontSize: '12px', color: '#7C8794', marginTop: '8px' }}>
                 {form.uploadedAssets.length} uploaded asset{form.uploadedAssets.length === 1 ? '' : 's'} ·{' '}
                 {form.uploadedAssets.filter(asset => asset.assetStatus === 'ready').length} ready ·{' '}
                 {form.uploadedAssets.filter(asset => ['pending', 'uploaded', 'scanning'].includes(asset.assetStatus)).length} processing ·{' '}
@@ -2824,17 +2967,17 @@ export default function App() {
 
             {/* Missing requirements */}
             {missingReqSnapshot.length > 0 && (
-              <div style={{ ...cardStyle, border: '1px solid rgba(245,158,11,0.2)', marginBottom: '12px' }}>
-                <div style={{ ...monoLabel, color: '#F59E0B', marginBottom: '10px' }}>{missingReqSnapshot.length} Item{missingReqSnapshot.length === 1 ? '' : 's'} Required Before Submission</div>
+              <div style={{ ...cardStyle, border: '1px solid rgba(245,180,0,0.2)', marginBottom: '12px' }}>
+                <div style={{ ...monoLabel, color: '#F5B400', marginBottom: '10px' }}>{missingReqSnapshot.length} Item{missingReqSnapshot.length === 1 ? '' : 's'} Required Before Submission</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {missingReqSnapshot.slice(0, 8).map((req, i) => (
-                    <div key={i} style={{ fontSize: '13px', color: '#C4D8EA', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                      <span style={{ color: '#F59E0B', flexShrink: 0, marginTop: '1px' }}>◦</span>
+                    <div key={i} style={{ fontSize: '13px', color: '#AAB6C4', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                      <span style={{ color: '#F5B400', flexShrink: 0, marginTop: '1px' }}>◦</span>
                       <span>{req.label}</span>
                     </div>
                   ))}
                   {missingReqSnapshot.length > 8 && (
-                    <div style={{ fontSize: '12px', color: '#3D5468' }}>+{missingReqSnapshot.length - 8} more items</div>
+                    <div style={{ fontSize: '12px', color: '#AAB6C4' }}>+{missingReqSnapshot.length - 8} more items</div>
                   )}
                 </div>
               </div>
@@ -2848,21 +2991,21 @@ export default function App() {
                   setOutcomeFinalized(null)
                   setStepIndex(resumeIndex >= 0 ? resumeIndex : flow.indexOf('review'))
                 }}
-                style={{ flex: 1, padding: '14px', borderRadius: '10px', border: '1px solid rgba(57,214,199,0.3)', background: 'rgba(57,214,199,0.06)', cursor: 'pointer', color: '#39D6C7', fontSize: '14px', fontWeight: 600 }}
+                style={{ flex: 1, padding: '14px', borderRadius: '10px', border: '1px solid rgba(70,168,115,0.3)', background: 'rgba(70,168,115,0.06)', cursor: 'pointer', color: '#46A873', fontSize: '14px', fontWeight: 600 }}
               >
                 Continue Editing
               </button>
               <button
                 onClick={handleSubmitIntake}
                 disabled={submitting || missingReqSnapshot.length > 0}
-                style={{ flex: 1, padding: '14px', borderRadius: '10px', border: 'none', background: missingReqSnapshot.length > 0 ? '#1A2535' : '#39D6C7', cursor: missingReqSnapshot.length > 0 ? 'not-allowed' : 'pointer', color: missingReqSnapshot.length > 0 ? '#3D5468' : '#060E18', fontSize: '14px', fontWeight: 700 }}
+                style={{ flex: 1, padding: '14px', borderRadius: '10px', border: 'none', background: missingReqSnapshot.length > 0 ? '#1A1C22' : '#46A873', cursor: missingReqSnapshot.length > 0 ? 'not-allowed' : 'pointer', color: missingReqSnapshot.length > 0 ? '#333944' : '#0A0C0F', fontSize: '14px', fontWeight: 700 }}
               >
                 {submitting ? 'Submitting…' : 'Submit for Review'}
               </button>
             </div>
             <button
               onClick={resetAll}
-              style={{ width: '100%', marginTop: '10px', padding: '11px', borderRadius: '10px', border: '1px solid #2A3441', background: 'transparent', cursor: 'pointer', color: '#7F95A8', fontSize: '13px', fontWeight: 600 }}
+              style={{ width: '100%', marginTop: '10px', padding: '11px', borderRadius: '10px', border: '1px solid #242830', background: 'transparent', cursor: 'pointer', color: '#7C8794', fontSize: '13px', fontWeight: 600 }}
             >
               Return to intake list / start a new intake
             </button>
@@ -2878,87 +3021,87 @@ export default function App() {
         {currentStep === 'build-card' && submitted && outcomeFinalized === 'submitted' && (
           <div>
             <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 16px', background: 'rgba(57,214,199,0.08)', border: '1px solid rgba(57,214,199,0.25)', borderRadius: '100px', marginBottom: '20px' }}>
-                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#39D6C7' }} />
-                <span style={{ fontSize: '12px', fontWeight: 600, color: '#39D6C7', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.06em' }}>Waiting for Owner Review</span>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 16px', background: 'rgba(70,168,115,0.08)', border: '1px solid rgba(70,168,115,0.25)', borderRadius: '100px', marginBottom: '20px' }}>
+                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#46A873' }} />
+                <span style={{ fontSize: '12px', fontWeight: 600, color: '#46A873', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.06em' }}>Waiting for Owner Review</span>
               </div>
-              <h1 style={{ fontSize: '32px', fontWeight: 700, letterSpacing: '-0.025em', color: '#F0F6FF', margin: '0 0 10px' }}>Intake Submitted</h1>
-              <p style={{ fontSize: '15px', color: '#4B6278', lineHeight: 1.65 }}>Your preliminary Build Card has been created and sent to M-THRYVE for owner review.</p>
+              <h1 style={{ fontSize: '32px', fontWeight: 700, letterSpacing: '-0.025em', color: '#E5E7EB', margin: '0 0 10px' }}>Intake Submitted</h1>
+              <p style={{ fontSize: '15px', color: '#AAB6C4', lineHeight: 1.65 }}>Your preliminary Build Card has been created and sent to M-THRYVE for owner review.</p>
             </div>
 
             {/* Build Reference Number — first and only appearance */}
-            <div style={{ ...cardStyle, border: '1px solid rgba(57,214,199,0.3)', marginBottom: '12px' }}>
-              <div style={{ ...monoLabel, color: '#39D6C7' }}>Build Reference Number</div>
+            <div style={{ ...cardStyle, border: '1px solid rgba(70,168,115,0.3)', marginBottom: '12px' }}>
+              <div style={{ ...monoLabel, color: '#46A873' }}>Build Reference Number</div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '26px', fontWeight: 700, color: '#39D6C7', letterSpacing: '0.08em' }}>{buildRef}</div>
-                <button onClick={() => copyToClipboard(buildRef, 'ref')} style={{ padding: '8px 16px', borderRadius: '7px', border: '1px solid rgba(57,214,199,0.3)', background: copiedRef ? 'rgba(57,214,199,0.15)' : 'transparent', cursor: 'pointer', color: copiedRef ? '#39D6C7' : '#4B6278', fontSize: '12px', fontWeight: 600, fontFamily: "'Inter', system-ui, sans-serif", transition: 'all 0.15s' }}>
-                  {copiedRef ? '✓ Copied' : 'Copy'}
+                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '26px', fontWeight: 700, color: '#46A873', letterSpacing: '0.08em' }}>{buildRef}</div>
+                <button onClick={() => copyToClipboard(buildRef, 'ref')} style={{ padding: '8px 16px', borderRadius: '7px', border: '1px solid rgba(70,168,115,0.3)', background: copiedRef ? 'rgba(70,168,115,0.15)' : 'transparent', cursor: 'pointer', color: copiedRef ? '#46A873' : '#333944', fontSize: '12px', fontWeight: 600, fontFamily: "'Inter', system-ui, sans-serif", transition: 'all 0.15s' }}>
+                        {copiedRef ? <><Icon name="check" size={12} strokeWidth={2.2} /> Copied</> : 'Copy'}
                 </button>
               </div>
-              <div style={{ fontSize: '13px', color: '#3D5468', lineHeight: 1.55 }}>Use this reference when contacting M-THRYVE about your project. Do not share it publicly.</div>
+              <div style={{ fontSize: '13px', color: '#AAB6C4', lineHeight: 1.55 }}>Use this reference when contacting M-THRYVE about your project. Do not share it publicly.</div>
             </div>
 
             {/* Preliminary Build Card */}
             <div style={{ ...cardStyle, marginBottom: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                 <div>
-                  <div style={{ ...monoLabel, color: '#F59E0B', marginBottom: '6px' }}>Preliminary Build Card — Subject to Owner Review</div>
-                  <div style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#F0F6FF' }}>{form.projectName || 'Your Project'}</div>
-                  <div style={{ fontSize: '13px', color: '#4B6278', marginTop: '2px' }}>{form.company || 'M-THRYVE Client'} · {TIER_LABELS[form.tier]}</div>
+                  <div style={{ ...monoLabel, color: '#F5B400', marginBottom: '6px' }}>Preliminary Build Card — Subject to Owner Review</div>
+                  <div style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#E5E7EB' }}>{form.projectName || 'Your Project'}</div>
+                  <div style={{ fontSize: '13px', color: '#AAB6C4', marginTop: '2px' }}>{form.company || 'M-THRYVE Client'} · {TIER_LABELS[form.tier]}</div>
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-                <div style={{ padding: '14px', background: '#0D1620', borderRadius: '8px', border: '1px solid #1E2E3D' }}>
-                  <div style={{ ...monoLabel, marginBottom: '6px', fontSize: '9px' }}>Complexity</div>
+                <div style={{ padding: '14px', background: '#0D0F12', borderRadius: '8px', border: '1px solid #1A1C22' }}>
+                  <div style={{ ...monoLabel, marginBottom: '6px', fontSize: '10px' }}>Complexity</div>
                   <div style={{ fontSize: '14px', fontWeight: 700, color: complexity.color, marginBottom: '6px' }}>{complexity.label}</div>
-                  <div style={{ height: '3px', background: '#1A2535', borderRadius: '100px' }}>
+                  <div style={{ height: '3px', background: '#1A1C22', borderRadius: '100px' }}>
                     <div style={{ height: '100%', width: `${complexity.level}%`, background: complexity.color, borderRadius: '100px' }} />
                   </div>
                 </div>
                 {(form.tier === 'template' || form.tier === 'custom') && pricing.total > 0 && (
-                  <div style={{ padding: '14px', background: '#0D1620', borderRadius: '8px', border: '1px solid #1E2E3D' }}>
-                    <div style={{ ...monoLabel, marginBottom: '6px', fontSize: '9px' }}>Preliminary Total</div>
-                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '20px', fontWeight: 700, color: '#39D6C7' }}>{formatPhp(pricing.total)}</div>
-                    <div style={{ fontSize: '11px', color: '#3D5468', marginTop: '2px' }}>Subject to owner review</div>
+                  <div style={{ padding: '14px', background: '#0D0F12', borderRadius: '8px', border: '1px solid #1A1C22' }}>
+                    <div style={{ ...monoLabel, marginBottom: '6px', fontSize: '10px' }}>Preliminary Total</div>
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '20px', fontWeight: 700, color: '#46A873' }}>{formatPhp(pricing.total)}</div>
+                    <div style={{ fontSize: '11px', color: '#AAB6C4', marginTop: '2px' }}>Subject to owner review</div>
                   </div>
                 )}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-                <div style={{ padding: '14px', background: '#0D1620', borderRadius: '8px', border: '1px solid #1E2E3D' }}>
-                  <div style={{ ...monoLabel, marginBottom: '8px', fontSize: '9px' }}>Recommended Stack</div>
-                  {techStack.map(t => <div key={t} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#D4E4F0', marginBottom: '6px' }}><div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#39D6C7', flexShrink: 0 }} />{t}</div>)}
+                <div style={{ padding: '14px', background: '#0D0F12', borderRadius: '8px', border: '1px solid #1A1C22' }}>
+                  <div style={{ ...monoLabel, marginBottom: '8px', fontSize: '10px' }}>Recommended Stack</div>
+                  {techStack.map(t => <div key={t} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#AAB6C4', marginBottom: '6px' }}><div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#46A873', flexShrink: 0 }} />{t}</div>)}
                 </div>
-                <div style={{ padding: '14px', background: '#0D1620', borderRadius: '8px', border: '1px solid #1E2E3D' }}>
-                  <div style={{ ...monoLabel, marginBottom: '8px', fontSize: '9px' }}>Development Team</div>
-                  {team.map(m => <div key={m} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#D4E4F0', marginBottom: '6px' }}><div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#4B6278', flexShrink: 0 }} />{m}</div>)}
+                <div style={{ padding: '14px', background: '#0D0F12', borderRadius: '8px', border: '1px solid #1A1C22' }}>
+                  <div style={{ ...monoLabel, marginBottom: '8px', fontSize: '10px' }}>Development Team</div>
+                  {team.map(m => <div key={m} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#AAB6C4', marginBottom: '6px' }}><div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#333944', flexShrink: 0 }} />{m}</div>)}
                 </div>
               </div>
 
               {(form.projectType === 'templated-website' || form.projectType === 'ai-assisted-website') && (
-                <div style={{ padding: '14px', background: '#0D1620', borderRadius: '8px', border: '1px solid #1E2E3D', marginBottom: '10px' }}>
-                  <div style={{ ...monoLabel, marginBottom: '8px', fontSize: '9px' }}>Factory Core Features · 8 Included</div>
+                <div style={{ padding: '14px', background: '#0D0F12', borderRadius: '8px', border: '1px solid #1A1C22', marginBottom: '10px' }}>
+                  <div style={{ ...monoLabel, marginBottom: '8px', fontSize: '10px' }}>Factory Core Features · 8 Included</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     {CORE_FEATURES.map(cf => (
                       <div key={cf.code} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', color: '#39D6C7', minWidth: '52px' }}>{cf.code}</span>
-                        <span style={{ fontSize: '11px', color: '#D4E4F0' }}>{cf.name}</span>
+                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', color: '#46A873', minWidth: '52px' }}>{cf.code}</span>
+                        <span style={{ fontSize: '11px', color: '#AAB6C4' }}>{cf.name}</span>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
               {(form.projectType === 'templated-website' || form.projectType === 'ai-assisted-website') && form.selectedExtensions.length > 0 && (
-                <div style={{ padding: '14px', background: '#0D1620', borderRadius: '8px', border: '1px solid #1E2E3D', marginBottom: '10px' }}>
-                  <div style={{ ...monoLabel, marginBottom: '8px', fontSize: '9px' }}>Optional Extensions · {form.selectedExtensions.length}</div>
+                <div style={{ padding: '14px', background: '#0D0F12', borderRadius: '8px', border: '1px solid #1A1C22', marginBottom: '10px' }}>
+                  <div style={{ ...monoLabel, marginBottom: '8px', fontSize: '10px' }}>Optional Extensions · {form.selectedExtensions.length}</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     {form.selectedExtensions.map(code => {
                       const ext = EXTENSIONS.find(e => e.code === code)
                       return (
                         <div key={code} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', color: '#39D6C7', minWidth: '52px' }}>{code}</span>
-                          <span style={{ fontSize: '11px', color: '#D4E4F0' }}>{ext?.name || code}</span>
+                          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', color: '#46A873', minWidth: '52px' }}>{code}</span>
+                          <span style={{ fontSize: '11px', color: '#AAB6C4' }}>{ext?.name || code}</span>
                         </div>
                       )
                     })}
@@ -2966,19 +3109,19 @@ export default function App() {
                 </div>
               )}
               {(form.projectType === 'templated-website' || form.projectType === 'ai-assisted-website') && form.customFeatures.length > 0 && (
-                <div style={{ padding: '14px', background: '#0D1620', borderRadius: '8px', border: '1px solid rgba(245,158,11,0.18)', marginBottom: '10px' }}>
-                  <div style={{ ...monoLabel, marginBottom: '4px', fontSize: '9px', color: '#F59E0B' }}>Custom Requests · Unconfirmed Assumptions</div>
-                  <div style={{ fontSize: '11px', color: '#4B6278', marginBottom: '8px' }}>Pending owner review — not confirmed scope</div>
+                <div style={{ padding: '14px', background: '#0D0F12', borderRadius: '8px', border: '1px solid rgba(245,180,0,0.18)', marginBottom: '10px' }}>
+                  <div style={{ ...monoLabel, marginBottom: '4px', fontSize: '10px', color: '#F5B400' }}>Custom Requests · Unconfirmed Assumptions</div>
+                  <div style={{ fontSize: '11px', color: '#AAB6C4', marginBottom: '8px' }}>Pending owner review — not confirmed scope</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-                    {form.customFeatures.map((f, i) => <span key={i} style={{ padding: '3px 9px', borderRadius: '100px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.25)', fontSize: '11px', color: '#F59E0B' }}>{f}</span>)}
+                    {form.customFeatures.map((f, i) => <span key={i} style={{ padding: '3px 9px', borderRadius: '100px', background: 'rgba(245,180,0,0.06)', border: '1px solid rgba(245,180,0,0.25)', fontSize: '11px', color: '#F5B400' }}>{f}</span>)}
                   </div>
                 </div>
               )}
 
-              <div style={{ padding: '12px 14px', background: '#0D1620', borderRadius: '8px', border: '1px solid #1E2E3D' }}>
+              <div style={{ padding: '12px 14px', background: '#0D0F12', borderRadius: '8px', border: '1px solid #1A1C22' }}>
                 <ReviewRow label="Submission date" value={new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} />
                 <ReviewRow label="Status" value="Waiting for Owner Review" bold />
-                <div style={{ marginTop: '10px', padding: '10px 12px', background: '#111827', border: '1px solid #1E2E3D', borderRadius: '6px', fontSize: '11px', color: '#3D5468', lineHeight: 1.6 }}>
+                <div style={{ marginTop: '10px', padding: '10px 12px', background: '#12151A', border: '1px solid #1A1C22', borderRadius: '6px', fontSize: '11px', color: '#AAB6C4', lineHeight: 1.6 }}>
                   Payment, agreement, and billing are handled in a separate workflow after owner approval. This intake does not capture or authorize any charge.
                 </div>
               </div>
@@ -2996,8 +3139,8 @@ export default function App() {
                   'Billing and development begin only under the final approved agreement.',
                   "You'll hear from us within 24 hours at the email address you provided.",
                 ].map((step, i) => (
-                  <div key={i} style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', fontSize: '13px', color: '#4B6278', lineHeight: 1.6 }}>
-                    <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#0D1620', border: '1px solid #2A3441', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', color: '#39D6C7', flexShrink: 0, marginTop: '1px' }}>{i + 1}</div>
+                  <div key={i} style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', fontSize: '13px', color: '#AAB6C4', lineHeight: 1.6 }}>
+                    <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#0D0F12', border: '1px solid #242830', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', color: '#46A873', flexShrink: 0, marginTop: '1px' }}>{i + 1}</div>
                     {step}
                   </div>
                 ))}
@@ -3010,16 +3153,14 @@ export default function App() {
         {!submitting && currentStep !== 'outcome' && (
           <div style={{ display: 'flex', justifyContent: currentStep === 'intro' ? 'flex-end' : 'space-between', alignItems: 'center', marginTop: '48px' }}>
             {currentStep !== 'intro' && currentStep !== 'build-card' && (
-              <button onClick={handleBack} data-testid="wizard-back" style={ghostBtn}>← Back</button>
+              <button aria-label="← Back" onClick={handleBack} data-testid="wizard-back" style={{ ...ghostButtonStyle, display: 'inline-flex', alignItems: 'center', gap: '8px' }}><Icon name="arrow-left" size={14} />Back</button>
             )}
             {currentStep === 'build-card' && (
-              <button onClick={resetAll} style={ghostBtn}>← Start New Intake</button>
+              <button aria-label="← Start New Intake" onClick={resetAll} style={{ ...ghostButtonStyle, display: 'inline-flex', alignItems: 'center', gap: '8px' }}><Icon name="arrow-left" size={14} />Start New Intake</button>
             )}
             {currentStep !== 'build-card' && (
-              <button onClick={handleNext} data-testid="wizard-next" style={primaryBtn} disabled={!canContinue}>
-                {currentStep === 'intro' ? 'Start Project Intake →'
-                  : currentStep === 'review' ? 'Continue →'
-                    : 'Continue →'}
+              <button aria-label={currentStep === 'intro' ? 'Start Project Intake →' : 'Continue →'} onClick={handleNext} data-testid="wizard-next" style={{ ...primaryButtonStyle(canContinue), display: 'inline-flex', alignItems: 'center', gap: '8px' }} disabled={!canContinue}>
+                <span>{currentStep === 'intro' ? 'Start Project Intake' : 'Continue'}</span><Icon name="arrow-right" size={15} />
               </button>
             )}
           </div>
@@ -3027,30 +3168,31 @@ export default function App() {
 
         {currentStep === 'outcome' && !submitting && (
           <div style={{ marginTop: '32px' }}>
-            <button onClick={handleBack} style={ghostBtn}>← Back to Review</button>
+            <button aria-label="← Back to Review" onClick={handleBack} style={{ ...ghostButtonStyle, display: 'inline-flex', alignItems: 'center', gap: '8px' }}><Icon name="arrow-left" size={14} />Back to Review</button>
           </div>
         )}
       </div>
 
       {/* ══ DISCARDED terminal view (Phase 2) ══ */}
+      </main>
       {outcomeFinalized === 'discarded' && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(6,12,16,0.96)', zIndex: 250, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-          <div style={{ background: '#111827', border: '1px solid rgba(239,68,68,0.35)', borderRadius: '14px', width: '100%', maxWidth: '520px', padding: '32px' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,12,15,0.96)', zIndex: 250, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+          <div style={{ background: 'rgba(18,21,26,0.7)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: '14px', width: '100%', maxWidth: '520px', padding: '32px' }}>
             <div style={{ ...monoLabel, color: '#EF4444', marginBottom: '10px' }}>Intake Discarded</div>
-            <div style={{ fontSize: '22px', fontWeight: 700, color: '#F0F6FF', marginBottom: '10px' }}>Archived with reason</div>
-            <div style={{ fontSize: '13px', color: '#4B6278', lineHeight: 1.65, marginBottom: '18px' }}>
+            <div style={{ fontSize: '22px', fontWeight: 700, color: '#E5E7EB', marginBottom: '10px' }}>Archived with reason</div>
+            <div style={{ fontSize: '13px', color: '#AAB6C4', lineHeight: 1.65, marginBottom: '18px' }}>
               This intake has been marked <strong style={{ color: '#EF4444' }}>discarded</strong>. It is not routed to the owner-review queue and no Build Card was generated. Captured discovery state is preserved for the future persistence layer.
             </div>
-            <div style={{ padding: '14px', background: '#0D1620', border: '1px solid #1E2E3D', borderRadius: '10px', marginBottom: '20px' }}>
-              <div style={{ fontSize: '11px', color: '#4B6278', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.06em', marginBottom: '6px' }}>Reason</div>
-              <div style={{ fontSize: '14px', color: '#D4E4F0', marginBottom: '6px' }}>
+            <div style={{ padding: '14px', background: '#0D0F12', border: '1px solid #1A1C22', borderRadius: '10px', marginBottom: '20px' }}>
+              <div style={{ fontSize: '11px', color: '#AAB6C4', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.06em', marginBottom: '6px' }}>Reason</div>
+              <div style={{ fontSize: '14px', color: '#AAB6C4', marginBottom: '6px' }}>
                 {DISCARD_REASON_OPTIONS.find(r => r.code === form.discardReason?.code)?.label || '—'}
               </div>
               {form.discardReason?.note && (
-                <div style={{ fontSize: '13px', color: '#4B6278', lineHeight: 1.55 }}>{form.discardReason.note}</div>
+                <div style={{ fontSize: '13px', color: '#AAB6C4', lineHeight: 1.55 }}>{form.discardReason.note}</div>
               )}
             </div>
-            <button onClick={resetAll} style={{ padding: '10px 18px', borderRadius: '8px', border: 'none', background: '#39D6C7', color: '#060C10', fontSize: '14px', fontWeight: 700, cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif" }}>
+            <button onClick={resetAll} style={{ padding: '10px 18px', borderRadius: '8px', border: 'none', background: '#2E6F46', color: '#FFFFFF', fontSize: '14px', fontWeight: 700, cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif" }}>
               Start new intake
             </button>
           </div>
@@ -3059,28 +3201,30 @@ export default function App() {
 
       {/* ══ DISCARD CONFIRMATION MODAL (Phase 2) ══ */}
       {showDiscardModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(6,12,16,0.92)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-          <div style={{ background: '#111827', border: '1px solid rgba(239,68,68,0.35)', borderRadius: '14px', width: '100%', maxWidth: '480px', padding: '28px' }}>
-            <div style={{ fontSize: '18px', fontWeight: 700, color: '#F0F6FF', marginBottom: '8px' }}>Discard this intake?</div>
-            <div style={{ fontSize: '13px', color: '#4B6278', lineHeight: 1.65, marginBottom: '20px' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,12,15,0.92)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+          <div style={{ background: 'rgba(18,21,26,0.7)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: '14px', width: '100%', maxWidth: '480px', padding: '28px' }}>
+            <div style={{ fontSize: '18px', fontWeight: 700, color: '#E5E7EB', marginBottom: '8px' }}>Discard this intake?</div>
+            <div style={{ fontSize: '13px', color: '#AAB6C4', lineHeight: 1.65, marginBottom: '20px' }}>
               The record will be archived with the reason below. It will not be sent to owner review and no Build Card will be generated.
             </div>
 
             <div style={{ marginBottom: '16px' }}>
-              <div style={labelStyle}>Reason</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div id="discard-reason-label" style={labelStyle}>Reason</div>
+              <div role="group" aria-labelledby="discard-reason-label" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {DISCARD_REASON_OPTIONS.map(opt => {
                   const sel = discardReasonCode === opt.code
                   return (
                     <button
+                      type="button"
                       key={opt.code}
+                      aria-pressed={sel}
                       onClick={() => setDiscardReasonCode(opt.code)}
                       style={{
                         padding: '10px 12px',
                         borderRadius: '8px',
-                        border: `1px solid ${sel ? '#EF4444' : '#2A3441'}`,
-                        background: sel ? 'rgba(239,68,68,0.08)' : '#0D1620',
-                        color: sel ? '#F0F6FF' : '#4B6278',
+                        border: `1px solid ${sel ? '#EF4444' : '#242830'}`,
+                        background: sel ? 'rgba(239,68,68,0.08)' : '#0D0F12',
+                        color: sel ? '#E5E7EB' : '#333944',
                         fontSize: '13px',
                         cursor: 'pointer',
                         textAlign: 'left',
@@ -3095,8 +3239,9 @@ export default function App() {
             </div>
 
             <div style={{ marginBottom: '20px' }}>
-              <div style={labelStyle}>Operator note (optional)</div>
+              <label htmlFor="discard-operator-note" style={labelStyle}>Operator note (optional)</label>
               <textarea
+                id="discard-operator-note"
                 value={discardNote}
                 onChange={e => setDiscardNote(e.target.value)}
                 placeholder="Context, next steps, or verbatim client statement…"
@@ -3108,14 +3253,14 @@ export default function App() {
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button
                 onClick={() => setShowDiscardModal(false)}
-                style={{ padding: '10px 18px', borderRadius: '8px', border: '1px solid #2A3441', background: 'transparent', color: '#4B6278', fontSize: '14px', cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif" }}
+                style={{ padding: '10px 18px', borderRadius: '8px', border: '1px solid #242830', background: 'transparent', color: '#AAB6C4', fontSize: '14px', cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif" }}
               >
                 Keep intake
               </button>
               <button
                 onClick={confirmDiscard}
                 data-testid="discard-confirm"
-                style={{ padding: '10px 18px', borderRadius: '8px', border: 'none', background: '#EF4444', color: '#F0F6FF', fontSize: '14px', fontWeight: 700, cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif" }}
+                style={{ padding: '10px 18px', borderRadius: '8px', border: 'none', background: '#EF4444', color: '#E5E7EB', fontSize: '14px', fontWeight: 700, cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif" }}
               >
                 Discard intake
               </button>
@@ -3126,10 +3271,10 @@ export default function App() {
 
       {/* ══ TIER CHANGE WARNING ══ */}
       {showTierWarning && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(6,12,16,0.92)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-          <div style={{ background: '#111827', border: '1px solid #2A3441', borderRadius: '14px', width: '100%', maxWidth: '480px', padding: '28px' }}>
-            <div style={{ fontSize: '18px', fontWeight: 700, color: '#F0F6FF', marginBottom: '10px' }}>Switch to {TIER_LABELS[pendingTier] || pendingTier}?</div>
-            <div style={{ fontSize: '14px', color: '#4B6278', lineHeight: 1.65, marginBottom: '16px' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,12,15,0.92)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+          <div style={{ background: 'rgba(18,21,26,0.7)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: '1px solid rgba(170,182,196,0.12)', borderRadius: '14px', width: '100%', maxWidth: '480px', padding: '28px' }}>
+            <div style={{ fontSize: '18px', fontWeight: 700, color: '#E5E7EB', marginBottom: '10px' }}>Switch to {TIER_LABELS[pendingTier] || pendingTier}?</div>
+            <div style={{ fontSize: '14px', color: '#AAB6C4', lineHeight: 1.65, marginBottom: '16px' }}>
               Switching tiers will clear your template selection, questionnaire answers, features, and vision fields. Your contact details, project name, and company assets will be preserved.
             </div>
             {(() => {
@@ -3137,10 +3282,10 @@ export default function App() {
               const currentLabel = PROJECT_TYPES_FULL.find(t => t.id === form.projectType)?.label
               if (form.projectType && currentLabel && !validTypes.includes(form.projectType)) {
                 return (
-                  <div style={{ padding: '14px 16px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.30)', borderRadius: '10px', marginBottom: '16px' }}>
-                    <div style={{ fontSize: '12px', color: '#F59E0B', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.06em', marginBottom: '6px' }}>INCOMPATIBLE SELECTION</div>
-                    <div style={{ fontSize: '13px', color: '#C4D8EA', lineHeight: 1.6 }}>
-                      You selected <strong style={{ color: '#F59E0B' }}>{currentLabel}</strong> as the project type. <strong style={{ color: '#EF4444' }}>{currentLabel} is not available on the {TIER_LABELS[pendingTier] || pendingTier} path.</strong> This selection will be cleared if you continue.
+                  <div style={{ padding: '14px 16px', background: 'rgba(245,180,0,0.08)', border: '1px solid rgba(245,180,0,0.30)', borderRadius: '10px', marginBottom: '16px' }}>
+                    <div style={{ fontSize: '12px', color: '#F5B400', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.06em', marginBottom: '6px' }}>INCOMPATIBLE SELECTION</div>
+                    <div style={{ fontSize: '13px', color: '#AAB6C4', lineHeight: 1.6 }}>
+                      You selected <strong style={{ color: '#F5B400' }}>{currentLabel}</strong> as the project type. <strong style={{ color: '#EF4444' }}>{currentLabel} is not available on the {TIER_LABELS[pendingTier] || pendingTier} path.</strong> This selection will be cleared if you continue.
                     </div>
                   </div>
                 )
@@ -3148,8 +3293,8 @@ export default function App() {
               return null
             })()}
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <button onClick={() => { setShowTierWarning(false); setPendingTier('') }} style={{ padding: '10px 18px', borderRadius: '8px', border: '1px solid #2A3441', background: 'transparent', cursor: 'pointer', color: '#4B6278', fontSize: '14px', fontFamily: "'Inter', system-ui, sans-serif" }}>Keep current tier</button>
-              <button onClick={confirmTierChange} style={{ padding: '10px 18px', borderRadius: '8px', border: 'none', background: '#39D6C7', cursor: 'pointer', color: '#060C10', fontSize: '14px', fontWeight: 700, fontFamily: "'Inter', system-ui, sans-serif" }}>Switch to {TIER_LABELS[pendingTier] || pendingTier}</button>
+              <button onClick={() => { setShowTierWarning(false); setPendingTier('') }} style={{ padding: '10px 18px', borderRadius: '8px', border: '1px solid #242830', background: 'transparent', cursor: 'pointer', color: '#AAB6C4', fontSize: '14px', fontFamily: "'Inter', system-ui, sans-serif" }}>Keep current tier</button>
+              <button onClick={confirmTierChange} style={{ padding: '10px 18px', borderRadius: '8px', border: 'none', background: '#2E6F46', cursor: 'pointer', color: '#FFFFFF', fontSize: '14px', fontWeight: 700, fontFamily: "'Inter', system-ui, sans-serif" }}>Switch to {TIER_LABELS[pendingTier] || pendingTier}</button>
             </div>
           </div>
         </div>
@@ -3158,24 +3303,24 @@ export default function App() {
       {/* ══ FLOATING AI CONCIERGE ══ */}
       <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 200 }}>
         {conciergeOpen ? (
-          <div style={{ width: '360px', background: '#111827', border: '1px solid #2A3441', borderRadius: '16px', boxShadow: '0 8px 40px rgba(0,0,0,0.6)', overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '520px' }}>
-            <div style={{ padding: '16px 18px', borderBottom: '1px solid #1E2E3D', display: 'flex', alignItems: 'center', gap: '12px', background: '#0D1620' }}>
+          <div style={{ width: '360px', background: 'rgba(18,21,26,0.7)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: '1px solid rgba(170,182,196,0.12)', borderRadius: '16px', boxShadow: '0 8px 40px rgba(0,0,0,0.6)', overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '520px' }}>
+            <div style={{ padding: '16px 18px', borderBottom: '1px solid #1A1C22', display: 'flex', alignItems: 'center', gap: '12px', background: '#0D0F12' }}>
               <RobotIcon size={36} />
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: '13px', color: '#D4E4F0', letterSpacing: '-0.01em' }}>M-THRYVE AI Concierge</div>
-                <div style={{ fontSize: '11px', color: '#4B6278' }}>Help for this step</div>
+                <div style={{ fontWeight: 700, fontSize: '13px', color: '#AAB6C4', letterSpacing: '-0.01em' }}>M-THRYVE AI Concierge</div>
+                <div style={{ fontSize: '11px', color: '#AAB6C4' }}>Help for this step</div>
               </div>
-              <button onClick={() => { setConciergeOpen(false); setConciergeQ(null) }} style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #2A3441', background: 'transparent', cursor: 'pointer', color: '#4B6278', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+              <button aria-label="Close concierge" onClick={() => { setConciergeOpen(false); setConciergeQ(null) }} style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #242830', background: 'transparent', cursor: 'pointer', color: '#AAB6C4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="close" size={14} /></button>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {!conciergeQ ? (
                 <>
-                  <div style={{ padding: '12px 14px', background: '#0D1620', borderRadius: '10px', fontSize: '13px', color: '#C4D8EA', lineHeight: 1.65 }}>
+                  <div style={{ padding: '12px 14px', background: '#0D0F12', borderRadius: '10px', fontSize: '13px', color: '#AAB6C4', lineHeight: 1.65 }}>
                     Hello — I am here to help you complete this step. Select a question below or type your own.
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
                     {faqs.map(faq => (
-                      <button key={faq.q} onClick={() => setConciergeQ(faq.q)} style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #2A3441', background: '#0D1620', cursor: 'pointer', textAlign: 'left', fontSize: '13px', color: '#4B6278', fontFamily: "'Inter', system-ui, sans-serif", transition: 'all 0.12s', lineHeight: 1.45 }}>
+                      <button key={faq.q} onClick={() => setConciergeQ(faq.q)} style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #242830', background: '#0D0F12', cursor: 'pointer', textAlign: 'left', fontSize: '13px', color: '#AAB6C4', fontFamily: "'Inter', system-ui, sans-serif", transition: 'all 0.12s', lineHeight: 1.45 }}>
                         {faq.q}
                       </button>
                     ))}
@@ -3183,40 +3328,41 @@ export default function App() {
                 </>
               ) : (
                 <>
-                  <div style={{ padding: '10px 14px', background: 'rgba(57,214,199,0.06)', borderRadius: '8px', border: '1px solid rgba(57,214,199,0.15)', fontSize: '13px', color: '#39D6C7' }}>{conciergeQ}</div>
+                  <div style={{ padding: '10px 14px', background: 'rgba(70,168,115,0.06)', borderRadius: '8px', border: '1px solid rgba(70,168,115,0.15)', fontSize: '13px', color: '#46A873' }}>{conciergeQ}</div>
                   {conciergeAnswer && (
-                    <div style={{ padding: '12px 14px', background: '#0D1620', borderRadius: '10px', fontSize: '13px', color: '#C4D8EA', lineHeight: 1.65 }}>
+                    <div style={{ padding: '12px 14px', background: '#0D0F12', borderRadius: '10px', fontSize: '13px', color: '#AAB6C4', lineHeight: 1.65 }}>
                       <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                         <RobotIcon size={24} />
                         <span>{conciergeAnswer}</span>
                       </div>
                     </div>
                   )}
-                  <button onClick={() => setConciergeQ(null)} style={{ alignSelf: 'flex-start', padding: '6px 12px', borderRadius: '6px', border: '1px solid #2A3441', background: 'transparent', cursor: 'pointer', color: '#4B6278', fontSize: '12px', fontFamily: "'Inter', system-ui, sans-serif" }}>← Back to questions</button>
+                  <button onClick={() => setConciergeQ(null)} style={{ alignSelf: 'flex-start', padding: '6px 12px', borderRadius: '6px', border: '1px solid #242830', background: 'transparent', cursor: 'pointer', color: '#AAB6C4', fontSize: '12px', fontFamily: "'Inter', system-ui, sans-serif", display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Icon name="arrow-left" size={13} /> Back to questions</button>
                 </>
               )}
             </div>
-            <div style={{ padding: '12px 18px', borderTop: '1px solid #1E2E3D', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '11px', color: '#3D5468' }}>Need more help?</span>
-              <button style={{ fontSize: '12px', color: '#39D6C7', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif", fontWeight: 600 }}>Contact M-THRYVE →</button>
+            <div style={{ padding: '12px 18px', borderTop: '1px solid #1A1C22', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '11px', color: '#AAB6C4' }}>Need more help?</span>
+              <button style={{ fontSize: '12px', color: '#46A873', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif", fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '5px' }}>Contact M-THRYVE <Icon name="arrow-right" size={13} /></button>
             </div>
           </div>
         ) : (
           <button
             onClick={() => { setConciergeOpen(true); setConciergeQ(null) }}
             title="Ask the M-THRYVE AI Concierge"
-            style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#0D2035', border: '1.5px solid #39D6C7', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 20px rgba(57,214,199,0.2)', transition: 'all 0.2s', padding: 0 }}
+            style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#0D0F12', border: '1.5px solid #46A873', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 20px rgba(70,168,115,0.2)', transition: 'all 0.2s', padding: 0 }}
           >
             <RobotIcon size={40} />
           </button>
         )}
       </div>
 
+      </div>
+
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
-        input::placeholder, textarea::placeholder { color: #2A3C4E; }
-        input:focus, textarea:focus, select:focus { border-color: #39D6C7 !important; box-shadow: 0 0 0 3px rgba(57,214,199,0.08); }
-        select option { background: #111827; color: #E2E8F0; }
+        input::placeholder, textarea::placeholder { color: #7C8794; }
+        select option { background: #12151A; color: #E5E7EB; }
         input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.4); }
       `}</style>
     </div>

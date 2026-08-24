@@ -14,6 +14,7 @@ import BuildCardView from "./BuildCardView";
 import AuditTrail from "./AuditTrail";
 import TemplateFilterPanel from "./TemplateFilterPanel";
 import type { TemplateDefinition } from "../data/templates";
+import { Icon } from "../components/icons/Icons";
 
 interface IntakeDetailViewProps {
   intakeId: string;
@@ -324,15 +325,16 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function Section({ id, label, expanded, onToggle, children }: { id: SectionId; label: string; expanded: boolean; onToggle: () => void; children: React.ReactNode }) {
+  const contentId = `console-section-${id}`;
   return (
     <div style={styles.card}>
-      <div onClick={onToggle} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", marginBottom: expanded ? "16px" : "0" }}>
+      <button type="button" aria-expanded={expanded} aria-controls={contentId} onClick={onToggle} style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", marginBottom: expanded ? "16px" : "0", padding: 0, border: 0, background: "transparent", textAlign: "left" }}>
         <span style={{ fontSize: "12px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "#64748B" }}>
           Section {id} &mdash; {label}
         </span>
-        <span style={{ color: "#64748B", fontSize: "14px" }}>{expanded ? "\u25B2" : "\u25BC"}</span>
-      </div>
-      {expanded && children}
+        <Icon name="chevron-right" size={14} style={{ color: "#64748B", transform: expanded ? "rotate(90deg)" : "none", transition: "transform 0.15s" }} />
+      </button>
+      {expanded && <div id={contentId}>{children}</div>}
     </div>
   );
 }

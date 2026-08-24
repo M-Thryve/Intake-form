@@ -1,11 +1,11 @@
 # Graph Report - Intake-Form  (2026-08-24)
 
 ## Corpus Check
-- 357 files · ~291,819 words
+- 357 files · ~291,510 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3548 nodes · 4666 edges · 303 communities (234 shown, 69 thin omitted)
+- 3548 nodes · 4664 edges · 301 communities (232 shown, 69 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 57 edges (avg confidence: 0.63)
 - Token cost: 0 input · 0 output
 
@@ -16,7 +16,7 @@
 
 ## Community Hubs (Navigation)
 - api/console.ts
-- mcp-roles.ts
+- mcp-orchestration.ts
 - App.tsx
 - devDependencies
 - devDependencies
@@ -33,7 +33,7 @@
 - apply-migrations.mjs
 - compilerOptions
 - Query
-- supabase.ts
+- client-identity.ts
 - gray
 - finance.ts
 - none
@@ -116,7 +116,7 @@
 - TestTailwindConfigGenerator
 - html-token-validator.py
 - Asset Approval Checklist
-- config.ts
+- src/index.ts
 - Logo AI Prompt Engineering
 - Color Palette Management
 - CIP Deliverable Guide
@@ -229,11 +229,11 @@
 - inspect.mjs
 - mighist.mjs
 - detect_domain
-- build-delivery.ts
+- supabase.ts
 - probe.mjs
 - IntakeDetail.tsx
 - input
-- mcp-orchestration.ts
+- build-eligibility.test.ts
 - graphify reference: GitHub clone and cross-repo merge
 - graphify reference: transcribe video and audio
 - destructive
@@ -261,7 +261,7 @@
 - .test_add_colors
 - 2. Canonical Vocabulary
 - agreement-eligibility.test.ts
-- src/index.ts
+- 1
 - Q: What current intake flow must the revision prompt account for?
 - Q: How do REVISION_HANDOVER v3.0 and TECHNICAL_HANDOVER v3.0 define the upcoming implementation?
 - 11. WS-10 / WS-11 — Step 5: Optional Feature Catalog
@@ -301,12 +301,10 @@
 - primary-foreground
 - lib/hash.ts
 - secondary-foreground
-- McpStatusPanel.tsx
+- jsdom
 - 3
 - oxfmt
-- 0
 - @types/react
-- vite
 - vitest
 - auth.test.ts
 - @types/node
@@ -330,10 +328,10 @@
   src/imports/pasted_text/m-thryve-ai-intake-update.md → server/PHASE_6_COMPLETION_REPORT.md
 - `Operational Escalation Path` --conceptually_related_to--> `Human Owner Review Gate`  [INFERRED]
   docs/support/troubleshooting.md → TECHNICAL_HANDOVER.md
-- `AGENTS.md Instruction Reference` --references--> `EKOMS AI Router and Project Guide`  [EXTRACTED]
-  CLAUDE.md → AGENTS.md
-- `Client ID at First Persistence` --conceptually_related_to--> `Intake Status Lifecycle`  [EXTRACTED]
-  REVISION_NOTES.md → TECHNICAL_HANDOVER.md
+- `buildApp()` --indirect_call--> `requireAuth()`  [INFERRED]
+  server/src/__tests__/agreement-finance.test.ts → server/src/middleware/auth.ts
+- `buildApp()` --indirect_call--> `requireAuth()`  [INFERRED]
+  server/src/__tests__/build-delivery.test.ts → server/src/middleware/auth.ts
 
 ## Import Cycles
 - None detected.
@@ -343,15 +341,15 @@
 - **Template Preview Constraint Set** — src_imports_updates_live_color_preview, src_imports_updates_mobile_viewport, src_imports_updates_page_loop, src_imports_updates_price_invariance [EXTRACTED 1.00]
 - **Intake to Owner Review Flow** — src_imports_pasted_text_m_thryve_ai_intake_update_workflow, src_imports_pasted_text_m_thryve_intake_update_submitted_build_card, server_mcp_build_card, server_phase_6_no_build_payment, server_phase_7_queue_gate [INFERRED 0.85]
 
-## Communities (303 total, 69 thin omitted)
+## Communities (301 total, 69 thin omitted)
 
 ### Community 0 - "api/console.ts"
 Cohesion: 0.13
-Nodes (16): AuditEvent, DecisionRequest, DecisionResponse, DetailResponse, fetchAudit(), IntakeDetail, PackageResponse, QueueResponse (+8 more)
+Nodes (18): AuditEvent, DecisionRequest, DecisionResponse, DetailResponse, fetchAudit(), handleResponse(), IntakeDetail, PackageResponse (+10 more)
 
-### Community 1 - "mcp-roles.ts"
-Cohesion: 0.11
-Nodes (25): AssetReadinessOutput, assetReadinessOutputSchema, BuildCardOutput, buildCardOutputSchema, FINDING_SEVERITY, FindingSeverity, IntakeValidationOutput, intakeValidationOutputSchema (+17 more)
+### Community 1 - "mcp-orchestration.ts"
+Cohesion: 0.09
+Nodes (48): AssetReadinessOutput, assetReadinessOutputSchema, BuildCardOutput, buildCardOutputSchema, FINDING_SEVERITY, FindingSeverity, IntakeValidationOutput, intakeValidationOutputSchema (+40 more)
 
 ### Community 2 - "App.tsx"
 Cohesion: 0.05
@@ -359,7 +357,7 @@ Nodes (53): App(), ASSET_CHECKLIST, ASSET_SERVICES, ASSET_STATUS_OPTIONS, calcPr
 
 ### Community 3 - "devDependencies"
 Cohesion: 0.15
-Nodes (13): jsdom, devDependencies, jsdom, @playwright/test, @testing-library/dom, @testing-library/jest-dom, @types/react-dom, typescript (+5 more)
+Nodes (13): devDependencies, @playwright/test, @testing-library/dom, @testing-library/jest-dom, @types/react-dom, typescript, vite, typescript (+5 more)
 
 ### Community 4 - "devDependencies"
 Cohesion: 0.05
@@ -413,17 +411,17 @@ Nodes (7): failures, files, headers, [ref, migrationsDir], runSql(), sleep(), to
 Cohesion: 0.12
 Nodes (16): dist, node_modules, compilerOptions, declaration, esModuleInterop, module, moduleResolution, outDir (+8 more)
 
-### Community 18 - "supabase.ts"
-Cohesion: 0.18
-Nodes (10): ClientIdentityInput, ClientIdentityResult, normalizeClientEmail(), resolveOrCreateClient(), getSupabase(), supabase, internalOutboxRouter, patchSchema (+2 more)
+### Community 18 - "client-identity.ts"
+Cohesion: 0.47
+Nodes (4): ClientIdentityInput, ClientIdentityResult, normalizeClientEmail(), resolveOrCreateClient()
 
 ### Community 19 - "gray"
 Cohesion: 0.05
 Nodes (53): $type, $value, $type, $value, $type, $value, $type, $value (+45 more)
 
 ### Community 20 - "finance.ts"
-Cohesion: 0.22
-Nodes (12): checkEligibility(), AGREEMENT_STATUSES, AgreementStatus, applyTransition(), audit(), handleTransition(), loadCurrentDraft(), parseUuid() (+4 more)
+Cohesion: 0.12
+Nodes (19): checkEligibility(), agreementRouter, AGREEMENT_STATUSES, AgreementStatus, applyTransition(), audit(), financeRouter, handleTransition() (+11 more)
 
 ### Community 21 - "none"
 Cohesion: 0.67
@@ -439,7 +437,7 @@ Nodes (11): All indexed terms, for suggestion/typo-recovery purposes., Nearest k
 
 ### Community 24 - "routes/assets.ts"
 Cohesion: 0.11
-Nodes (20): ALLOWED_MIME_TYPES, AssetStatus, AssetValidationResult, buildStorageKey(), DANGEROUS_EXTENSIONS, formatBytes(), isValidTransition(), sanitizeFilename() (+12 more)
+Nodes (21): ALLOWED_MIME_TYPES, AssetStatus, AssetValidationResult, buildStorageKey(), DANGEROUS_EXTENSIONS, formatBytes(), isValidTransition(), sanitizeFilename() (+13 more)
 
 ### Community 26 - "ReviewQueue.tsx"
 Cohesion: 0.18
@@ -590,8 +588,8 @@ Cohesion: 0.67
 Nodes (3): Consultant Concierge Avatar, Enterprise SaaS Content Voice, Frontend Enhancement Design System
 
 ### Community 86 - "portal.ts"
-Cohesion: 0.12
-Nodes (18): uploadRequestSchema, CLIENT_FACING_STATES, ClientFacingState, COMMERCIAL_STAGE_MAPPING, KNOWN_INTERNAL_STATUSES, KnownInternalStatus, projectClientStatus(), IntakeRow (+10 more)
+Cohesion: 0.13
+Nodes (17): CLIENT_FACING_STATES, ClientFacingState, COMMERCIAL_STAGE_MAPPING, KNOWN_INTERNAL_STATUSES, KnownInternalStatus, projectClientStatus(), IntakeRow, loadScopedIntake() (+9 more)
 
 ### Community 87 - "Workflows"
 Cohesion: 0.15
@@ -673,9 +671,9 @@ Nodes (24): get_context(), is_allowed_exception(), is_allowed_rgba(), is_inside_
 Cohesion: 0.08
 Nodes (25): Accessibility, Archival, Asset Approval Checklist, Automation Support, Color Compliance, Common Issues & Fixes, Content Accessibility, Content Quality (+17 more)
 
-### Community 108 - "config.ts"
-Cohesion: 0.15
-Nodes (14): configSchema, envFile, getConfig(), getEnvironment(), preflightCheck(), ServerConfig, validateConfig(), requireInternalService() (+6 more)
+### Community 108 - "src/index.ts"
+Cohesion: 0.11
+Nodes (19): app, config, preflight, configSchema, envFile, getConfig(), getEnvironment(), preflightCheck() (+11 more)
 
 ### Community 109 - "Logo AI Prompt Engineering"
 Cohesion: 0.08
@@ -779,7 +777,7 @@ Nodes (17): generate_css_for_background(), get_background_image(), get_curated_i
 
 ### Community 134 - "middleware/auth.ts"
 Cohesion: 0.10
-Nodes (21): AuthenticatedClient, ClientRole, Express, INTERNAL_ROLES, Request, requireAuth(), requireClientAuth(), requireRole() (+13 more)
+Nodes (22): getMcpRun(), getMcpRunsForIntake(), AuthenticatedClient, AuthenticatedUser, ClientRole, Express, INTERNAL_ROLES, Request (+14 more)
 
 ### Community 135 - "TestShadcnInstaller"
 Cohesion: 0.12
@@ -874,8 +872,8 @@ Cohesion: 0.15
 Nodes (12): Categories, Dark Mode, File Organization, Layer 1: Primitive Tokens, Layer 2: Semantic Tokens, Layer 3: Component Tokens, Layer Overview, Migration from Flat Tokens (+4 more)
 
 ### Community 159 - "build-delivery.test.ts"
-Cohesion: 0.31
-Nodes (6): chain, enq(), enqEligibleNoPackageRequired(), enqEligibleWithFreshPackage(), enqPackagePayloadReads(), state
+Cohesion: 0.21
+Nodes (9): buildDeliveryRouter, buildOrchestrationRouter, buildApp(), chain, enq(), enqEligibleNoPackageRequired(), enqEligibleWithFreshPackage(), enqPackagePayloadReads() (+1 more)
 
 ### Community 160 - "Detailed Findings"
 Cohesion: 0.15
@@ -1081,21 +1079,21 @@ Nodes (3): _check_file(), main(), _read_rows()
 Cohesion: 0.43
 Nodes (3): detect_domain(), Auto-detect the most relevant domain from query. Matches are weighted by…, TestDomainDetection
 
-### Community 221 - "build-delivery.ts"
-Cohesion: 0.07
-Nodes (27): AgreementRow, BuildCardRow, BuildEligibilityFailure, BuildEligibilityResult, BuildEligibilitySnapshot, checkBuildEligibility(), DecisionRow, DeliveryPackageRow (+19 more)
+### Community 221 - "supabase.ts"
+Cohesion: 0.08
+Nodes (26): AgreementRow, BuildCardRow, BuildEligibilityFailure, BuildEligibilityResult, BuildEligibilitySnapshot, checkBuildEligibility(), DecisionRow, DeliveryPackageRow (+18 more)
 
 ### Community 223 - "IntakeDetail.tsx"
-Cohesion: 0.19
-Nodes (9): fetchAnalysisPackage(), fetchAnalysisRuns(), fetchIntakeDetail(), handleResponse(), IntakeDetailView(), IntakeDetailViewProps, SECTION_LABELS, SectionId (+1 more)
+Cohesion: 0.14
+Nodes (12): fetchAnalysisPackage(), fetchAnalysisRuns(), fetchIntakeDetail(), McpRun, IntakeDetailView(), IntakeDetailViewProps, SECTION_LABELS, SectionId (+4 more)
 
 ### Community 224 - "input"
 Cohesion: 0.29
 Nodes (8): padding-x, input, $type, $value, focus-ring, padding-x, $type, $value
 
-### Community 225 - "mcp-orchestration.ts"
-Cohesion: 0.16
-Nodes (27): McpRole, McpRunStatus, AssetEntry, AssetSnapshot, buildRoleInput(), executeMcpRole(), executeWithTimeout(), INDEPENDENT_ROLES (+19 more)
+### Community 225 - "build-eligibility.test.ts"
+Cohesion: 0.32
+Nodes (5): chain, enqBaseline(), enqList(), enqSingle(), state
 
 ### Community 228 - "destructive"
 Cohesion: 0.67
@@ -1121,9 +1119,9 @@ Nodes (3): $type, $value, 16
 Cohesion: 0.20
 Nodes (10): 2.1 Build paths (unchanged), 2.2 Project types, 2.3 Industries, 2.4 Factory Core Features (always included), 2.5 Feature categories (Step 5 dropdown), 2.6 Optional website extensions, 2.7 Intake outcome and status (unchanged), 2.8 Asset readiness (unchanged) (+2 more)
 
-### Community 253 - "src/index.ts"
-Cohesion: 0.16
-Nodes (10): app, config, preflight, agreementRouter, buildOrchestrationRouter, financeRouter, chain, enq() (+2 more)
+### Community 253 - "1"
+Cohesion: 0.67
+Nodes (3): $type, $value, 1
 
 ### Community 254 - "Q: What current intake flow must the revision prompt account for?"
 Cohesion: 0.40
@@ -1237,17 +1235,9 @@ Nodes (3): primary-foreground, $type, $value
 Cohesion: 0.67
 Nodes (3): secondary-foreground, $type, $value
 
-### Community 293 - "McpStatusPanel.tsx"
-Cohesion: 0.33
-Nodes (5): McpRun, retryMcpRun(), McpStatusPanel(), McpStatusPanelProps, ROLE_LABELS
-
 ### Community 294 - "3"
 Cohesion: 0.67
 Nodes (3): $type, $value, 3
-
-### Community 296 - "0"
-Cohesion: 0.67
-Nodes (3): $type, $value, 0
 
 ## Ambiguous Edges - Review These
 - `Remove Compare All Tiers` → `Compare Tiers Modal`  [AMBIGUOUS]
@@ -1274,4 +1264,4 @@ _Questions this graph is uniquely positioned to answer:_
 - **What connects `$schema`, `.opencode/plugins/graphify.js`, `fs` to the rest of the system?**
   _1602 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `api/console.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.13450292397660818 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.13333333333333333 - nodes in this community are weakly interconnected._

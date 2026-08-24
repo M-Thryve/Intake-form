@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react'
+import { Icon } from './icons/Icons'
 
 export interface InlineWarningProps {
   /** Warning text. Renders nothing when null or empty. */
@@ -32,6 +33,7 @@ export default function InlineWarning({ message, severity = 'warning', fieldId }
   return (
     <div id={`${fieldId}-warning`} role="alert" className="mthryve-inline-warning" style={style}>
       <span aria-hidden="true" style={{ flexShrink: 0, lineHeight: '1.4' }}>⚠</span>
+      <Icon name="warning" size={14} />
       <span>{message}</span>
     </div>
   )

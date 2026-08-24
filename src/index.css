@@ -1,21 +1,362 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import 'tailwindcss';
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.mthryve-inline-warning > span:first-child {
+  font-size: 0;
+}
+
+/* ── Aurora Design System ─────────────────────────────────────────────── */
+:root {
+  --a-void: #0A0C0F;
+  --a-space: #0D0F12;
+  --a-nebula: #12151A;
+  --a-cosmos: #1A1C22;
+  --a-rim: #242830;
+  --a-rim-mid: #333944;
+
+  /* M-THRYVE Brandkit — the ambient aurora spectrum */
+  --a-primary: #2E6F46;       /* brand primary, button fills */
+  --a-forest: #214B34;        /* brand primary-dark */
+  --a-steel: #6D7885;         /* brand tertiary */
+  --a-emerald: #46A873;      /* on-dark tint of brand primary */
+  --a-gold: #C9A34A;         /* brand accent */
+  --a-silver: #AAB6C4;       /* brand secondary */
+  --a-warning: #F5B400;      /* caution and follow-up */
+  --a-danger: #EF4444;       /* validation and destructive actions */
+  --a-on-primary: #FFFFFF;   /* text on primary action fills */
+  --a-glass-bg: rgba(18,21,26,0.7);
+  --a-glass-border: rgba(170,182,196,0.12);
+
+
+  --a-text-1: #E5E7EB;
+  --a-text-2: #AAB6C4;
+  --a-text-3: #7C8794;
+
+}
+
+h1, h2, h3 {
+  font-family: 'Sora', 'Inter', system-ui, sans-serif;
+}
+
+.wizard-project-type-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+@media (max-width: 639px) {
+  .wizard-project-type-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 body {
-  background: #0B0F14;
-  color: #E2E8F0;
+  background: var(--a-void);
+  color: var(--a-text-1);
   font-family: 'Inter', system-ui, sans-serif;
   margin: 0;
+  min-height: 100vh;
+}
+
+/* ── Aurora ambient stage ─────────────────────────────────────────────────
+   Fixed light layer behind all content. Curtains bloom from the top (sky),
+   the topographic ridge anchors the bottom, the form floats in the calm
+   middle band. Only transform/opacity animate — everything stays on the
+   compositor. This is what the glass cards frost. */
+
+.aurora-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  contain: strict;
+}
+
+/* Deep sky wash — violet at altitude, fading to void at the horizon */
+.aurora-sky {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 140% 78% at 50% -18%, #16301F 0%, #101A14 34%, rgba(10,6,20,0) 72%),
+    linear-gradient(to bottom, #0B0F0D 0%, #0A0C0F 72%);
+}
+
+/* Starfield — three tiling densities, no animation */
+/* Aurora plate — a real looping clip of the curtains moving (Higgsfield,
+   kling2_6 from the still plate, denoised so bitrate goes into the gradients
+   rather than grain the page re-adds itself in CSS).
+
+   Sized by WIDTH at its natural 2.39:1 aspect. object-fit:cover on a full
+   -height stage made the height drive the scale, upscaling the clip ~2x on a
+   1080p screen — which is what read as blur. Width-driven sizing is 1:1 at
+   1920 and downscales below it. */
+.aurora-plate {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: auto;
+  display: block;
+  opacity: 0.74;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 48%, rgba(0,0,0,0.36) 76%, transparent 98%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 48%, rgba(0,0,0,0.36) 76%, transparent 98%);
+}
+
+/* Reduced-motion path: the clip's own first frame, held still. Needs an
+   explicit ratio because an empty div has no intrinsic height. */
+.aurora-plate--still {
+  aspect-ratio: 1920 / 804;
+  background-image: url('/aurora/sky-a.webp');
+  background-size: cover;
+  background-position: 50% 0%;
+  background-repeat: no-repeat;
+}
+
+/* Deep field — small, dim, tiled for density. At this size the tile seam is
+   below the perceptual threshold, so it reads as scattered depth. */
+.aurora-stars-far {
+  position: absolute;
+  inset: 0;
+  opacity: 0.55;
+  background-image:
+    radial-gradient(0.9px 0.9px at 14% 22%, rgba(255,255,255,0.75) 50%, transparent 55%),
+    radial-gradient(0.7px 0.7px at 61% 9%, rgba(214,236,255,0.6) 50%, transparent 55%),
+    radial-gradient(0.8px 0.8px at 37% 63%, rgba(255,255,255,0.55) 50%, transparent 55%),
+    radial-gradient(0.7px 0.7px at 88% 41%, rgba(226,240,255,0.5) 50%, transparent 55%),
+    radial-gradient(0.9px 0.9px at 72% 77%, rgba(255,255,255,0.45) 50%, transparent 55%),
+    radial-gradient(0.6px 0.6px at 24% 88%, rgba(255,255,255,0.4) 50%, transparent 55%);
+  background-size: 260px 260px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 44%, transparent 74%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 44%, transparent 74%);
+}
+
+/* Foreground stars — larger, brighter, positioned once so they read as a
+   real constellation rather than a texture. Breathes very slowly. */
+.aurora-stars {
+  position: absolute;
+  inset: 0;
+  opacity: 0.9;
+  background-image:
+    radial-gradient(1.7px 1.7px at 18% 12%, rgba(255,255,255,0.95) 50%, transparent 55%),
+    radial-gradient(1.2px 1.2px at 62% 8%, rgba(214,236,255,0.85) 50%, transparent 55%),
+    radial-gradient(1.8px 1.8px at 84% 22%, rgba(255,255,255,0.8) 50%, transparent 55%),
+    radial-gradient(1.1px 1.1px at 33% 30%, rgba(255,255,255,0.7) 50%, transparent 55%),
+    radial-gradient(1.3px 1.3px at 8% 40%, rgba(226,240,255,0.72) 50%, transparent 55%),
+    radial-gradient(1.1px 1.1px at 72% 38%, rgba(255,255,255,0.6) 50%, transparent 55%),
+    radial-gradient(1.6px 1.6px at 46% 18%, rgba(255,255,255,0.85) 50%, transparent 55%),
+    radial-gradient(1.1px 1.1px at 92% 46%, rgba(255,255,255,0.55) 50%, transparent 55%),
+    radial-gradient(1.4px 1.4px at 27% 6%, rgba(240,248,255,0.8) 50%, transparent 55%),
+    radial-gradient(1.2px 1.2px at 54% 44%, rgba(255,255,255,0.5) 50%, transparent 55%);
+  background-size: 100% 100%;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 46%, transparent 76%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 46%, transparent 76%);
+  animation: aurora-twinkle 11s ease-in-out infinite;
+}
+
+@keyframes aurora-twinkle {
+  0%, 100% { opacity: 0.9; }
+  50%      { opacity: 0.62; }
+}
+
+/* ── Curtains ──
+   Painted per-frame by <AuroraCanvas />. A low internal resolution scaled up
+   under a blur: aurora has no hard edges, so nothing is lost and the loop
+   stays cheap. Screen blend keeps the canvas black fully transparent. */
+
+.aurora-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  filter: blur(17px) saturate(1.12);
+  mix-blend-mode: screen;
+  opacity: 0.45;
+}
+
+/* Content scrim — the aurora stays full strength at the margins, but the
+   centre column where copy lives is pulled back down so body text keeps its
+   contrast. Feathered so the transition is never a visible edge. */
+.aurora-scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 48% 72% at 50% 40%,
+      rgba(10,12,15,0.80) 0%,
+      rgba(10,12,15,0.58) 42%,
+      rgba(10,12,15,0.20) 68%,
+      rgba(10,12,15,0) 84%);
+}
+
+/* Horizon bloom where the curtains meet the ridge */
+.aurora-horizon {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 46%;
+  background:
+    radial-gradient(ellipse 90% 100% at 50% 118%, rgba(170,182,196,0.30) 0%, rgba(70,168,115,0.10) 42%, transparent 72%);
+  mix-blend-mode: screen;
+}
+
+/* Topographic ridge — the AURORA.jpg signature, anchored at the bottom */
+/* Generated wireframe terrain (Higgsfield). Screen blend drops its
+   pure-black ground to transparent, leaving only the luminous mesh. */
+.aurora-ridge-plate {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 46vh;
+  background-image: url('/aurora/ridge.webp');
+  background-size: cover;
+  background-position: 50% 60%;
+  background-repeat: no-repeat;
+  mix-blend-mode: screen;
+  opacity: 0.9;
+}
+
+/* Vignette — pulls the corners down so the composition reads as a frame
+   rather than a flat fill, and keeps the eye on the centre column. */
+.aurora-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 78% 68% at 50% 46%,
+    transparent 0%, transparent 52%, rgba(5,6,8,0.42) 82%, rgba(5,6,8,0.72) 100%);
+}
+
+/* Film grain — smooth gradients band visibly on near-black; grain breaks the
+   banding into noise the eye reads as texture instead of a defect. Static,
+   so it costs one paint and never animates. */
+.aurora-grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.13;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+}
+
+@media (max-width: 768px) {
+  .aurora-canvas { filter: blur(11px) saturate(1.12); }
+  .aurora-ridge-plate { height: 32vh; opacity: 0.75; }
+  .aurora-plate { opacity: 0.85; }
+  .aurora-grain { opacity: 0.10; }
+}
+
+/* Motion is ambient, not informational — settle it entirely on request */
+@media (prefers-reduced-motion: reduce) {
+  .aurora-stars { animation: none; }
 }
 
 * {
   box-sizing: border-box;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--a-rim-mid) transparent;
 }
 
 *::-webkit-scrollbar {
-  display: none;
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--a-rim-mid);
+  border: 3px solid transparent;
+  border-radius: 100px;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--a-steel);
+}
+
+::selection {
+  background: rgba(70,168,115,0.25);
+  color: var(--a-text-1);
+}
+
+input, textarea, [contenteditable] {
+  caret-color: var(--a-emerald);
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Keyboard focus has to be visible on every control, not just fields.
+   The portal keeps its own focus treatment. */
+button:not([class*="portal-"]):focus-visible,
+a:not([class*="portal-"]):focus-visible,
+select:not([class*="portal-"]):focus-visible,
+[tabindex]:not([class*="portal-"]):focus-visible {
+  outline: 2px solid var(--a-emerald);
+  outline-offset: 2px;
+}
+
+input:not(.portal-input):focus, textarea:not(.portal-input):focus {
+  border-color: var(--a-emerald) !important;
+  box-shadow: 0 0 0 3px rgba(70,168,115,0.18), 0 0 24px rgba(70,168,115,0.12) !important;
+}
+
+button:not([class*="portal-"]):not(:disabled):active {
+  transform: translateY(1px);
+}
+
+/* App content rides above the aurora stage */
+.aurora-content {
+  position: relative;
+  z-index: 1;
+}
+
+/* Neon bloom on the hero headline — the AURORA.jpg lettering treatment */
+.aurora-bloom {
+  text-shadow:
+    0 0 22px rgba(220,235,225,0.28),
+    0 0 46px rgba(170,182,196,0.22),
+    0 0 90px rgba(201,163,74,0.14);
+}
+
+/* The lit accent word inside the headline */
+.aurora-lit {
+  background: linear-gradient(104deg, #DCEBE1 0%, #46A873 26%, #AAB6C4 58%, #C9A34A 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Gradient-clipped text renders as nothing when the OS overrides colour,
+   so hand the headline back a real fill there. */
+@media (forced-colors: active) {
+  .aurora-lit {
+    background: none;
+    -webkit-text-fill-color: currentColor;
+    color: CanvasText;
+  }
 }
 
 /* ── Phase 10 client portal ─────────────────────────────────────────────── */
@@ -65,3 +406,142 @@ body {
 }
 .portal-mobile-nav { display: none; }
 @media (max-width: 640px) { .portal-mobile-nav { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 10px 18px 0; background: #11343a; }.portal-mobile-nav button { border: 0; border-radius: 8px; background: transparent; color: #9fc0bc; padding: 10px 4px; cursor: pointer; font: inherit; font-size: 10px; }.portal-mobile-nav button.is-active { color: #eafff8; background: rgba(220,255,248,.1); }.portal-mobile-nav .portal-glyph { display: inline; width: auto; margin-right: 5px; font-size: 13px; } }
+
+/* Final interaction and browser-surface polish. */
+.portal-app-shell * {
+  scrollbar-color: #9bb8b4 transparent;
+}
+
+.portal-app-shell ::selection {
+  background: rgba(57, 214, 199, 0.28);
+  color: #102b31;
+}
+
+.portal-app-shell button:focus-visible,
+.portal-app-shell input:focus-visible,
+.portal-app-shell label:focus-within {
+  outline: 2px solid #178f86;
+  outline-offset: 3px;
+}
+
+.portal-button,
+.portal-link-button,
+.portal-stat-link,
+.portal-back-button,
+.portal-sidebar-help button,
+.portal-demo-link,
+.portal-approved-badge,
+.portal-asset-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.portal-stat-link {
+  align-self: flex-start;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font-family: inherit;
+}
+
+.portal-back-button,
+.portal-sidebar-help button {
+  min-height: 28px;
+}
+
+.portal-sidebar-help > svg,
+.portal-trust-note > svg,
+.portal-asset-footnote > svg,
+.portal-agreement-seam > svg,
+.portal-notice > svg {
+  flex: 0 0 auto;
+}
+
+.portal-sidebar-help > svg,
+.portal-trust-note > svg,
+.portal-asset-footnote > svg,
+.portal-agreement-seam > svg {
+  color: #31a197;
+}
+
+.portal-notice > svg {
+  color: #b0791e;
+  margin-top: 1px;
+}
+
+.portal-footer span:nth-child(2),
+.portal-footer span:nth-child(2) b {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.portal-button-glyph {
+  margin-right: 0;
+}
+
+.portal-button .portal-button-glyph {
+  margin-left: 0;
+}
+
+.portal-button-glyph svg {
+  width: 14px;
+  height: 14px;
+}
+
+.portal-upload-zone {
+  position: relative;
+}
+
+.portal-upload-zone input {
+  display: block;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.portal-upload-zone:focus-within {
+  border-color: #178f86;
+  box-shadow: 0 0 0 3px rgba(23, 143, 134, 0.14);
+}
+
+.portal-detail-tabs button {
+  min-height: 44px;
+}
+
+.portal-app-shell button:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+@media (max-width: 640px) {
+  .portal-mobile-menu,
+  .portal-mobile-header .portal-avatar {
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+  }
+
+  .portal-mobile-nav button {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wizard-progress-fill,
+  .mthryve-inline-warning,
+  .portal-app-shell *,
+  .portal-app-shell *::before,
+  .portal-app-shell *::after {
+    animation: none !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

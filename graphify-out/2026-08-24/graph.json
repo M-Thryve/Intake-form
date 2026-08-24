@@ -3214,8 +3214,8 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "opencode_skills_design_system_templates_design_tokens_starter_spacing_0",
-      "community": 296,
-      "community_name": "0",
+      "community": 120,
+      "community_name": "spacing",
       "norm_label": "0"
     },
     {
@@ -3225,8 +3225,8 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "opencode_skills_design_system_templates_design_tokens_starter_0_value",
-      "community": 296,
-      "community_name": "0",
+      "community": 120,
+      "community_name": "spacing",
       "norm_label": "$value"
     },
     {
@@ -3236,8 +3236,8 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "opencode_skills_design_system_templates_design_tokens_starter_0_type",
-      "community": 296,
-      "community_name": "0",
+      "community": 120,
+      "community_name": "spacing",
       "norm_label": "$type"
     },
     {
@@ -3247,8 +3247,8 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "opencode_skills_design_system_templates_design_tokens_starter_spacing_1",
-      "community": 120,
-      "community_name": "spacing",
+      "community": 253,
+      "community_name": "1",
       "norm_label": "1"
     },
     {
@@ -3258,8 +3258,8 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "opencode_skills_design_system_templates_design_tokens_starter_1_value",
-      "community": 120,
-      "community_name": "spacing",
+      "community": 253,
+      "community_name": "1",
       "norm_label": "$value"
     },
     {
@@ -3269,8 +3269,8 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "opencode_skills_design_system_templates_design_tokens_starter_1_type",
-      "community": 120,
-      "community_name": "spacing",
+      "community": 253,
+      "community_name": "1",
       "norm_label": "$type"
     },
     {
@@ -11090,8 +11090,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "package_devdependencies_jsdom",
-      "community": 3,
-      "community_name": "devDependencies",
+      "community": 293,
+      "community_name": "jsdom",
       "norm_label": "jsdom"
     },
     {
@@ -11101,8 +11101,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "jsdom",
-      "community": 3,
-      "community_name": "devDependencies",
+      "community": 293,
+      "community_name": "jsdom",
       "norm_label": "jsdom"
     },
     {
@@ -11178,8 +11178,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "package_devdependencies_vite",
-      "community": 298,
-      "community_name": "vite",
+      "community": 3,
+      "community_name": "devDependencies",
       "norm_label": "vite"
     },
     {
@@ -11189,8 +11189,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "vite",
-      "community": 298,
-      "community_name": "vite",
+      "community": 3,
+      "community_name": "devDependencies",
       "norm_label": "vite"
     },
     {
@@ -11838,8 +11838,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "server_src_tests_agreement_finance_test",
-      "community": 253,
-      "community_name": "src/index.ts",
+      "community": 20,
+      "community_name": "finance.ts",
       "norm_label": "agreement-finance.test.ts"
     },
     {
@@ -11849,8 +11849,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "server_src_tests_agreement_finance_test_state",
-      "community": 253,
-      "community_name": "src/index.ts",
+      "community": 20,
+      "community_name": "finance.ts",
       "norm_label": "state"
     },
     {
@@ -11860,8 +11860,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "server_src_tests_agreement_finance_test_next",
-      "community": 253,
-      "community_name": "src/index.ts",
+      "community": 20,
+      "community_name": "finance.ts",
       "norm_label": "next()"
     },
     {
@@ -11871,8 +11871,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "server_src_tests_agreement_finance_test_chain",
-      "community": 253,
-      "community_name": "src/index.ts",
+      "community": 20,
+      "community_name": "finance.ts",
       "norm_label": "chain"
     },
     {
@@ -11882,8 +11882,8 @@
       "source_location": "L85",
       "_origin": "ast",
       "id": "server_src_tests_agreement_finance_test_buildapp",
-      "community": 134,
-      "community_name": "middleware/auth.ts",
+      "community": 20,
+      "community_name": "finance.ts",
       "norm_label": "buildapp()"
     },
     {
@@ -11893,8 +11893,8 @@
       "source_location": "L98",
       "_origin": "ast",
       "id": "server_src_tests_agreement_finance_test_enq",
-      "community": 253,
-      "community_name": "src/index.ts",
+      "community": 20,
+      "community_name": "finance.ts",
       "norm_label": "enq()"
     },
     {
@@ -11904,8 +11904,8 @@
       "source_location": "L104",
       "_origin": "ast",
       "id": "server_src_tests_agreement_finance_test_enqeligible",
-      "community": 253,
-      "community_name": "src/index.ts",
+      "community": 20,
+      "community_name": "finance.ts",
       "norm_label": "enqeligible()"
     },
     {
@@ -11981,8 +11981,8 @@
       "source_location": "L95",
       "_origin": "ast",
       "id": "server_src_tests_build_delivery_test_buildapp",
-      "community": 134,
-      "community_name": "middleware/auth.ts",
+      "community": 159,
+      "community_name": "build-delivery.test.ts",
       "norm_label": "buildapp()"
     },
     {
@@ -12047,8 +12047,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "server_src_tests_build_eligibility_test",
-      "community": 221,
-      "community_name": "build-delivery.ts",
+      "community": 225,
+      "community_name": "build-eligibility.test.ts",
       "norm_label": "build-eligibility.test.ts"
     },
     {
@@ -12058,8 +12058,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "server_src_tests_build_eligibility_test_state",
-      "community": 221,
-      "community_name": "build-delivery.ts",
+      "community": 225,
+      "community_name": "build-eligibility.test.ts",
       "norm_label": "state"
     },
     {
@@ -12069,8 +12069,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "server_src_tests_build_eligibility_test_nextsingle",
-      "community": 221,
-      "community_name": "build-delivery.ts",
+      "community": 225,
+      "community_name": "build-eligibility.test.ts",
       "norm_label": "nextsingle()"
     },
     {
@@ -12080,8 +12080,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "server_src_tests_build_eligibility_test_nextlist",
-      "community": 221,
-      "community_name": "build-delivery.ts",
+      "community": 225,
+      "community_name": "build-eligibility.test.ts",
       "norm_label": "nextlist()"
     },
     {
@@ -12091,8 +12091,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "server_src_tests_build_eligibility_test_chain",
-      "community": 221,
-      "community_name": "build-delivery.ts",
+      "community": 225,
+      "community_name": "build-eligibility.test.ts",
       "norm_label": "chain"
     },
     {
@@ -12102,8 +12102,8 @@
       "source_location": "L55",
       "_origin": "ast",
       "id": "server_src_tests_build_eligibility_test_enqsingle",
-      "community": 221,
-      "community_name": "build-delivery.ts",
+      "community": 225,
+      "community_name": "build-eligibility.test.ts",
       "norm_label": "enqsingle()"
     },
     {
@@ -12113,8 +12113,8 @@
       "source_location": "L58",
       "_origin": "ast",
       "id": "server_src_tests_build_eligibility_test_enqlist",
-      "community": 221,
-      "community_name": "build-delivery.ts",
+      "community": 225,
+      "community_name": "build-eligibility.test.ts",
       "norm_label": "enqlist()"
     },
     {
@@ -12124,8 +12124,8 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "server_src_tests_build_eligibility_test_enqbaseline",
-      "community": 221,
-      "community_name": "build-delivery.ts",
+      "community": 225,
+      "community_name": "build-eligibility.test.ts",
       "norm_label": "enqbaseline()"
     },
     {
@@ -12213,7 +12213,7 @@
       "_origin": "ast",
       "id": "server_src_tests_client_identity_test",
       "community": 18,
-      "community_name": "supabase.ts",
+      "community_name": "client-identity.ts",
       "norm_label": "client-identity.test.ts"
     },
     {
@@ -12235,7 +12235,7 @@
       "_origin": "ast",
       "id": "server_src_tests_config_test",
       "community": 108,
-      "community_name": "config.ts",
+      "community_name": "src/index.ts",
       "norm_label": "config.test.ts"
     },
     {
@@ -12411,7 +12411,7 @@
       "_origin": "ast",
       "id": "server_src_tests_internal_auth_test",
       "community": 108,
-      "community_name": "config.ts",
+      "community_name": "src/index.ts",
       "norm_label": "internal-auth.test.ts"
     },
     {
@@ -12422,7 +12422,7 @@
       "_origin": "ast",
       "id": "server_src_tests_internal_auth_test_buildapp",
       "community": 108,
-      "community_name": "config.ts",
+      "community_name": "src/index.ts",
       "norm_label": "buildapp()"
     },
     {
@@ -12432,7 +12432,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "server_src_tests_internal_outbox_test",
-      "community": 18,
+      "community": 221,
       "community_name": "supabase.ts",
       "norm_label": "internal-outbox.test.ts"
     },
@@ -12443,7 +12443,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "server_src_tests_internal_outbox_test_buildapp",
-      "community": 18,
+      "community": 221,
       "community_name": "supabase.ts",
       "norm_label": "buildapp()"
     },
@@ -12565,7 +12565,7 @@
       "_origin": "ast",
       "id": "server_src_tests_mcp_analysis_test",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "mcp-analysis.test.ts"
     },
     {
@@ -12576,7 +12576,7 @@
       "_origin": "ast",
       "id": "server_src_tests_mcp_analysis_test_maketemplatecontext",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "maketemplatecontext()"
     },
     {
@@ -12587,7 +12587,7 @@
       "_origin": "ast",
       "id": "server_src_tests_mcp_analysis_test_makeenterprisecontext",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "makeenterprisecontext()"
     },
     {
@@ -12598,7 +12598,7 @@
       "_origin": "ast",
       "id": "server_src_tests_mcp_analysis_test_empty_assets",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "empty_assets"
     },
     {
@@ -12708,7 +12708,7 @@
       "_origin": "ast",
       "id": "server_src_tests_prompt5_assets_test",
       "community": 108,
-      "community_name": "config.ts",
+      "community_name": "src/index.ts",
       "norm_label": "prompt5-assets.test.ts"
     },
     {
@@ -12719,7 +12719,7 @@
       "_origin": "ast",
       "id": "server_src_tests_prompt5_assets_test_state",
       "community": 108,
-      "community_name": "config.ts",
+      "community_name": "src/index.ts",
       "norm_label": "state"
     },
     {
@@ -12906,7 +12906,7 @@
       "_origin": "ast",
       "id": "server_src_tests_prompt5_assets_test_seedintake",
       "community": 108,
-      "community_name": "config.ts",
+      "community_name": "src/index.ts",
       "norm_label": "seedintake()"
     },
     {
@@ -12917,7 +12917,7 @@
       "_origin": "ast",
       "id": "server_src_tests_prompt5_assets_test_makeapp",
       "community": 108,
-      "community_name": "config.ts",
+      "community_name": "src/index.ts",
       "norm_label": "makeapp()"
     },
     {
@@ -12928,7 +12928,7 @@
       "_origin": "ast",
       "id": "server_src_tests_prompt5_assets_test_binding",
       "community": 108,
-      "community_name": "config.ts",
+      "community_name": "src/index.ts",
       "norm_label": "binding"
     },
     {
@@ -12939,7 +12939,7 @@
       "_origin": "ast",
       "id": "server_src_tests_prompt5_assets_test_validupload",
       "community": 108,
-      "community_name": "config.ts",
+      "community_name": "src/index.ts",
       "norm_label": "validupload"
     },
     {
@@ -13037,7 +13037,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "server_src_index",
-      "community": 253,
+      "community": 108,
       "community_name": "src/index.ts",
       "norm_label": "src/index.ts"
     },
@@ -13048,7 +13048,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "server_src_index_preflight",
-      "community": 253,
+      "community": 108,
       "community_name": "src/index.ts",
       "norm_label": "preflight"
     },
@@ -13059,7 +13059,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "server_src_index_config",
-      "community": 253,
+      "community": 108,
       "community_name": "src/index.ts",
       "norm_label": "config"
     },
@@ -13070,7 +13070,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "server_src_index_parseorigins",
-      "community": 253,
+      "community": 108,
       "community_name": "src/index.ts",
       "norm_label": "parseorigins()"
     },
@@ -13081,7 +13081,7 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "server_src_index_app",
-      "community": 253,
+      "community": 108,
       "community_name": "src/index.ts",
       "norm_label": "app"
     },
@@ -13279,8 +13279,8 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "server_src_lib_asset_validation_uploadrequestschema",
-      "community": 86,
-      "community_name": "portal.ts",
+      "community": 24,
+      "community_name": "routes/assets.ts",
       "norm_label": "uploadrequestschema"
     },
     {
@@ -13401,7 +13401,7 @@
       "_origin": "ast",
       "id": "server_src_lib_build_eligibility",
       "community": 221,
-      "community_name": "build-delivery.ts",
+      "community_name": "supabase.ts",
       "norm_label": "build-eligibility.ts"
     },
     {
@@ -13412,7 +13412,7 @@
       "_origin": "ast",
       "id": "server_src_lib_build_eligibility_buildeligibilityfailure",
       "community": 221,
-      "community_name": "build-delivery.ts",
+      "community_name": "supabase.ts",
       "norm_label": "buildeligibilityfailure"
     },
     {
@@ -13423,7 +13423,7 @@
       "_origin": "ast",
       "id": "server_src_lib_build_eligibility_buildeligibilitysnapshot",
       "community": 221,
-      "community_name": "build-delivery.ts",
+      "community_name": "supabase.ts",
       "norm_label": "buildeligibilitysnapshot"
     },
     {
@@ -13434,7 +13434,7 @@
       "_origin": "ast",
       "id": "server_src_lib_build_eligibility_buildeligibilityresult",
       "community": 221,
-      "community_name": "build-delivery.ts",
+      "community_name": "supabase.ts",
       "norm_label": "buildeligibilityresult"
     },
     {
@@ -13445,7 +13445,7 @@
       "_origin": "ast",
       "id": "server_src_lib_build_eligibility_intakerow",
       "community": 221,
-      "community_name": "build-delivery.ts",
+      "community_name": "supabase.ts",
       "norm_label": "intakerow"
     },
     {
@@ -13456,7 +13456,7 @@
       "_origin": "ast",
       "id": "server_src_lib_build_eligibility_agreementrow",
       "community": 221,
-      "community_name": "build-delivery.ts",
+      "community_name": "supabase.ts",
       "norm_label": "agreementrow"
     },
     {
@@ -13467,7 +13467,7 @@
       "_origin": "ast",
       "id": "server_src_lib_build_eligibility_buildcardrow",
       "community": 221,
-      "community_name": "build-delivery.ts",
+      "community_name": "supabase.ts",
       "norm_label": "buildcardrow"
     },
     {
@@ -13478,7 +13478,7 @@
       "_origin": "ast",
       "id": "server_src_lib_build_eligibility_decisionrow",
       "community": 221,
-      "community_name": "build-delivery.ts",
+      "community_name": "supabase.ts",
       "norm_label": "decisionrow"
     },
     {
@@ -13489,7 +13489,7 @@
       "_origin": "ast",
       "id": "server_src_lib_build_eligibility_deliverypackagerow",
       "community": 221,
-      "community_name": "build-delivery.ts",
+      "community_name": "supabase.ts",
       "norm_label": "deliverypackagerow"
     },
     {
@@ -13500,7 +13500,7 @@
       "_origin": "ast",
       "id": "server_src_lib_build_eligibility_orchestrationrow",
       "community": 221,
-      "community_name": "build-delivery.ts",
+      "community_name": "supabase.ts",
       "norm_label": "orchestrationrow"
     },
     {
@@ -13511,7 +13511,7 @@
       "_origin": "ast",
       "id": "server_src_lib_build_eligibility_checkbuildeligibility",
       "community": 221,
-      "community_name": "build-delivery.ts",
+      "community_name": "supabase.ts",
       "norm_label": "checkbuildeligibility()"
     },
     {
@@ -13665,7 +13665,7 @@
       "_origin": "ast",
       "id": "server_src_lib_build_package",
       "community": 221,
-      "community_name": "build-delivery.ts",
+      "community_name": "supabase.ts",
       "norm_label": "build-package.ts"
     },
     {
@@ -13676,7 +13676,7 @@
       "_origin": "ast",
       "id": "server_src_lib_build_package_deliverypackagepayload",
       "community": 221,
-      "community_name": "build-delivery.ts",
+      "community_name": "supabase.ts",
       "norm_label": "deliverypackagepayload"
     },
     {
@@ -13687,7 +13687,7 @@
       "_origin": "ast",
       "id": "server_src_lib_build_package_canonicalize",
       "community": 221,
-      "community_name": "build-delivery.ts",
+      "community_name": "supabase.ts",
       "norm_label": "canonicalize()"
     },
     {
@@ -13698,7 +13698,7 @@
       "_origin": "ast",
       "id": "server_src_lib_build_package_computepackagechecksum",
       "community": 221,
-      "community_name": "build-delivery.ts",
+      "community_name": "supabase.ts",
       "norm_label": "computepackagechecksum()"
     },
     {
@@ -13709,7 +13709,7 @@
       "_origin": "ast",
       "id": "server_src_lib_build_package_draftrow",
       "community": 221,
-      "community_name": "build-delivery.ts",
+      "community_name": "supabase.ts",
       "norm_label": "draftrow"
     },
     {
@@ -13720,7 +13720,7 @@
       "_origin": "ast",
       "id": "server_src_lib_build_package_buildcarddetailrow",
       "community": 221,
-      "community_name": "build-delivery.ts",
+      "community_name": "supabase.ts",
       "norm_label": "buildcarddetailrow"
     },
     {
@@ -13731,7 +13731,7 @@
       "_origin": "ast",
       "id": "server_src_lib_build_package_mcprunsummary",
       "community": 221,
-      "community_name": "build-delivery.ts",
+      "community_name": "supabase.ts",
       "norm_label": "mcprunsummary"
     },
     {
@@ -13742,7 +13742,7 @@
       "_origin": "ast",
       "id": "server_src_lib_build_package_assetrow",
       "community": 221,
-      "community_name": "build-delivery.ts",
+      "community_name": "supabase.ts",
       "norm_label": "assetrow"
     },
     {
@@ -13753,7 +13753,7 @@
       "_origin": "ast",
       "id": "server_src_lib_build_package_builddeliverypackagepayload",
       "community": 221,
-      "community_name": "build-delivery.ts",
+      "community_name": "supabase.ts",
       "norm_label": "builddeliverypackagepayload()"
     },
     {
@@ -13764,7 +13764,7 @@
       "_origin": "ast",
       "id": "server_src_lib_client_identity",
       "community": 18,
-      "community_name": "supabase.ts",
+      "community_name": "client-identity.ts",
       "norm_label": "client-identity.ts"
     },
     {
@@ -13775,7 +13775,7 @@
       "_origin": "ast",
       "id": "server_src_lib_client_identity_clientidentityinput",
       "community": 18,
-      "community_name": "supabase.ts",
+      "community_name": "client-identity.ts",
       "norm_label": "clientidentityinput"
     },
     {
@@ -13786,7 +13786,7 @@
       "_origin": "ast",
       "id": "server_src_lib_client_identity_clientidentityresult",
       "community": 18,
-      "community_name": "supabase.ts",
+      "community_name": "client-identity.ts",
       "norm_label": "clientidentityresult"
     },
     {
@@ -13797,7 +13797,7 @@
       "_origin": "ast",
       "id": "server_src_lib_client_identity_normalizeclientemail",
       "community": 18,
-      "community_name": "supabase.ts",
+      "community_name": "client-identity.ts",
       "norm_label": "normalizeclientemail()"
     },
     {
@@ -13808,7 +13808,7 @@
       "_origin": "ast",
       "id": "server_src_lib_client_identity_resolveorcreateclient",
       "community": 18,
-      "community_name": "supabase.ts",
+      "community_name": "client-identity.ts",
       "norm_label": "resolveorcreateclient()"
     },
     {
@@ -13896,7 +13896,7 @@
       "_origin": "ast",
       "id": "server_src_lib_config",
       "community": 108,
-      "community_name": "config.ts",
+      "community_name": "src/index.ts",
       "norm_label": "config.ts"
     },
     {
@@ -13907,7 +13907,7 @@
       "_origin": "ast",
       "id": "server_src_lib_config_envfile",
       "community": 108,
-      "community_name": "config.ts",
+      "community_name": "src/index.ts",
       "norm_label": "envfile"
     },
     {
@@ -13918,7 +13918,7 @@
       "_origin": "ast",
       "id": "server_src_lib_config_getenvironment",
       "community": 108,
-      "community_name": "config.ts",
+      "community_name": "src/index.ts",
       "norm_label": "getenvironment()"
     },
     {
@@ -13929,7 +13929,7 @@
       "_origin": "ast",
       "id": "server_src_lib_config_configschema",
       "community": 108,
-      "community_name": "config.ts",
+      "community_name": "src/index.ts",
       "norm_label": "configschema"
     },
     {
@@ -13940,7 +13940,7 @@
       "_origin": "ast",
       "id": "server_src_lib_config_serverconfig",
       "community": 108,
-      "community_name": "config.ts",
+      "community_name": "src/index.ts",
       "norm_label": "serverconfig"
     },
     {
@@ -13951,7 +13951,7 @@
       "_origin": "ast",
       "id": "server_src_lib_config_validateconfig",
       "community": 108,
-      "community_name": "config.ts",
+      "community_name": "src/index.ts",
       "norm_label": "validateconfig()"
     },
     {
@@ -13962,7 +13962,7 @@
       "_origin": "ast",
       "id": "server_src_lib_config_getconfig",
       "community": 108,
-      "community_name": "config.ts",
+      "community_name": "src/index.ts",
       "norm_label": "getconfig()"
     },
     {
@@ -13973,7 +13973,7 @@
       "_origin": "ast",
       "id": "server_src_lib_config_preflightcheck",
       "community": 108,
-      "community_name": "config.ts",
+      "community_name": "src/index.ts",
       "norm_label": "preflightcheck()"
     },
     {
@@ -14116,7 +14116,7 @@
       "_origin": "ast",
       "id": "server_src_lib_mcp_contracts",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "mcp-contracts.ts"
     },
     {
@@ -14127,7 +14127,7 @@
       "_origin": "ast",
       "id": "server_src_lib_mcp_contracts_mcp_run_status",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "mcp_run_status"
     },
     {
@@ -14137,7 +14137,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "server_src_lib_mcp_contracts_mcprunstatus",
-      "community": 225,
+      "community": 1,
       "community_name": "mcp-orchestration.ts",
       "norm_label": "mcprunstatus"
     },
@@ -14149,7 +14149,7 @@
       "_origin": "ast",
       "id": "server_src_lib_mcp_contracts_mcp_role",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "mcp_role"
     },
     {
@@ -14159,7 +14159,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "server_src_lib_mcp_contracts_mcprole",
-      "community": 225,
+      "community": 1,
       "community_name": "mcp-orchestration.ts",
       "norm_label": "mcprole"
     },
@@ -14171,7 +14171,7 @@
       "_origin": "ast",
       "id": "server_src_lib_mcp_contracts_finding_severity",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "finding_severity"
     },
     {
@@ -14182,7 +14182,7 @@
       "_origin": "ast",
       "id": "server_src_lib_mcp_contracts_findingseverity",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "findingseverity"
     },
     {
@@ -14193,7 +14193,7 @@
       "_origin": "ast",
       "id": "server_src_lib_mcp_contracts_mcpfindingschema",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "mcpfindingschema"
     },
     {
@@ -14204,7 +14204,7 @@
       "_origin": "ast",
       "id": "server_src_lib_mcp_contracts_mcpfinding",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "mcpfinding"
     },
     {
@@ -14215,7 +14215,7 @@
       "_origin": "ast",
       "id": "server_src_lib_mcp_contracts_mcp_output_versions",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "mcp_output_versions"
     },
     {
@@ -14226,7 +14226,7 @@
       "_origin": "ast",
       "id": "server_src_lib_mcp_contracts_intakevalidationoutputschema",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "intakevalidationoutputschema"
     },
     {
@@ -14237,7 +14237,7 @@
       "_origin": "ast",
       "id": "server_src_lib_mcp_contracts_intakevalidationoutput",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "intakevalidationoutput"
     },
     {
@@ -14248,7 +14248,7 @@
       "_origin": "ast",
       "id": "server_src_lib_mcp_contracts_assetreadinessoutputschema",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "assetreadinessoutputschema"
     },
     {
@@ -14259,7 +14259,7 @@
       "_origin": "ast",
       "id": "server_src_lib_mcp_contracts_assetreadinessoutput",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "assetreadinessoutput"
     },
     {
@@ -14270,7 +14270,7 @@
       "_origin": "ast",
       "id": "server_src_lib_mcp_contracts_scopeanalysisoutputschema",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "scopeanalysisoutputschema"
     },
     {
@@ -14281,7 +14281,7 @@
       "_origin": "ast",
       "id": "server_src_lib_mcp_contracts_scopeanalysisoutput",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "scopeanalysisoutput"
     },
     {
@@ -14292,7 +14292,7 @@
       "_origin": "ast",
       "id": "server_src_lib_mcp_contracts_pricingtimelineoutputschema",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "pricingtimelineoutputschema"
     },
     {
@@ -14303,7 +14303,7 @@
       "_origin": "ast",
       "id": "server_src_lib_mcp_contracts_pricingtimelineoutput",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "pricingtimelineoutput"
     },
     {
@@ -14314,7 +14314,7 @@
       "_origin": "ast",
       "id": "server_src_lib_mcp_contracts_buildcardoutputschema",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "buildcardoutputschema"
     },
     {
@@ -14325,7 +14325,7 @@
       "_origin": "ast",
       "id": "server_src_lib_mcp_contracts_buildcardoutput",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "buildcardoutput"
     },
     {
@@ -14336,7 +14336,7 @@
       "_origin": "ast",
       "id": "server_src_lib_mcp_contracts_sanitizedintakecontextschema",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "sanitizedintakecontextschema"
     },
     {
@@ -14347,7 +14347,7 @@
       "_origin": "ast",
       "id": "server_src_lib_mcp_contracts_sanitizedintakecontext",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "sanitizedintakecontext"
     },
     {
@@ -14357,7 +14357,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "server_src_lib_mcp_orchestration",
-      "community": 225,
+      "community": 1,
       "community_name": "mcp-orchestration.ts",
       "norm_label": "mcp-orchestration.ts"
     },
@@ -14368,7 +14368,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "server_src_lib_mcp_orchestration_independent_roles",
-      "community": 225,
+      "community": 1,
       "community_name": "mcp-orchestration.ts",
       "norm_label": "independent_roles"
     },
@@ -14379,7 +14379,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "server_src_lib_mcp_orchestration_assetsnapshot",
-      "community": 225,
+      "community": 1,
       "community_name": "mcp-orchestration.ts",
       "norm_label": "assetsnapshot"
     },
@@ -14390,7 +14390,7 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "server_src_lib_mcp_orchestration_assetentry",
-      "community": 225,
+      "community": 1,
       "community_name": "mcp-orchestration.ts",
       "norm_label": "assetentry"
     },
@@ -14401,7 +14401,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "server_src_lib_mcp_orchestration_orchestrateanalysis",
-      "community": 225,
+      "community": 1,
       "community_name": "mcp-orchestration.ts",
       "norm_label": "orchestrateanalysis()"
     },
@@ -14412,7 +14412,7 @@
       "source_location": "L139",
       "_origin": "ast",
       "id": "server_src_lib_mcp_orchestration_runbuildcardgeneration",
-      "community": 225,
+      "community": 1,
       "community_name": "mcp-orchestration.ts",
       "norm_label": "runbuildcardgeneration()"
     },
@@ -14423,7 +14423,7 @@
       "source_location": "L204",
       "_origin": "ast",
       "id": "server_src_lib_mcp_orchestration_retrymcprun",
-      "community": 225,
+      "community": 1,
       "community_name": "mcp-orchestration.ts",
       "norm_label": "retrymcprun()"
     },
@@ -14434,7 +14434,7 @@
       "source_location": "L247",
       "_origin": "ast",
       "id": "server_src_lib_mcp_orchestration_executemcprole",
-      "community": 225,
+      "community": 1,
       "community_name": "mcp-orchestration.ts",
       "norm_label": "executemcprole()"
     },
@@ -14445,7 +14445,7 @@
       "source_location": "L292",
       "_origin": "ast",
       "id": "server_src_lib_mcp_orchestration_buildroleinput",
-      "community": 225,
+      "community": 1,
       "community_name": "mcp-orchestration.ts",
       "norm_label": "buildroleinput()"
     },
@@ -14456,7 +14456,7 @@
       "source_location": "L309",
       "_origin": "ast",
       "id": "server_src_lib_mcp_orchestration_executewithtimeout",
-      "community": 225,
+      "community": 1,
       "community_name": "mcp-orchestration.ts",
       "norm_label": "executewithtimeout()"
     },
@@ -14467,7 +14467,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "server_src_lib_mcp_persistence",
-      "community": 225,
+      "community": 1,
       "community_name": "mcp-orchestration.ts",
       "norm_label": "mcp-persistence.ts"
     },
@@ -14478,7 +14478,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "server_src_lib_mcp_persistence_mcprunrecord",
-      "community": 225,
+      "community": 1,
       "community_name": "mcp-orchestration.ts",
       "norm_label": "mcprunrecord"
     },
@@ -14489,7 +14489,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "server_src_lib_mcp_persistence_createmcprun",
-      "community": 225,
+      "community": 1,
       "community_name": "mcp-orchestration.ts",
       "norm_label": "createmcprun()"
     },
@@ -14500,7 +14500,7 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "server_src_lib_mcp_persistence_transitionmcprun",
-      "community": 225,
+      "community": 1,
       "community_name": "mcp-orchestration.ts",
       "norm_label": "transitionmcprun()"
     },
@@ -14511,8 +14511,8 @@
       "source_location": "L79",
       "_origin": "ast",
       "id": "server_src_lib_mcp_persistence_getmcprunsforintake",
-      "community": 225,
-      "community_name": "mcp-orchestration.ts",
+      "community": 134,
+      "community_name": "middleware/auth.ts",
       "norm_label": "getmcprunsforintake()"
     },
     {
@@ -14522,8 +14522,8 @@
       "source_location": "L90",
       "_origin": "ast",
       "id": "server_src_lib_mcp_persistence_getmcprun",
-      "community": 225,
-      "community_name": "mcp-orchestration.ts",
+      "community": 134,
+      "community_name": "middleware/auth.ts",
       "norm_label": "getmcprun()"
     },
     {
@@ -14533,7 +14533,7 @@
       "source_location": "L101",
       "_origin": "ast",
       "id": "server_src_lib_mcp_persistence_hascompletedbuildcard",
-      "community": 225,
+      "community": 1,
       "community_name": "mcp-orchestration.ts",
       "norm_label": "hascompletedbuildcard()"
     },
@@ -14544,7 +14544,7 @@
       "source_location": "L114",
       "_origin": "ast",
       "id": "server_src_lib_mcp_persistence_incrementretrycount",
-      "community": 225,
+      "community": 1,
       "community_name": "mcp-orchestration.ts",
       "norm_label": "incrementretrycount()"
     },
@@ -14555,7 +14555,7 @@
       "source_location": "L133",
       "_origin": "ast",
       "id": "server_src_lib_mcp_persistence_storereleasepackage",
-      "community": 225,
+      "community": 1,
       "community_name": "mcp-orchestration.ts",
       "norm_label": "storereleasepackage()"
     },
@@ -14567,7 +14567,7 @@
       "_origin": "ast",
       "id": "server_src_lib_mcp_roles",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "mcp-roles.ts"
     },
     {
@@ -14578,7 +14578,7 @@
       "_origin": "ast",
       "id": "server_src_lib_mcp_roles_assetsnapshot",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "assetsnapshot"
     },
     {
@@ -14588,7 +14588,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "server_src_lib_mcp_roles_runintakevalidation",
-      "community": 225,
+      "community": 1,
       "community_name": "mcp-orchestration.ts",
       "norm_label": "runintakevalidation()"
     },
@@ -14600,7 +14600,7 @@
       "_origin": "ast",
       "id": "server_src_lib_mcp_roles_mcpsnapshot",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "mcpsnapshot"
     },
     {
@@ -14610,7 +14610,7 @@
       "source_location": "L107",
       "_origin": "ast",
       "id": "server_src_lib_mcp_roles_runassetreadiness",
-      "community": 225,
+      "community": 1,
       "community_name": "mcp-orchestration.ts",
       "norm_label": "runassetreadiness()"
     },
@@ -14621,7 +14621,7 @@
       "source_location": "L186",
       "_origin": "ast",
       "id": "server_src_lib_mcp_roles_runscopeanalysis",
-      "community": 225,
+      "community": 1,
       "community_name": "mcp-orchestration.ts",
       "norm_label": "runscopeanalysis()"
     },
@@ -14633,7 +14633,7 @@
       "_origin": "ast",
       "id": "server_src_lib_mcp_roles_tierpricingfactors",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "tierpricingfactors()"
     },
     {
@@ -14644,7 +14644,7 @@
       "_origin": "ast",
       "id": "server_src_lib_mcp_roles_weeklyestimatefactors",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "weeklyestimatefactors()"
     },
     {
@@ -14655,7 +14655,7 @@
       "_origin": "ast",
       "id": "server_src_lib_mcp_roles_runpricingtimeline",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "runpricingtimeline()"
     },
     {
@@ -14665,7 +14665,7 @@
       "source_location": "L358",
       "_origin": "ast",
       "id": "server_src_lib_mcp_roles_runbuildcard",
-      "community": 225,
+      "community": 1,
       "community_name": "mcp-orchestration.ts",
       "norm_label": "runbuildcard()"
     },
@@ -14677,7 +14677,7 @@
       "_origin": "ast",
       "id": "server_src_lib_mcp_sanitization",
       "community": 1,
-      "community_name": "mcp-roles.ts",
+      "community_name": "mcp-orchestration.ts",
       "norm_label": "mcp-sanitization.ts"
     },
     {
@@ -14687,7 +14687,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "server_src_lib_mcp_sanitization_buildsanitizedcontext",
-      "community": 225,
+      "community": 1,
       "community_name": "mcp-orchestration.ts",
       "norm_label": "buildsanitizedcontext()"
     },
@@ -14698,7 +14698,7 @@
       "source_location": "L134",
       "_origin": "ast",
       "id": "server_src_lib_mcp_sanitization_buildassetsnapshots",
-      "community": 225,
+      "community": 1,
       "community_name": "mcp-orchestration.ts",
       "norm_label": "buildassetsnapshots()"
     },
@@ -14852,7 +14852,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "server_src_lib_reference",
-      "community": 18,
+      "community": 221,
       "community_name": "supabase.ts",
       "norm_label": "lib/reference.ts"
     },
@@ -14874,7 +14874,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "server_src_lib_supabase",
-      "community": 18,
+      "community": 221,
       "community_name": "supabase.ts",
       "norm_label": "supabase.ts"
     },
@@ -14885,8 +14885,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "server_src_lib_supabase_getsupabase",
-      "community": 18,
-      "community_name": "supabase.ts",
+      "community": 108,
+      "community_name": "src/index.ts",
       "norm_label": "getsupabase()"
     },
     {
@@ -14896,7 +14896,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "server_src_lib_supabase_supabase",
-      "community": 18,
+      "community": 221,
       "community_name": "supabase.ts",
       "norm_label": "supabase"
     },
@@ -15622,8 +15622,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "server_src_middleware_auth_authenticateduser",
-      "community": 225,
-      "community_name": "mcp-orchestration.ts",
+      "community": 134,
+      "community_name": "middleware/auth.ts",
       "norm_label": "authenticateduser"
     },
     {
@@ -15699,8 +15699,8 @@
       "source_location": "L167",
       "_origin": "ast",
       "id": "server_src_middleware_auth_requireclientauth",
-      "community": 134,
-      "community_name": "middleware/auth.ts",
+      "community": 108,
+      "community_name": "src/index.ts",
       "norm_label": "requireclientauth()"
     },
     {
@@ -15711,7 +15711,7 @@
       "_origin": "ast",
       "id": "server_src_middleware_internal_auth",
       "community": 108,
-      "community_name": "config.ts",
+      "community_name": "src/index.ts",
       "norm_label": "internal-auth.ts"
     },
     {
@@ -15722,7 +15722,7 @@
       "_origin": "ast",
       "id": "server_src_middleware_internal_auth_requireinternalservice",
       "community": 108,
-      "community_name": "config.ts",
+      "community_name": "src/index.ts",
       "norm_label": "requireinternalservice()"
     },
     {
@@ -15820,8 +15820,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "server_src_routes_agreement_agreementrouter",
-      "community": 253,
-      "community_name": "src/index.ts",
+      "community": 20,
+      "community_name": "finance.ts",
       "norm_label": "agreementrouter"
     },
     {
@@ -15897,8 +15897,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "server_src_routes_analysis",
-      "community": 225,
-      "community_name": "mcp-orchestration.ts",
+      "community": 134,
+      "community_name": "middleware/auth.ts",
       "norm_label": "analysis.ts"
     },
     {
@@ -15908,8 +15908,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "server_src_routes_analysis_analysisrouter",
-      "community": 225,
-      "community_name": "mcp-orchestration.ts",
+      "community": 134,
+      "community_name": "middleware/auth.ts",
       "norm_label": "analysisrouter"
     },
     {
@@ -16052,7 +16052,7 @@
       "_origin": "ast",
       "id": "server_src_routes_build_delivery",
       "community": 221,
-      "community_name": "build-delivery.ts",
+      "community_name": "supabase.ts",
       "norm_label": "build-delivery.ts"
     },
     {
@@ -16062,8 +16062,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "server_src_routes_build_delivery_builddeliveryrouter",
-      "community": 221,
-      "community_name": "build-delivery.ts",
+      "community": 159,
+      "community_name": "build-delivery.test.ts",
       "norm_label": "builddeliveryrouter"
     },
     {
@@ -16074,7 +16074,7 @@
       "_origin": "ast",
       "id": "server_src_routes_build_delivery_parseuuid",
       "community": 221,
-      "community_name": "build-delivery.ts",
+      "community_name": "supabase.ts",
       "norm_label": "parseuuid()"
     },
     {
@@ -16085,7 +16085,7 @@
       "_origin": "ast",
       "id": "server_src_routes_build_delivery_audit",
       "community": 221,
-      "community_name": "build-delivery.ts",
+      "community_name": "supabase.ts",
       "norm_label": "audit()"
     },
     {
@@ -16096,7 +16096,7 @@
       "_origin": "ast",
       "id": "server_src_routes_build_delivery_loadlatestpackage",
       "community": 221,
-      "community_name": "build-delivery.ts",
+      "community_name": "supabase.ts",
       "norm_label": "loadlatestpackage()"
     },
     {
@@ -16107,7 +16107,7 @@
       "_origin": "ast",
       "id": "server_src_routes_build_delivery_nextpackageversion",
       "community": 221,
-      "community_name": "build-delivery.ts",
+      "community_name": "supabase.ts",
       "norm_label": "nextpackageversion()"
     },
     {
@@ -16118,7 +16118,7 @@
       "_origin": "ast",
       "id": "server_src_routes_build_delivery_createpackageschema",
       "community": 221,
-      "community_name": "build-delivery.ts",
+      "community_name": "supabase.ts",
       "norm_label": "createpackageschema"
     },
     {
@@ -16129,7 +16129,7 @@
       "_origin": "ast",
       "id": "server_src_routes_build_delivery_acknowledgeschema",
       "community": 221,
-      "community_name": "build-delivery.ts",
+      "community_name": "supabase.ts",
       "norm_label": "acknowledgeschema"
     },
     {
@@ -16140,7 +16140,7 @@
       "_origin": "ast",
       "id": "server_src_routes_build_delivery_noteschema",
       "community": 221,
-      "community_name": "build-delivery.ts",
+      "community_name": "supabase.ts",
       "norm_label": "noteschema"
     },
     {
@@ -16161,8 +16161,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "server_src_routes_build_orchestration_buildorchestrationrouter",
-      "community": 253,
-      "community_name": "src/index.ts",
+      "community": 159,
+      "community_name": "build-delivery.test.ts",
       "norm_label": "buildorchestrationrouter"
     },
     {
@@ -16348,8 +16348,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "server_src_routes_finance_financerouter",
-      "community": 253,
-      "community_name": "src/index.ts",
+      "community": 20,
+      "community_name": "finance.ts",
       "norm_label": "financerouter"
     },
     {
@@ -16634,7 +16634,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "server_src_routes_internal_outbox",
-      "community": 18,
+      "community": 221,
       "community_name": "supabase.ts",
       "norm_label": "internal-outbox.ts"
     },
@@ -16645,7 +16645,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "server_src_routes_internal_outbox_internaloutboxrouter",
-      "community": 18,
+      "community": 221,
       "community_name": "supabase.ts",
       "norm_label": "internaloutboxrouter"
     },
@@ -16656,7 +16656,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "server_src_routes_internal_outbox_patchschema",
-      "community": 18,
+      "community": 221,
       "community_name": "supabase.ts",
       "norm_label": "patchschema"
     },
@@ -16667,7 +16667,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "server_src_routes_internal_outbox_uuidschema",
-      "community": 18,
+      "community": 221,
       "community_name": "supabase.ts",
       "norm_label": "uuidschema"
     },
@@ -16678,7 +16678,7 @@
       "source_location": "L109",
       "_origin": "ast",
       "id": "server_src_routes_internal_outbox_queryschema",
-      "community": 18,
+      "community": 221,
       "community_name": "supabase.ts",
       "norm_label": "queryschema"
     },
@@ -16778,7 +16778,7 @@
       "_origin": "ast",
       "id": "server_src_scripts_preflight",
       "community": 108,
-      "community_name": "config.ts",
+      "community_name": "src/index.ts",
       "norm_label": "preflight.ts"
     },
     {
@@ -16789,7 +16789,7 @@
       "_origin": "ast",
       "id": "server_src_scripts_preflight_preflight",
       "community": 108,
-      "community_name": "config.ts",
+      "community_name": "src/index.ts",
       "norm_label": "preflight"
     },
     {
@@ -18009,8 +18009,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "src_api_console_handleresponse",
-      "community": 223,
-      "community_name": "IntakeDetail.tsx",
+      "community": 0,
+      "community_name": "api/console.ts",
       "norm_label": "handleresponse()"
     },
     {
@@ -18097,8 +18097,8 @@
       "source_location": "L74",
       "_origin": "ast",
       "id": "src_api_console_mcprun",
-      "community": 293,
-      "community_name": "McpStatusPanel.tsx",
+      "community": 223,
+      "community_name": "IntakeDetail.tsx",
       "norm_label": "mcprun"
     },
     {
@@ -18218,8 +18218,8 @@
       "source_location": "L160",
       "_origin": "ast",
       "id": "src_api_console_retrymcprun",
-      "community": 293,
-      "community_name": "McpStatusPanel.tsx",
+      "community": 0,
+      "community_name": "api/console.ts",
       "norm_label": "retrymcprun()"
     },
     {
@@ -18655,7 +18655,7 @@
       "label": "IconProps",
       "file_type": "code",
       "source_file": "src/components/icons/Icons.tsx",
-      "source_location": "L31",
+      "source_location": "L29",
       "_origin": "ast",
       "id": "src_components_icons_icons_iconprops",
       "community": 50,
@@ -18666,7 +18666,7 @@
       "label": "paths",
       "file_type": "code",
       "source_file": "src/components/icons/Icons.tsx",
-      "source_location": "L36",
+      "source_location": "L34",
       "_origin": "ast",
       "id": "src_components_icons_icons_paths",
       "community": 50,
@@ -18677,7 +18677,7 @@
       "label": "Icon()",
       "file_type": "code",
       "source_file": "src/components/icons/Icons.tsx",
-      "source_location": "L65",
+      "source_location": "L61",
       "_origin": "ast",
       "id": "src_components_icons_icons_icon",
       "community": 50,
@@ -18798,7 +18798,7 @@
       "label": "IntakeDetailViewProps",
       "file_type": "code",
       "source_file": "src/console/IntakeDetail.tsx",
-      "source_location": "L19",
+      "source_location": "L18",
       "_origin": "ast",
       "id": "src_console_intakedetail_intakedetailviewprops",
       "community": 223,
@@ -18809,7 +18809,7 @@
       "label": "SectionId",
       "file_type": "code",
       "source_file": "src/console/IntakeDetail.tsx",
-      "source_location": "L25",
+      "source_location": "L24",
       "_origin": "ast",
       "id": "src_console_intakedetail_sectionid",
       "community": 223,
@@ -18820,7 +18820,7 @@
       "label": "SECTION_LABELS",
       "file_type": "code",
       "source_file": "src/console/IntakeDetail.tsx",
-      "source_location": "L27",
+      "source_location": "L26",
       "_origin": "ast",
       "id": "src_console_intakedetail_section_labels",
       "community": 223,
@@ -18831,7 +18831,7 @@
       "label": "IntakeDetailView()",
       "file_type": "code",
       "source_file": "src/console/IntakeDetail.tsx",
-      "source_location": "L39",
+      "source_location": "L38",
       "_origin": "ast",
       "id": "src_console_intakedetail_intakedetailview",
       "community": 223,
@@ -18842,7 +18842,7 @@
       "label": "StatusBadge()",
       "file_type": "code",
       "source_file": "src/console/IntakeDetail.tsx",
-      "source_location": "L321",
+      "source_location": "L320",
       "_origin": "ast",
       "id": "src_console_intakedetail_statusbadge",
       "community": 26,
@@ -18853,7 +18853,7 @@
       "label": "Section()",
       "file_type": "code",
       "source_file": "src/console/IntakeDetail.tsx",
-      "source_location": "L327",
+      "source_location": "L326",
       "_origin": "ast",
       "id": "src_console_intakedetail_section",
       "community": 223,
@@ -18864,7 +18864,7 @@
       "label": "Field()",
       "file_type": "code",
       "source_file": "src/console/IntakeDetail.tsx",
-      "source_location": "L342",
+      "source_location": "L340",
       "_origin": "ast",
       "id": "src_console_intakedetail_field",
       "community": 223,
@@ -18875,7 +18875,7 @@
       "label": "FullField()",
       "file_type": "code",
       "source_file": "src/console/IntakeDetail.tsx",
-      "source_location": "L351",
+      "source_location": "L349",
       "_origin": "ast",
       "id": "src_console_intakedetail_fullfield",
       "community": 223,
@@ -18886,7 +18886,7 @@
       "label": "AssetReadinessBadge()",
       "file_type": "code",
       "source_file": "src/console/IntakeDetail.tsx",
-      "source_location": "L360",
+      "source_location": "L358",
       "_origin": "ast",
       "id": "src_console_intakedetail_assetreadinessbadge",
       "community": 223,
@@ -18897,7 +18897,7 @@
       "label": "AssetStatusBadge()",
       "file_type": "code",
       "source_file": "src/console/IntakeDetail.tsx",
-      "source_location": "L383",
+      "source_location": "L381",
       "_origin": "ast",
       "id": "src_console_intakedetail_assetstatusbadge",
       "community": 223,
@@ -18911,8 +18911,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_console_mcpstatuspanel",
-      "community": 293,
-      "community_name": "McpStatusPanel.tsx",
+      "community": 223,
+      "community_name": "IntakeDetail.tsx",
       "norm_label": "mcpstatuspanel.tsx"
     },
     {
@@ -18922,8 +18922,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "src_console_mcpstatuspanel_mcpstatuspanelprops",
-      "community": 293,
-      "community_name": "McpStatusPanel.tsx",
+      "community": 223,
+      "community_name": "IntakeDetail.tsx",
       "norm_label": "mcpstatuspanelprops"
     },
     {
@@ -18933,8 +18933,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "src_console_mcpstatuspanel_role_labels",
-      "community": 293,
-      "community_name": "McpStatusPanel.tsx",
+      "community": 223,
+      "community_name": "IntakeDetail.tsx",
       "norm_label": "role_labels"
     },
     {
@@ -18944,8 +18944,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_console_mcpstatuspanel_mcpstatuspanel",
-      "community": 293,
-      "community_name": "McpStatusPanel.tsx",
+      "community": 223,
+      "community_name": "IntakeDetail.tsx",
       "norm_label": "mcpstatuspanel()"
     },
     {
@@ -18955,8 +18955,8 @@
       "source_location": "L87",
       "_origin": "ast",
       "id": "src_console_mcpstatuspanel_runstatusicon",
-      "community": 293,
-      "community_name": "McpStatusPanel.tsx",
+      "community": 223,
+      "community_name": "IntakeDetail.tsx",
       "norm_label": "runstatusicon()"
     },
     {
@@ -20668,7 +20668,7 @@
       "label": "StatusPill()",
       "file_type": "code",
       "source_file": "src/portal/ClientPortal.tsx",
-      "source_location": "L103",
+      "source_location": "L104",
       "_origin": "ast",
       "id": "src_portal_clientportal_statuspill",
       "community": 42,
@@ -20679,7 +20679,7 @@
       "label": "PortalLogo()",
       "file_type": "code",
       "source_file": "src/portal/ClientPortal.tsx",
-      "source_location": "L107",
+      "source_location": "L108",
       "_origin": "ast",
       "id": "src_portal_clientportal_portallogo",
       "community": 42,
@@ -20690,7 +20690,7 @@
       "label": "AuthScreen()",
       "file_type": "code",
       "source_file": "src/portal/ClientPortal.tsx",
-      "source_location": "L116",
+      "source_location": "L117",
       "_origin": "ast",
       "id": "src_portal_clientportal_authscreen",
       "community": 42,
@@ -20701,7 +20701,7 @@
       "label": "EmptyProjects()",
       "file_type": "code",
       "source_file": "src/portal/ClientPortal.tsx",
-      "source_location": "L164",
+      "source_location": "L165",
       "_origin": "ast",
       "id": "src_portal_clientportal_emptyprojects",
       "community": 42,
@@ -20712,7 +20712,7 @@
       "label": "Overview()",
       "file_type": "code",
       "source_file": "src/portal/ClientPortal.tsx",
-      "source_location": "L176",
+      "source_location": "L177",
       "_origin": "ast",
       "id": "src_portal_clientportal_overview",
       "community": 42,
@@ -20723,7 +20723,7 @@
       "label": "Settings()",
       "file_type": "code",
       "source_file": "src/portal/ClientPortal.tsx",
-      "source_location": "L214",
+      "source_location": "L215",
       "_origin": "ast",
       "id": "src_portal_clientportal_settings",
       "community": 42,
@@ -20734,7 +20734,7 @@
       "label": "BuildCard()",
       "file_type": "code",
       "source_file": "src/portal/ClientPortal.tsx",
-      "source_location": "L220",
+      "source_location": "L221",
       "_origin": "ast",
       "id": "src_portal_clientportal_buildcard",
       "community": 42,
@@ -20745,7 +20745,7 @@
       "label": "AssetsPanel()",
       "file_type": "code",
       "source_file": "src/portal/ClientPortal.tsx",
-      "source_location": "L224",
+      "source_location": "L225",
       "_origin": "ast",
       "id": "src_portal_clientportal_assetspanel",
       "community": 42,
@@ -20756,7 +20756,7 @@
       "label": "AgreementPanel()",
       "file_type": "code",
       "source_file": "src/portal/ClientPortal.tsx",
-      "source_location": "L231",
+      "source_location": "L232",
       "_origin": "ast",
       "id": "src_portal_clientportal_agreementpanel",
       "community": 42,
@@ -20767,7 +20767,7 @@
       "label": "ProjectDetail()",
       "file_type": "code",
       "source_file": "src/portal/ClientPortal.tsx",
-      "source_location": "L235",
+      "source_location": "L236",
       "_origin": "ast",
       "id": "src_portal_clientportal_projectdetail",
       "community": 42,
@@ -20778,7 +20778,7 @@
       "label": "ClientPortal()",
       "file_type": "code",
       "source_file": "src/portal/ClientPortal.tsx",
-      "source_location": "L291",
+      "source_location": "L244",
       "_origin": "ast",
       "id": "src_portal_clientportal_clientportal",
       "community": 42,
@@ -69442,7 +69442,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/console/IntakeDetail.tsx",
-      "source_location": "L67",
+      "source_location": "L66",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_console_intakedetail_intakedetailview",
@@ -69490,7 +69490,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/console/IntakeDetail.tsx",
-      "source_location": "L68",
+      "source_location": "L67",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_console_intakedetail_intakedetailview",
@@ -69526,7 +69526,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/console/IntakeDetail.tsx",
-      "source_location": "L69",
+      "source_location": "L68",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_console_intakedetail_intakedetailview",
@@ -70334,7 +70334,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/components/icons/Icons.tsx",
-      "source_location": "L65",
+      "source_location": "L61",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_icons_icons",
@@ -70356,7 +70356,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/components/icons/Icons.tsx",
-      "source_location": "L31",
+      "source_location": "L29",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_icons_icons",
@@ -70367,23 +70367,11 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/components/icons/Icons.tsx",
-      "source_location": "L36",
+      "source_location": "L34",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_icons_icons",
       "target": "src_components_icons_icons_paths",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/console/IntakeDetail.tsx",
-      "source_location": "L17",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "src_console_intakedetail",
-      "target": "src_components_icons_icons",
       "confidence_score": 1.0
     },
     {
@@ -70444,18 +70432,6 @@
       "_origin": "ast",
       "source": "src_portal_clientportal",
       "target": "src_components_icons_icons_iconname",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/console/IntakeDetail.tsx",
-      "source_location": "L17",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "src_console_intakedetail",
-      "target": "src_components_icons_icons_icon",
       "confidence_score": 1.0
     },
     {
@@ -70732,7 +70708,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/console/IntakeDetail.tsx",
-      "source_location": "L360",
+      "source_location": "L358",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_console_intakedetail",
@@ -70743,7 +70719,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/console/IntakeDetail.tsx",
-      "source_location": "L383",
+      "source_location": "L381",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_console_intakedetail",
@@ -70754,7 +70730,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/console/IntakeDetail.tsx",
-      "source_location": "L342",
+      "source_location": "L340",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_console_intakedetail",
@@ -70765,7 +70741,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/console/IntakeDetail.tsx",
-      "source_location": "L351",
+      "source_location": "L349",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_console_intakedetail",
@@ -70776,7 +70752,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/console/IntakeDetail.tsx",
-      "source_location": "L39",
+      "source_location": "L38",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_console_intakedetail",
@@ -70787,7 +70763,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/console/IntakeDetail.tsx",
-      "source_location": "L19",
+      "source_location": "L18",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_console_intakedetail",
@@ -70798,7 +70774,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/console/IntakeDetail.tsx",
-      "source_location": "L327",
+      "source_location": "L326",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_console_intakedetail",
@@ -70809,7 +70785,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/console/IntakeDetail.tsx",
-      "source_location": "L27",
+      "source_location": "L26",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_console_intakedetail",
@@ -70820,7 +70796,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/console/IntakeDetail.tsx",
-      "source_location": "L25",
+      "source_location": "L24",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_console_intakedetail",
@@ -70831,7 +70807,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/console/IntakeDetail.tsx",
-      "source_location": "L321",
+      "source_location": "L320",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_console_intakedetail",
@@ -70988,7 +70964,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/console/IntakeDetail.tsx",
-      "source_location": "L126",
+      "source_location": "L125",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_console_intakedetail_intakedetailview",
@@ -70999,7 +70975,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/console/IntakeDetail.tsx",
-      "source_location": "L324",
+      "source_location": "L323",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_console_intakedetail_statusbadge",
@@ -74459,7 +74435,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/portal/ClientPortal.tsx",
-      "source_location": "L231",
+      "source_location": "L232",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_portal_clientportal",
@@ -74481,7 +74457,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/portal/ClientPortal.tsx",
-      "source_location": "L224",
+      "source_location": "L225",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_portal_clientportal",
@@ -74492,7 +74468,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/portal/ClientPortal.tsx",
-      "source_location": "L116",
+      "source_location": "L117",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_portal_clientportal",
@@ -74503,7 +74479,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/portal/ClientPortal.tsx",
-      "source_location": "L220",
+      "source_location": "L221",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_portal_clientportal",
@@ -74514,7 +74490,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/portal/ClientPortal.tsx",
-      "source_location": "L291",
+      "source_location": "L244",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_portal_clientportal",
@@ -74525,7 +74501,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/portal/ClientPortal.tsx",
-      "source_location": "L164",
+      "source_location": "L165",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_portal_clientportal",
@@ -74558,7 +74534,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/portal/ClientPortal.tsx",
-      "source_location": "L176",
+      "source_location": "L177",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_portal_clientportal",
@@ -74569,7 +74545,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/portal/ClientPortal.tsx",
-      "source_location": "L107",
+      "source_location": "L108",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_portal_clientportal",
@@ -74602,7 +74578,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/portal/ClientPortal.tsx",
-      "source_location": "L235",
+      "source_location": "L236",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_portal_clientportal",
@@ -74613,7 +74589,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/portal/ClientPortal.tsx",
-      "source_location": "L210",
+      "source_location": "L211",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_portal_clientportal",
@@ -74635,7 +74611,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/portal/ClientPortal.tsx",
-      "source_location": "L214",
+      "source_location": "L215",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_portal_clientportal",
@@ -74646,7 +74622,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/portal/ClientPortal.tsx",
-      "source_location": "L103",
+      "source_location": "L104",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_portal_clientportal",
@@ -74682,7 +74658,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/portal/ClientPortal.tsx",
-      "source_location": "L296",
+      "source_location": "L249",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_portal_clientportal_clientportal",
@@ -74694,7 +74670,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/portal/ClientPortal.tsx",
-      "source_location": "L205",
+      "source_location": "L206",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_portal_clientportal_overview",
