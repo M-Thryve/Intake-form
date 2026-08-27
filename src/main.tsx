@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import ConsoleApp from './console/ConsoleApp'
 import './index.css'
+import './styles/aurora.css'
 
 function Root() {
   const [route] = React.useState(window.location.hash)

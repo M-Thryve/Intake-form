@@ -1,0 +1,185 @@
+/* ── Aurora ambient stage ─────────────────────────────────────────────────
+   Fixed light layer behind all content. Curtains bloom from the top (sky),
+   the topographic ridge anchors the bottom, the form floats in the calm
+   middle band. Only transform/opacity animate — everything stays on the
+   compositor. This is what the glass cards frost. */
+
+.aurora-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  contain: strict;
+}
+
+/* Deep sky wash — violet at altitude, fading to void at the horizon */
+.aurora-sky {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 140% 78% at 50% -18%, #16301F 0%, #101A14 34%, rgba(10,6,20,0) 72%),
+    linear-gradient(to bottom, #0B0F0D 0%, #0A0C0F 72%);
+}
+
+/* Starfield — three tiling densities, no animation */
+/* Aurora plate — a real looping clip of the curtains moving (Higgsfield,
+   kling2_6 from the still plate, denoised so bitrate goes into the gradients
+   rather than grain the page re-adds itself in CSS).
+
+   Sized by WIDTH at its natural 2.39:1 aspect. object-fit:cover on a full
+   -height stage made the height drive the scale, upscaling the clip ~2x on a
+   1080p screen — which is what read as blur. Width-driven sizing is 1:1 at
+   1920 and downscales below it. */
+.aurora-plate {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: auto;
+  display: block;
+  opacity: 0.74;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 48%, rgba(0,0,0,0.36) 76%, transparent 98%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 48%, rgba(0,0,0,0.36) 76%, transparent 98%);
+}
+
+/* Reduced-motion path: the clip's own first frame, held still. Needs an
+   explicit ratio because an empty div has no intrinsic height. */
+.aurora-plate--still {
+  aspect-ratio: 1920 / 804;
+  background-image: url('/aurora/sky-a.webp');
+  background-size: cover;
+  background-position: 50% 0%;
+  background-repeat: no-repeat;
+}
+
+/* Deep field — small, dim, tiled for density. At this size the tile seam is
+   below the perceptual threshold, so it reads as scattered depth. */
+.aurora-stars-far {
+  position: absolute;
+  inset: 0;
+  opacity: 0.55;
+  background-image:
+    radial-gradient(0.9px 0.9px at 14% 22%, rgba(255,255,255,0.75) 50%, transparent 55%),
+    radial-gradient(0.7px 0.7px at 61% 9%, rgba(214,236,255,0.6) 50%, transparent 55%),
+    radial-gradient(0.8px 0.8px at 37% 63%, rgba(255,255,255,0.55) 50%, transparent 55%),
+    radial-gradient(0.7px 0.7px at 88% 41%, rgba(226,240,255,0.5) 50%, transparent 55%),
+    radial-gradient(0.9px 0.9px at 72% 77%, rgba(255,255,255,0.45) 50%, transparent 55%),
+    radial-gradient(0.6px 0.6px at 24% 88%, rgba(255,255,255,0.4) 50%, transparent 55%);
+  background-size: 260px 260px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 44%, transparent 74%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 44%, transparent 74%);
+}
+
+/* Foreground stars — larger, brighter, positioned once so they read as a
+   real constellation rather than a texture. Breathes very slowly. */
+.aurora-stars {
+  position: absolute;
+  inset: 0;
+  opacity: 0.9;
+  background-image:
+    radial-gradient(1.7px 1.7px at 18% 12%, rgba(255,255,255,0.95) 50%, transparent 55%),
+    radial-gradient(1.2px 1.2px at 62% 8%, rgba(214,236,255,0.85) 50%, transparent 55%),
+    radial-gradient(1.8px 1.8px at 84% 22%, rgba(255,255,255,0.8) 50%, transparent 55%),
+    radial-gradient(1.1px 1.1px at 33% 30%, rgba(255,255,255,0.7) 50%, transparent 55%),
+    radial-gradient(1.3px 1.3px at 8% 40%, rgba(226,240,255,0.72) 50%, transparent 55%),
+    radial-gradient(1.1px 1.1px at 72% 38%, rgba(255,255,255,0.6) 50%, transparent 55%),
+    radial-gradient(1.6px 1.6px at 46% 18%, rgba(255,255,255,0.85) 50%, transparent 55%),
+    radial-gradient(1.1px 1.1px at 92% 46%, rgba(255,255,255,0.55) 50%, transparent 55%),
+    radial-gradient(1.4px 1.4px at 27% 6%, rgba(240,248,255,0.8) 50%, transparent 55%),
+    radial-gradient(1.2px 1.2px at 54% 44%, rgba(255,255,255,0.5) 50%, transparent 55%);
+  background-size: 100% 100%;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 46%, transparent 76%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 46%, transparent 76%);
+  animation: aurora-twinkle 11s ease-in-out infinite;
+}
+
+@keyframes aurora-twinkle {
+  0%, 100% { opacity: 0.9; }
+  50%      { opacity: 0.62; }
+}
+
+/* ── Curtains ──
+   Painted per-frame by <AuroraCanvas />. A low internal resolution scaled up
+   under a blur: aurora has no hard edges, so nothing is lost and the loop
+   stays cheap. Screen blend keeps the canvas black fully transparent. */
+
+.aurora-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  filter: blur(17px) saturate(1.12);
+  mix-blend-mode: screen;
+  opacity: 0.45;
+}
+
+/* Content scrim — the aurora stays full strength at the margins, but the
+   centre column where copy lives is pulled back down so body text keeps its
+   contrast. Feathered so the transition is never a visible edge. */
+.aurora-scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 48% 72% at 50% 40%,
+      rgba(10,12,15,0.80) 0%,
+      rgba(10,12,15,0.58) 42%,
+      rgba(10,12,15,0.20) 68%,
+      rgba(10,12,15,0) 84%);
+}
+
+/* Horizon bloom where the curtains meet the ridge */
+.aurora-horizon {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 46%;
+  background:
+    radial-gradient(ellipse 90% 100% at 50% 118%, rgba(170,182,196,0.30) 0%, rgba(70,168,115,0.10) 42%, transparent 72%);
+  mix-blend-mode: screen;
+}
+
+/* Topographic ridge — the AURORA.jpg signature, anchored at the bottom */
+/* Generated wireframe terrain (Higgsfield). Screen blend drops its
+   pure-black ground to transparent, leaving only the luminous mesh. */
+.aurora-ridge-plate {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 46vh;
+  background-image: url('/aurora/ridge.webp');
+  background-size: cover;
+  background-position: 50% 60%;
+  background-repeat: no-repeat;
+  mix-blend-mode: screen;
+  opacity: 0.9;
+}
+
+/* Vignette — pulls the corners down so the composition reads as a frame
+   rather than a flat fill, and keeps the eye on the centre column. */
+.aurora-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 78% 68% at 50% 46%,
+    transparent 0%, transparent 52%, rgba(5,6,8,0.42) 82%, rgba(5,6,8,0.72) 100%);
+}
+
+/* Film grain — smooth gradients band visibly on near-black; grain breaks the
+   banding into noise the eye reads as texture instead of a defect. Static,
+   so it costs one paint and never animates. */
+.aurora-grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.13;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size: 256px 256px;
+}
+
+/* ── Content layer ──────────────────────────────────────────────────────── */
+.aurora-content {
+  position: relative;
+  z-index: 10;
+  isolation: isolate;
+}
