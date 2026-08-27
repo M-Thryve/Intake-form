@@ -21,3 +21,25 @@ INTAKE FORM KNOWLEDGE/
 test-results/
 playwright-report/
 blob-report/
+
+# Graphify cache
+graphify-out/cache/
+
+# Source assets (keep only public/)
+LOGO.png
+BANNER.png
+
+# Internal docs & planning
+.planning/
+00 - System/
+01 - Business/
+02 - Projects/
+CONTEXT-POLICY.md
+INTAKE-FLOW.md
+me.md
+memory.md
+nul
+
+# OS
+.DS_Store
+Thumbs.db
