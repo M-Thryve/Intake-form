@@ -1,220 +1,113 @@
 /**
- * REV-03: Industry-to-template-tag mapping layer.
+ * REV-03 (v3.2): Industry-to-template direct mapping.
  *
- * Maps each industry to the template tags that are compatible with it.
- * Templates can have multiple tags. A template matches an industry if
- * it has at least one tag that appears in the industry's tag list.
+ * The seven canonical industries map EXACTLY onto the seven catalogue groups.
+ * A template belongs to a category, and a category belongs to exactly one
+ * industry. Filtering is therefore a direct category-membership test — the
+ * previous tag-matching layer has been removed.
  */
 
 export interface IndustryTemplateMapping {
-  /** Slug key used for lookups. */
+  /** Canonical industry slug (e.g. 'service-commerce'). */
   industry: string
   /** Human-readable industry label shown in the filter indicator. */
   label: string
-  /** Template tags that are compatible with this industry. */
-  compatibleTags: string[]
-  /** Tags for templates that are "recommended alternatives" — related but not primary. */
-  relatedTags: string[]
+  /** Template category labels that belong to this industry. */
+  categories: string[]
 }
 
 export const INDUSTRY_TEMPLATE_MAP: IndustryTemplateMapping[] = [
   {
-    industry: 'entertainment',
-    label: 'Entertainment',
-    compatibleTags: [
-      'entertainment',
-      'media',
-      'events',
-      'streaming',
-      'artist',
-      'performer',
-      'production',
+    industry: 'service-commerce',
+    label: 'Service-Based Commerce',
+    categories: [
+      'Marketing Agency',
+      'Creative Agency and Studio',
+      'Professional Consultant',
     ],
-    relatedTags: ['creative', 'portfolio', 'agency'],
   },
   {
-    industry: 'real-estate',
-    label: 'Real Estate',
-    compatibleTags: ['real-estate', 'property', 'listings', 'realty', 'broker'],
-    relatedTags: ['business', 'corporate', 'directory'],
-  },
-  {
-    industry: 'healthcare',
-    label: 'Healthcare',
-    compatibleTags: [
-      'healthcare',
-      'medical',
-      'clinic',
-      'wellness',
-      'dental',
-      'pharmacy',
+    industry: 'dtc-ecommerce',
+    label: 'Direct-to-Consumer E-Commerce',
+    categories: [
+      'Fashion and Lifestyle Store',
+      'Beauty and Personal Care Store',
+      'Food and Beverage Product Store',
+      'Home and Living Store',
+      'Electronics and Accessories Store',
+      'Specialty Product Store',
+      'Digital Product Store',
     ],
-    relatedTags: ['professional', 'booking', 'directory'],
   },
   {
-    industry: 'restaurant',
-    label: 'Restaurant & Food',
-    compatibleTags: ['restaurant', 'food', 'cafe', 'bakery', 'catering', 'bar'],
-    relatedTags: ['ecommerce', 'delivery', 'booking'],
-  },
-  {
-    industry: 'technology',
-    label: 'Technology',
-    compatibleTags: ['technology', 'saas', 'software', 'startup', 'fintech', 'ai'],
-    relatedTags: ['corporate', 'agency', 'portfolio'],
-  },
-  {
-    industry: 'education',
-    label: 'Education',
-    compatibleTags: [
-      'education',
-      'school',
-      'university',
-      'elearning',
-      'training',
-      'tutoring',
+    industry: 'retail-multi-branch',
+    label: 'Retail & Multi-Branch Commerce',
+    categories: [
+      'General Retail Chain',
+      'Grocery and Convenience Retail',
+      'Pharmacy and Health Retail',
+      'Hardware, Furniture, and Appliance Retail',
     ],
-    relatedTags: ['nonprofit', 'community', 'directory'],
   },
   {
-    industry: 'ecommerce',
-    label: 'E-Commerce & Retail',
-    compatibleTags: [
-      'ecommerce',
-      'retail',
-      'shop',
-      'store',
-      'marketplace',
-      'fashion',
+    industry: 'wholesale-distribution',
+    label: 'Wholesale & Distribution',
+    categories: [
+      'General Wholesale Distributor',
+      'Food & Beverage Distributor',
+      'Industrial Supplier',
+      'Specialized Distributor',
     ],
-    relatedTags: ['product', 'catalog', 'delivery'],
   },
   {
-    industry: 'construction',
-    label: 'Construction & Trades',
-    compatibleTags: [
-      'construction',
-      'contractor',
-      'architecture',
-      'engineering',
-      'plumbing',
-      'electrical',
+    industry: 'manufacturing-fabrication',
+    label: 'Manufacturing & Fabrication',
+    categories: [
+      'General Manufacturer',
+      'Industrial Manufacturer',
+      'Custom Fabricator',
+      'Contract and Private-Label Manufacturer',
     ],
-    relatedTags: ['business', 'corporate', 'portfolio'],
   },
   {
-    industry: 'legal',
-    label: 'Legal',
-    compatibleTags: ['legal', 'law', 'attorney', 'firm'],
-    relatedTags: ['professional', 'corporate', 'directory'],
-  },
-  {
-    industry: 'finance',
-    label: 'Finance & Insurance',
-    compatibleTags: [
-      'finance',
-      'insurance',
-      'banking',
-      'accounting',
-      'investment',
+    industry: 'warehousing-storage',
+    label: 'Warehousing & Storage',
+    categories: [
+      'General Warehouse Provider',
+      'E-Commerce Fulfillment',
+      'Specialized Storage',
     ],
-    relatedTags: ['corporate', 'professional', 'fintech'],
   },
   {
-    industry: 'fitness',
-    label: 'Fitness & Sports',
-    compatibleTags: [
-      'fitness',
-      'gym',
-      'sports',
-      'yoga',
-      'personal-training',
+    industry: 'logistics-transportation',
+    label: 'Logistics & Transportation',
+    categories: [
+      'Courier & Last-Mile Delivery',
+      'Trucking & Freight Transport',
+      'Freight Forwarding',
+      'Specialized Logistics',
     ],
-    relatedTags: ['wellness', 'booking', 'community'],
-  },
-  {
-    industry: 'nonprofit',
-    label: 'Nonprofit & Community',
-    compatibleTags: [
-      'nonprofit',
-      'charity',
-      'community',
-      'church',
-      'ngo',
-      'foundation',
-    ],
-    relatedTags: ['education', 'events', 'directory'],
-  },
-  {
-    industry: 'creative',
-    label: 'Creative & Agency',
-    compatibleTags: [
-      'creative',
-      'agency',
-      'design',
-      'photography',
-      'videography',
-      'art',
-    ],
-    relatedTags: ['portfolio', 'entertainment', 'media'],
-  },
-  {
-    industry: 'travel',
-    label: 'Travel & Hospitality',
-    compatibleTags: [
-      'travel',
-      'hotel',
-      'tourism',
-      'hospitality',
-      'resort',
-      'booking',
-    ],
-    relatedTags: ['events', 'restaurant', 'directory'],
-  },
-  {
-    industry: 'automotive',
-    label: 'Automotive',
-    compatibleTags: ['automotive', 'car', 'dealership', 'mechanic', 'rental'],
-    relatedTags: ['business', 'directory', 'ecommerce'],
   },
   {
     industry: 'other',
     label: 'Other',
-    compatibleTags: [],
-    relatedTags: [],
+    categories: [],
   },
 ]
 
 /**
- * Display-name aliases that map the intake form's INDUSTRIES values to the
- * mapping keys used by this module. Keys are lowrcased, trimmed display names.
+ * Display-name / alias fallbacks that map an intake form industry value to a
+ * canonical slug. The form's 7 canonical slugs are matched directly; these
+ * aliases cover legacy display strings.
  */
 const INDUSTRY_ALIASES: Record<string, string> = {
-  entertainment: 'entertainment',
-  'real estate': 'real-estate',
-  healthcare: 'healthcare',
-  'food & beverage': 'restaurant',
-  technology: 'technology',
-  education: 'education',
-  'e-commerce': 'ecommerce',
-  'construction & trades': 'construction',
-  legal: 'legal',
-  finance: 'finance',
-  'fitness & sports': 'fitness',
-  'non-profit': 'nonprofit',
-  nonprofit: 'nonprofit',
-  'creative & agency': 'creative',
-  'travel & hospitality': 'travel',
-  automotive: 'automotive',
-  other: 'other',
-  // v3.0 canonical industry slugs
-  'service-commerce': 'ecommerce',
-  'dtc-ecommerce': 'ecommerce',
-  'retail-multi-branch': 'ecommerce',
-  'wholesale-distribution': 'ecommerce',
-  'manufacturing-fabrication': 'construction',
-  'warehousing-storage': 'construction',
-  'logistics-transportation': 'travel',
+  'service-based commerce': 'service-commerce',
+  'direct-to-consumer e-commerce': 'dtc-ecommerce',
+  'retail & multi-branch commerce': 'retail-multi-branch',
+  'wholesale & distribution': 'wholesale-distribution',
+  'manufacturing & fabrication': 'manufacturing-fabrication',
+  'warehousing & storage': 'warehousing-storage',
+  'logistics & transportation': 'logistics-transportation',
 }
 
 function normalize(value: string): string {
@@ -222,27 +115,24 @@ function normalize(value: string): string {
 }
 
 /**
- * Resolves a form industry value (display string or slug) to the canonical
+ * Resolves a form industry value (display string or slug) to a canonical
  * mapping key. Returns 'other' for unmapped or empty values so the filter
  * falls back to showing all templates.
  */
 export function resolveIndustryKey(industry: string): string {
-  const raw = industry.trim()
+  const raw = (industry ?? '').trim()
   if (!raw) return 'other'
 
   const slug = normalize(raw)
 
-  // Exact key match (e.g. 'ecommerce', 'real-estate').
-  const keyMatch = INDUSTRY_TEMPLATE_MAP.find(m => m.industry === slug)
+  const keyMatch = INDUSTRY_TEMPLATE_MAP.find((m) => m.industry === slug)
   if (keyMatch) return slug
 
-  // Match against display labels (case-insensitive, punctuation-stripped).
   const labelMatch = INDUSTRY_TEMPLATE_MAP.find(
-    m => normalize(m.label) === slug,
+    (m) => normalize(m.label) === slug,
   )
   if (labelMatch) return labelMatch.industry
 
-  // Fallback alias.
   const alias = INDUSTRY_ALIASES[slug]
   if (alias) return alias
 
@@ -251,14 +141,14 @@ export function resolveIndustryKey(industry: string): string {
 
 /**
  * Returns the mapping for a given industry value (display string or key).
- * Falls back to the `'other'` mapping (no filtering) if not found.
+ * Falls back to the 'other' mapping (no filtering) if not found.
  */
 export function getMappingForIndustry(
   industry: string,
 ): IndustryTemplateMapping {
   const key = resolveIndustryKey(industry)
   return (
-    INDUSTRY_TEMPLATE_MAP.find(m => m.industry === key) ??
-    INDUSTRY_TEMPLATE_MAP.find(m => m.industry === 'other')!
+    INDUSTRY_TEMPLATE_MAP.find((m) => m.industry === key) ??
+    INDUSTRY_TEMPLATE_MAP.find((m) => m.industry === 'other')!
   )
 }

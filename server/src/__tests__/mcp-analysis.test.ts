@@ -26,7 +26,7 @@ function makeTemplateContext(overrides: Partial<SanitizedIntakeContext> = {}): S
       businessDescription: "Online retail platform",
     },
     assets: { qualification: "ready", serviceRequestedCount: 1, hasRequestedServices: true },
-    template: { templateId: "tpl-retail", projectVersion: "desktop", colorPreset: "navy" },
+    template: { templateId: "tpl-retail", colorPreset: "navy" },
     enterprise: undefined,
     content: {
       featureCount: 5,
@@ -384,7 +384,7 @@ describe("Build Card MCP", () => {
 // ═══════════════════════════════════════════════════════════
 
 describe("Owner gate boundary", () => {
-  it("Build Card status is always waiting_owner_review", () => {
+  it("Build Card output status is preparing", () => {
     const context = makeTemplateContext();
     const validation = runIntakeValidation(context);
     const readiness = runAssetReadiness(context, EMPTY_ASSETS);
@@ -400,8 +400,8 @@ describe("Owner gate boundary", () => {
       mcpRunRefs: [],
     });
 
-    expect(result.status).toBe("waiting_owner_review");
-    expect(result.status).not.toBe("approved");
+    expect(result.status).toBe("preparing");
+    expect(result.status).not.toBe("issued");
   });
 
   it("pricing estimates are always preliminary", () => {

@@ -187,11 +187,11 @@ export async function checkBuildEligibility(
   if (!buildCard) {
     return { eligible: false, reason: "build_card_missing", detail: "Build card row is missing." };
   }
-  if (buildCard.status !== "approved") {
+  if (buildCard.status !== "issued") {
     return {
       eligible: false,
       reason: "build_card_missing",
-      detail: `Build card status '${buildCard.status}' is not approved.`,
+      detail: `Build card status '${buildCard.status}' is not issued.`,
     };
   }
 

@@ -17,7 +17,7 @@ function emptyForm(): FormData {
     deckSectionStatuses: {}, deckSectionNotes: {},
     resourceStatuses: {}, resourceNotes: {}, resourceAddOnCosts: {},
     tier: '',
-    templateCategory: '', templateId: '', projectVersion: '', colorPreset: '',
+    templateCategory: '', templateId: '', colorPreset: '',
     customSizes: false, allSizes: false,
     projectVision: '', targetUsers: '', userRoles: '', businessWorkflows: '',
     integrations: '', existingSystems: '', dataSecurityReqs: '', scalabilityReqs: '',
@@ -185,16 +185,14 @@ describe('getInlineWarnings — build-approach', () => {
 })
 
 describe('getInlineWarnings — template-select', () => {
-  it('warns on missing template and version for the templated-website path', () => {
+  it('warns on missing template for the templated-website path', () => {
     const warnings = getInlineWarnings('template-select', form({ projectType: 'templated-website' }))
     expect(warnings['field-templateId']).toBe('Please select a template')
-    expect(warnings['field-projectVersion']).toBe('Please select a project version')
   })
 
-  it('only warns on the version once a template is selected', () => {
+  it('clears once a template is selected', () => {
     const warnings = getInlineWarnings('template-select', form({ projectType: 'templated-website', templateId: 'apex' }))
     expect(warnings['field-templateId']).toBeNull()
-    expect(warnings['field-projectVersion']).toBe('Please select a project version')
   })
 
   it('produces no warnings for non-templated-website paths', () => {

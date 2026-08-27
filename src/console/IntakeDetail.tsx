@@ -30,7 +30,7 @@ const SECTION_LABELS: Record<SectionId, string> = {
   C: "Scope & Content",
   D: "Asset Readiness",
   E: "MCP Analysis Summary",
-  F: "Preliminary Build Card",
+  F: "Preliminary Estimate",
   G: "Decision History",
   H: "Audit Trail",
   I: "Template Recommendations",
@@ -154,7 +154,7 @@ export default function IntakeDetailView({ intakeId, isOwner, onClose }: IntakeD
         {template ? (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             <Field label="Selected Template" value={template.templateId as string} />
-            <Field label="Project Version" value={template.projectVersion as string} />
+            {template.projectVersion ? <Field label="Project Version (legacy)" value={template.projectVersion as string} /> : null}
             <Field label="Color Preset" value={template.colorPreset as string} />
           </div>
         ) : enterprise ? (

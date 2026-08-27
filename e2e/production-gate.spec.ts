@@ -329,7 +329,9 @@ test.describe.serial('real authenticated production gate', () => {
     })
     expect(record.payload.client).toMatchObject({ fullName: 'Release Gate Client', company: 'Release Gate Studio' })
     expect(record.payload.project).toMatchObject({ projectType: 'templated-website', industry: 'service-commerce' })
-    expect(record.payload.template).toMatchObject({ templateId: 'apex', projectVersion: 'desktop', colorPreset: 'original' })
+    expect(record.payload.template).toMatchObject({ templateId: 'apex', colorPreset: 'original' })
+    // v3.1 removed platform versions — new payloads carry no projectVersion.
+    expect(record.payload.template).not.toHaveProperty('projectVersion')
     expect(record.payload.scope.extensions).toContain('EXT-001')
     expect(record.payload.scope.customFeatures).toContain('Partner directory pending owner review')
     expect(record.payload.scope.pages.find((item: { name: string }) => item.name === 'Home').fields.headline).toBe('Production-ready intake lifecycle')

@@ -41,9 +41,10 @@ export function toSubmissionPayload(
     ),
   }
   const assetQualification = formData.assetQualification || (
-    Object.keys(structuredAssetStatuses).length > 0 ? 'ready' : ''
+    Object.keys(structuredAssetStatuses).length > 0 ? 'ready' : 'incomplete'
   )
 
+  const tierForServer = formData.tier === 'template' ? 'custom' : formData.tier
   const buildPath: BuildPath = formData.tier === 'enterprise' ? 'enterprise' : 'custom'
 
   const coreFeatureCodes = Array.from(CORE_FEATURE_CODES)
@@ -62,7 +63,7 @@ export function toSubmissionPayload(
       projectType: formData.projectType,
       businessDescription: formData.businessDesc,
     },
-    tier: formData.tier,
+    tier: tierForServer,
     buildPath,
     assets: {
       qualification: assetQualification,
@@ -78,12 +79,34 @@ export function toSubmissionPayload(
       styles: formData.designStyles,
       inspirationLink: formData.inspirationLink,
     },
+    content: {
+      pages,
+      features: [
+        ...coreFeatureCodes.map(code => ({ name: code, priority: 'Required' as const, source: 'chip' as const })),
+        ...selectedExtensions.map(code => ({ name: code, priority: 'Required' as const, source: 'chip' as const })),
+        ...(formData.customFeatures ?? []).map(name => ({ name, priority: 'Need Help Deciding' as const, source: 'custom' as const })),
+      ],
+    },
     scope: {
       pages,
       features: [],
       coreFeatures: coreFeatureCodes,
       extensions: selectedExtensions,
       customFeatures: formData.customFeatures ?? [],
+    },
+    payment: {
+      plan: '',
+      maintenanceAfterFree: '',
+      maintenanceEndAcknowledged: false,
+      voucherCode: '',
+    },
+    confirmations: {
+      accurate: false,
+      receipt: false,
+      payment: false,
+      maintenance: false,
+      buildCard: false,
+      submission: false,
     },
     outcome,
     missingRequirements: formData.missingRequirements ?? [],
@@ -96,10 +119,11 @@ export function toSubmissionPayload(
   }
 
   // Template block: only for Templated Website builds.
+  // v3.1: projectVersion is no longer collected or submitted. Historical
+  // records keep their stored value server-side; it is never rewritten here.
   if (formData.projectType === 'templated-website') {
     payload.template = {
       templateId: formData.templateId,
-      projectVersion: formData.projectVersion,
       colorPreset: formData.colorPreset,
     }
   }
@@ -309,7 +333,6 @@ export function rehydrateDraftState(record: IntakeDraftRecord): RehydratedDraftS
       resourceNotes: payload.assets?.resourceNotes ?? {},
       resourceAddOnCosts: payload.assets?.resourceAddOnCosts ?? {},
       templateId: payload.template?.templateId ?? '',
-      projectVersion: payload.template?.projectVersion ?? '',
       colorPreset: payload.template?.colorPreset ?? '',
       websiteQuestionnaire: payload.websiteQuestionnaire ?? undefined,
       projectVision: payload.enterprise?.projectVision ?? '',

@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
-import { supabase } from "../lib/supabase.js";
+import { supabase } from "../lib/supabase.js"
+import { PAYMENT_DUE_NOTE } from "../lib/payments.js";
 import { requireRole } from "../middleware/auth.js";
 import { checkEligibility } from "../lib/agreement-eligibility.js";
 
@@ -375,8 +376,8 @@ async function applyTransition(
 
   const buildProtection =
     args.transition === "mark_ready_for_build_handoff"
-      ? "Package marked ready for the separate build-delivery handoff. No build has been started. No payment has been captured."
-      : "No payment captured. No build started.";
+      ? `Package marked ready for the separate build-delivery handoff. No build has been started. No payment has been captured. ${PAYMENT_DUE_NOTE}`
+      : `No payment captured. No build started. ${PAYMENT_DUE_NOTE}`;
 
   res.status(200).json({
     success: true,

@@ -269,7 +269,9 @@ function coerceDraftForPersistence(draft: DraftPayload): ValidatedPayload {
     tier: (draft.tier as "custom" | "enterprise") || "custom",
     template: draft.template ? {
       templateId: draft.template.templateId || "",
-      projectVersion: draft.template.projectVersion || "desktop",
+      // v3.1 removed platform versions. Preserve a value sent by a legacy
+      // client; never fabricate one for new selections.
+      ...(draft.template.projectVersion ? { projectVersion: draft.template.projectVersion } : {}),
       colorPreset: draft.template.colorPreset || "",
     } : undefined,
     enterprise: draft.enterprise ? {

@@ -106,10 +106,11 @@ function validateTemplate(
     }
     if (!isNonEmptyString(template.templateId))
       errors.push({ field: "template.templateId", message: "Template ID is required" });
-    if (!isNonEmptyString(template.projectVersion))
-      errors.push({ field: "template.projectVersion", message: "Project version is required" });
-    else if (!["desktop", "mobile", "both"].includes(template.projectVersion as string))
-      errors.push({ field: "template.projectVersion", message: "Invalid project version" });
+    // v3.1: projectVersion no longer collected — optional for legacy tolerance
+    if (template.projectVersion !== undefined && template.projectVersion !== null && template.projectVersion !== "") {
+      if (!["desktop", "mobile", "both"].includes(template.projectVersion as string))
+        errors.push({ field: "template.projectVersion", message: "Invalid project version" });
+    }
   }
 }
 

@@ -79,7 +79,7 @@ function enqBaseline() {
     reviewed_build_card_version: "2",
     reviewed_analysis_version: "3",
   });
-  enqSingle({ id: "bc1", version: 3, status: "approved" });
+  enqSingle({ id: "bc1", version: 3, status: "issued" });
   enqList([{ scan_status: "clean" }]);
   enqList([{ status: "completed", server_role: "build_card" }]);
 }
@@ -166,7 +166,7 @@ describe("checkBuildEligibility", () => {
       reviewed_build_card_version: "2",
       reviewed_analysis_version: "3",
     });
-    enqSingle({ id: "bc1", version: 3, status: "approved" });
+    enqSingle({ id: "bc1", version: 3, status: "issued" });
     enqList([{ scan_status: "failed" }]);
     enqList([{ status: "completed", server_role: "build_card" }]);
     const res = await checkBuildEligibility(INTAKE_ID);

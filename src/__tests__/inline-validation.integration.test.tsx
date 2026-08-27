@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import App from '../App'
 
@@ -10,6 +10,12 @@ vi.mock('../api/intake', async (importOriginal) => {
     saveDraft: vi.fn().mockResolvedValue({ success: true, intakeId: 'mock-intake-id', clientId: 'mock-client-id', buildReferenceNumber: 'MTH-TEST-001', status: 'draft' }),
     submitIntake: vi.fn().mockResolvedValue({ success: true, intakeId: 'mock-intake-id', buildReferenceNumber: 'MTH-TEST-001', clientId: 'mock-client-id' }),
   }
+})
+
+// persistDraft probes API reachability with an OPTIONS preflight before
+// dispatching. jsdom has no backend — answer it with a success response.
+beforeAll(() => {
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 200 })))
 })
 
 // v2.0 flow: intro → build-approach → client-details → company-assets → template-select → …
@@ -151,7 +157,6 @@ describe('inline validation — draft save with active warnings', () => {
     clickContinue() // → template-select
 
     fireEvent.click(screen.getByRole('button', { name: /Apex Business/ }))
-    fireEvent.click(screen.getByRole('button', { name: 'Website' }))
     clickContinue() // → pages-features
 
     // v3.0: features are optional and have no priority system; navigation is not blocked.
@@ -175,7 +180,6 @@ describe('inline validation — draft save with active warnings', () => {
     fireEvent.click(screen.getByRole('button', { name: /full deck available/ }))
     clickContinue() // → template-select
     fireEvent.click(screen.getByRole('button', { name: /Apex Business/ }))
-    fireEvent.click(screen.getByRole('button', { name: 'Website' }))
     clickContinue() // → pages-features
 
     // Extension catalog is present — category dropdown and extension cards
@@ -244,8 +248,9 @@ describe('REV-03 — industry template filter', () => {
     // Scroll to / find a non-primary template in "All other templates".
     // Studio has tags ['portfolio','creative','design'] — not ecommerce.
     fireEvent.click(screen.getByRole('button', { name: /Studio/ }))
-    // Verifying the template was selected: the version picker should appear.
-    expect(screen.getByText('Choose Your Platform')).toBeInTheDocument()
+    // Verifying the template was selected: the preliminary total panel appears.
+    // v3.1: platform version picker removed — selection is confirmed by pricing.
+    expect(screen.getByText('Preliminary Total')).toBeInTheDocument()
   })
 
   it('recommended alternatives are shown for an industry with no primary matches', () => {

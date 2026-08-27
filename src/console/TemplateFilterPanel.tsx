@@ -53,7 +53,7 @@ export default function TemplateFilterPanel({
   }, [industry])
 
   const mapping = getMappingForIndustry(industry)
-  const industryActive = !!industry.trim() && mapping.compatibleTags.length > 0
+  const industryActive = !!industry.trim() && mapping.categories.length > 0
 
   if (!industryActive) return null
 

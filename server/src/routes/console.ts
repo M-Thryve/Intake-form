@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express"
 import { z } from "zod"
 import { supabase } from "../lib/supabase.js"
 import { requireRole } from "../middleware/auth.js"
+import { computePreparedAt } from "../lib/mcp-orchestration.js"
 
 export const consoleRouter = Router()
 
@@ -595,10 +596,20 @@ consoleRouter.post(
       return
     }
 
-    // Update intake status with concurrency guard
+    // Update intake status with concurrency guard. On approval the Build Card
+    // is issued to the client and payment becomes due (Change 5).
+    const updatePayload: Record<string, unknown> = {
+      status: newStatus,
+      updated_at: new Date().toISOString(),
+    }
+    if (decision === "approve") {
+      // Change 6: approval starts the Build Card prep window (2-3 days). The
+      // card is issued and payment becomes due only once prep completes.
+      updatePayload.commercial_stage = "build_card_preparing"
+    }
     const { error: updateErr } = await supabase
       .from("intakes")
-      .update({ status: newStatus, updated_at: new Date().toISOString() })
+      .update(updatePayload)
       .eq("id", intakeId)
       .eq("status", currentStatus)
 
@@ -625,13 +636,15 @@ consoleRouter.post(
       req.user?.id,
     )
 
-    // For approval: mark Build Cards as trashed (superseded in schema)
+    // For approval: begin the Build Card prep window. The preliminary card
+    // (status 'queued') becomes 'preparing' and is scheduled for issuance after
+    // the 2-3 day prep (prepared_at). Payment is gated until then.
     if (decision === "approve") {
       await supabase
         .from("build_cards")
-        .update({ status: "approved" })
+        .update({ status: "preparing", prepared_at: computePreparedAt() })
         .eq("intake_id", intakeId)
-        .eq("status", "waiting_owner_review")
+        .eq("status", "queued")
     }
 
     res.json({
@@ -649,7 +662,7 @@ consoleRouter.post(
       },
       message:
         decision === "approve"
-          ? "Intake approved for next phase. No payment or build has been triggered."
+          ? "Intake approved. The Build Card is now in a 2-3 day prep and will be issued to the client for review and payment once ready. No payment has been captured by this action."
           : decision === "reject"
             ? "Intake rejected and archived."
             : "Changes requested from intake operator.",

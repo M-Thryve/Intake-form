@@ -142,9 +142,6 @@ export function collectMissingRequirements(formData: FormData): MissingRequireme
     if (!formData.templateId) {
       missing.push(mk('template.id', 'Template selection', 'build_path', 'template-select', 'required'))
     }
-    if (!formData.projectVersion) {
-      missing.push(mk('template.version', 'Project version (platform)', 'build_path', 'template-select', 'required'))
-    }
   }
   if (formData.projectType === 'ai-assisted-website') {
     const q = formData.websiteQuestionnaire
@@ -312,9 +309,6 @@ function validateTemplateSelect(form: FormData): ValidationError[] {
   const needsTemplate = form.projectType === 'templated-website'
   if (needsTemplate && !form.templateId) {
     errors.push({ message: 'Template selection is required' })
-  }
-  if (needsTemplate && !form.projectVersion) {
-    errors.push({ message: 'Project version is required' })
   }
   return errors
 }

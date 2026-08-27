@@ -1,0 +1,17 @@
+{
+  "colors": [
+    { "hex": "#0B0F14", "name": "Deep Space", "role": "background" },
+    { "hex": "#0D1620", "name": "Night Sky", "role": "surface" },
+    { "hex": "#1E293B", "name": "Slate", "role": "border" },
+    { "hex": "#39D6C7", "name": "Mint Teal", "role": "primary" },
+    { "hex": "#4ADE80", "name": "Success Green", "role": "success" },
+    { "hex": "#F59E0B", "name": "Amber", "role": "warning" },
+    { "hex": "#EF4444", "name": "Alert Red", "role": "error" },
+    { "hex": "#E2E8F0", "name": "Silver", "role": "text-primary" },
+    { "hex": "#94A3B8", "name": "Muted Slate", "role": "text-secondary" }
+  ],
+  "gradients": [
+    { "name": "Primary Gradient", "stops": ["#39D6C7", "#22C55E"] },
+    { "name": "Background Gradient", "stops": ["#0B0F14", "#0D1620", "#1E293B"] }
+  ]
+}

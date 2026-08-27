@@ -31,7 +31,7 @@ The request may send the payload directly or inside the `intake` envelope.
     "project": { "projectName": "...", "industry": "...", "projectType": "...", "businessDescription": "..." },
     "assets": { "qualification": "ready", "statuses": {}, "requestedServices": [] },
     "tier": "template | custom | enterprise",
-    "template": { "templateId": "...", "projectVersion": "desktop | mobile | both", "colorPreset": "..." },
+    "template": { "templateId": "...", "colorPreset": "..." },
     "content": { "pages": [], "features": [{ "name": "...", "priority": "Required", "source": "chip" }] },
     "design": { "styles": ["Modern"], "inspirationLink": "" },
     "payment": { "plan": "...", "maintenanceAfterFree": "...", "maintenanceEndAcknowledged": true, "voucherCode": "" },

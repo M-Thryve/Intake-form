@@ -25,7 +25,6 @@ function formWithV2Assets(): FormData {
     tier: "custom",
     templateCategory: "",
     templateId: "starter",
-    projectVersion: "desktop",
     colorPreset: "",
     customSizes: false,
     allSizes: false,

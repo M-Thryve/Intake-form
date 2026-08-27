@@ -23,7 +23,6 @@ function validPayload(overrides: Record<string, unknown> = {}) {
     tier: "custom",
     template: {
       templateId: "starter",
-      projectVersion: "desktop",
       colorPreset: "blue",
     },
     scope: {

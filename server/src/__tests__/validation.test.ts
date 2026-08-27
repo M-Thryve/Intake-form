@@ -24,7 +24,6 @@ function validPayload(overrides: Record<string, unknown> = {}) {
     tier: "custom",
     template: {
       templateId: "starter-portfolio",
-      projectVersion: "desktop",
       colorPreset: "blue",
     },
     scope: {
@@ -476,7 +475,7 @@ describe("validateDraftPayload", () => {
       project: { projectName: "", industry: "", projectType: "", businessDescription: "" },
       tier: "",
       assets: { qualification: "", statuses: {}, requestedServices: [] },
-      template: { templateId: "", projectVersion: "", colorPreset: "" },
+      template: { templateId: "", colorPreset: "" },
       content: { pages: [], features: [] },
       design: { styles: [], inspirationLink: "" },
       payment: { plan: "", maintenanceAfterFree: "", maintenanceEndAcknowledged: false, voucherCode: "" },
@@ -546,7 +545,8 @@ describe("validateDraftPayload", () => {
     });
     const fields = result.missingRequirements.map((m) => m.field);
     expect(fields).toContain("template.templateId");
-    expect(fields).toContain("template.projectVersion");
+    // v3.1 removed platform versions — no longer a gap.
+    expect(fields).not.toContain("template.projectVersion");
   });
 
   it("does NOT list template gaps when projectType is ai-assisted-website", () => {
@@ -599,7 +599,7 @@ describe("validateDraftPayload", () => {
       client: { fullName: "Juan", email: "juan@test.com" },
       project: { projectName: "P", industry: "service-commerce", projectType: "templated-website" },
       tier: "custom",
-      template: { templateId: "starter", projectVersion: "desktop", colorPreset: "" },
+      template: { templateId: "starter", colorPreset: "" },
       assets: { qualification: "ready", statuses: {}, requestedServices: [] },
       scope: { extensions: ["EXT-001", "EXT-003", "EXT-007"] },
     });
@@ -646,7 +646,7 @@ describe("validatePhase2Payload", () => {
       },
       assets: { qualification: "ready", statuses: {}, requestedServices: [] },
       tier: "custom",
-      template: { templateId: "starter", projectVersion: "desktop", colorPreset: "" },
+      template: { templateId: "starter", colorPreset: "" },
       content: { pages: [], features: [] },
       design: { styles: [], inspirationLink: "" },
     });
@@ -694,5 +694,39 @@ describe("validatePhase2Payload", () => {
 
     expect(result.success).toBe(false);
     expect(result.errors?.some((e) => e.field.includes("projectType"))).toBe(true);
+  });
+
+  it("passes with defaults when payment and confirmations are omitted", () => {
+    const result = validatePhase2Payload({
+      client: { fullName: "A", company: "", email: "a@example.com", phone: "" },
+      project: {
+        projectName: "Project",
+        industry: "service-commerce",
+        projectType: "templated-website",
+        businessDescription: "",
+      },
+      assets: { qualification: "ready", statuses: {}, requestedServices: [] },
+      tier: "custom",
+      template: { templateId: "starter", colorPreset: "" },
+      scope: { coreFeatures: [], extensions: [], customFeatures: [], pages: [], features: [] },
+      design: { styles: [], inspirationLink: "" },
+      // payment and confirmations intentionally absent — Zod .default({}) must fill them
+    });
+
+    expect(result.success).toBe(true);
+    expect((result as { success: true; data: Record<string, unknown> }).data.payment).toMatchObject({
+      plan: "",
+      maintenanceAfterFree: "",
+      maintenanceEndAcknowledged: false,
+      voucherCode: "",
+    });
+    expect((result as { success: true; data: Record<string, unknown> }).data.confirmations).toMatchObject({
+      accurate: false,
+      receipt: false,
+      payment: false,
+      maintenance: false,
+      buildCard: false,
+      submission: false,
+    });
   });
 });

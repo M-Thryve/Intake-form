@@ -99,7 +99,7 @@ function makePayload(overrides: Record<string, unknown> = {}) {
     project: { projectName: "Test App", industry: "service-commerce", projectType: "templated-website", businessDescription: "A test application" },
     assets: { qualification: "ready", statuses: { logo: "Available" }, requestedServices: [] },
     tier: "custom",
-    template: { templateId: "starter-portfolio", projectVersion: "desktop", colorPreset: "blue" },
+    template: { templateId: "starter-portfolio", colorPreset: "blue" },
     scope: { coreFeatures: [], extensions: [], pages: [{ name: "Home", fields: { headline: "Welcome" } }], features: [] },
     content: { pages: [{ name: "Home", fields: { headline: "Welcome" } }], features: [{ name: "Contact Form", priority: "Required", source: "chip" }] },
     design: { styles: ["Modern"], inspirationLink: "" },

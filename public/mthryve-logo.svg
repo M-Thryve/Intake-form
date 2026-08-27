@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Background circle for favicon visibility -->
+  <circle cx="32" cy="32" r="30" fill="#0B0F14"/>
+  <circle cx="32" cy="32" r="30" stroke="#39D6C7" stroke-width="2"/>
+  
+  <!-- MTHRYVE monogram - stylized M with tech/circuit feel -->
+  <g transform="translate(8, 14)">
+    <!-- Left vertical -->
+    <path d="M4 36V4" stroke="#39D6C7" stroke-width="3.5" stroke-linecap="round"/>
+    <!-- Diagonal down -->
+    <path d="M4 4L16 24" stroke="#39D6C7" stroke-width="3.5" stroke-linecap="round"/>
+    <!-- Diagonal up -->
+    <path d="M16 24L28 4" stroke="#39D6C7" stroke-width="3.5" stroke-linecap="round"/>
+    <!-- Right vertical -->
+    <path d="M28 4V36" stroke="#39D6C7" stroke-width="3.5" stroke-linecap="round"/>
+    
+    <!-- Circuit nodes - small circles at key points -->
+    <circle cx="4" cy="4" r="2" fill="#39D6C7"/>
+    <circle cx="16" cy="24" r="2" fill="#4ADE80"/>
+    <circle cx="28" cy="4" r="2" fill="#39D6C7"/>
+    <circle cx="4" cy="36" r="2" fill="#4ADE80"/>
+    <circle cx="28" cy="36" r="2" fill="#4ADE80"/>
+    
+    <!-- Connecting line at bottom -->
+    <path d="M4 36H28" stroke="#1E293B" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Accent dot - represents growth/seed -->
+  <circle cx="50" cy="50" r="4" fill="#F59E0B"/>
+</svg>

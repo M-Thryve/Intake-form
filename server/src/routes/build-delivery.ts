@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
-import { supabase } from "../lib/supabase.js";
+import { supabase } from "../lib/supabase.js"
+import { PAYMENT_DUE_NOTE } from "../lib/payments.js";
 import { requireRole } from "../middleware/auth.js";
 import { checkBuildEligibility } from "../lib/build-eligibility.js";
 import { buildDeliveryPackagePayload, computePackageChecksum } from "../lib/build-package.js";
@@ -231,7 +232,7 @@ buildDeliveryRouter.post(
     res.status(201).json({
       success: true,
       package: created,
-      message: "Build delivery package created. No build has been started. No payment has been captured.",
+      message: `Build delivery package created. No build has been started. No payment has been captured. ${PAYMENT_DUE_NOTE}`,
     });
   },
 );

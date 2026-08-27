@@ -331,7 +331,6 @@ export interface FormData {
   // Template (Custom Build — Templated Website only)
   templateCategory: string
   templateId: string
-  projectVersion: string
   colorPreset: string
   customSizes: boolean
   allSizes: boolean
@@ -436,8 +435,12 @@ export interface IntakeSubmissionPayload {
   tier: Tier
   template?: {
     templateId: string
-    projectVersion: string
     colorPreset: string
+    /**
+     * @deprecated v3.1 removed platform version selection. Never written by
+     * new submissions; present on historical records for read compatibility.
+     */
+    projectVersion?: string
   }
   enterprise?: {
     projectVision: string
@@ -606,6 +609,7 @@ export interface LegacyIntakePayload {
   tier: Tier
   template?: {
     templateId: string
+    /** @deprecated v3.1 removed platform versions — historical records only. */
     projectVersion: string
     colorPreset: string
   }

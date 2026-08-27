@@ -24,6 +24,8 @@ type Project = {
   description: string
   next: string
   assets: Asset[]
+  /** Change 5: client payment gate. "due" = Build Card issued, payment pending; "settled" = paid, full Build Card unlocked. */
+  paymentStatus?: "due" | "settled"
 }
 
 const PROJECTS: Project[] = [
@@ -40,6 +42,7 @@ const PROJECTS: Project[] = [
     description:
       "A calm, member-first space for Northstar to bring programs, payments, and community into one place.",
     next: "Review your proposal",
+    paymentStatus: "due",
     assets: [
       { id: "logo", name: "Northstar logo pack", meta: "PNG · 2.4 MB", status: "accepted" },
       { id: "brand", name: "Brand guidelines", meta: "PDF · 6.8 MB", status: "accepted" },
@@ -218,6 +221,38 @@ function Settings() {
 }
 
 function BuildCard({ project }: { project: Project }) {
+  const [unlocked, setUnlocked] = useState(project.paymentStatus === "settled")
+
+  // Change 5: the Build Card is issued to the client, but the full detail is
+  // locked behind payment. "due" shows a preview + pay-to-unlock CTA; the real
+  // unlock is driven by the server `commercial_stage` / payments state.
+  if (!unlocked) {
+    return (
+      <div className="portal-build-card">
+        <div className="portal-build-card-heading">
+          <div>
+            <span className="portal-reference">PRELIMINARY BUILD CARD · V1</span>
+            <h2>A focused first release</h2>
+            <p>{project.description}</p>
+          </div>
+          <span className="portal-approved-badge"><Icon name="check" size={14} strokeWidth={2.2} /> Ready to review</span>
+        </div>
+        <div className="portal-notice">
+          <Icon name="info" size={16} />
+          <p><strong>Payment required to unlock the full Build Card.</strong> Your Build Card has been issued for review. Pay the preliminary price to reveal the complete scope, pricing, and timeline.</p>
+        </div>
+        <div className="portal-build-metrics">
+          <div><span>PRELIMINARY RANGE</span><strong>₱480k – ₱620k</strong><small>Subject to final agreement</small></div>
+          <div><span>PRELIMINARY TIMELINE</span><strong>10 – 14 weeks</strong><small>Subject to final agreement</small></div>
+          <div><span>FIRST RELEASE</span><strong>Member web app</strong><small>Responsive across devices</small></div>
+        </div>
+        <button className="portal-button portal-button-primary" onClick={() => setUnlocked(true)}>
+          Pay ₱480k – ₱620k to unlock the full Build Card
+        </button>
+      </div>
+    )
+  }
+
   return <div className="portal-build-card"><div className="portal-build-card-heading"><div><span className="portal-reference">PRELIMINARY BUILD CARD · V1</span><h2>A focused first release</h2><p>{project.description}</p></div><span className="portal-approved-badge"><Icon name="check" size={14} strokeWidth={2.2} /> Ready to review</span></div><div className="portal-notice"><Icon name="info" size={16} /><p><strong>Preliminary — subject to final agreement.</strong> This view is an early planning range to help you make an informed decision.</p></div><div className="portal-build-metrics"><div><span>PRELIMINARY RANGE</span><strong>₱480k – ₱620k</strong><small>Subject to final agreement</small></div><div><span>PRELIMINARY TIMELINE</span><strong>10 – 14 weeks</strong><small>Subject to final agreement</small></div><div><span>FIRST RELEASE</span><strong>Member web app</strong><small>Responsive across devices</small></div></div><div className="portal-feature-list"><div><span>Included in the first release</span><strong>Core member experience</strong></div>{["Member onboarding and profiles", "Program discovery and saved items", "Account dashboard and updates", "Secure payments and receipts"].map((item) => <div className="portal-feature-row" key={item}><span className="portal-feature-check"><Icon name="check" size={14} strokeWidth={2.2} /></span>{item}<span className="portal-feature-priority">REQUIRED</span></div>)}</div></div>
 }
 

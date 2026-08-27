@@ -104,7 +104,7 @@ export async function checkEligibility(intakeId: string): Promise<EligibilityRes
   }
   const buildCard = buildCardRow as BuildCardRow;
 
-  if (buildCard.status !== "approved" && buildCard.status !== "waiting_owner_review") {
+  if (buildCard.status !== "issued") {
     return {
       eligible: false,
       reason: "build_card_missing",

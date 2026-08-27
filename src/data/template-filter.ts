@@ -2,16 +2,20 @@ import { getMappingForIndustry } from './industry-template-map'
 import type { TemplateDefinition } from './templates'
 
 export interface FilteredTemplates {
-  /** Templates with at least one primary compatible tag. */
+  /** Templates whose category belongs to the selected industry. */
   primary: TemplateDefinition[]
-  /** Templates with at least one related tag but no primary tag match. */
+  /** Reserved for future cross-sell; always empty under direct mapping. */
   recommended: TemplateDefinition[]
-  /** All remaining templates (shown only when override is active). */
+  /** All remaining templates (shown when override is active). */
   other: TemplateDefinition[]
 }
 
 /**
  * Filters and categorises templates based on the selected industry.
+ *
+ * Under the v3.2 direct-mapping model, a template is a primary match when its
+ * category belongs to the selected industry. 'other' (or an unknown industry)
+ * returns every template as primary (no filtering).
  */
 export function filterTemplatesByIndustry(
   templates: TemplateDefinition[],
@@ -19,32 +23,18 @@ export function filterTemplatesByIndustry(
 ): FilteredTemplates {
   const mapping = getMappingForIndustry(industry)
 
-  if (mapping.compatibleTags.length === 0) {
+  if (mapping.categories.length === 0) {
     return { primary: templates, recommended: [], other: [] }
   }
 
+  const categorySet = new Set(mapping.categories)
   const primary: TemplateDefinition[] = []
-  const recommended: TemplateDefinition[] = []
   const other: TemplateDefinition[] = []
 
   for (const t of templates) {
-    const hasPrimaryMatch = t.tags.some(tag =>
-      mapping.compatibleTags.includes(tag),
-    )
-    if (hasPrimaryMatch) {
-      primary.push(t)
-      continue
-    }
-
-    const hasRelatedMatch = t.tags.some(tag =>
-      mapping.relatedTags.includes(tag),
-    )
-    if (hasRelatedMatch) {
-      recommended.push(t)
-    } else {
-      other.push(t)
-    }
+    if (categorySet.has(t.category)) primary.push(t)
+    else other.push(t)
   }
 
-  return { primary, recommended, other }
+  return { primary, recommended: [], other }
 }

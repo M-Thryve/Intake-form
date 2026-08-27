@@ -6,14 +6,12 @@ import {
 } from '../industry-template-map'
 
 describe('getMappingForIndustry', () => {
-  it('returns the correct compatible and related tags for a known industry key', () => {
-    const m = getMappingForIndustry('entertainment')
-    expect(m.industry).toBe('entertainment')
-    expect(m.label).toBe('Entertainment')
-    expect(m.compatibleTags).toContain('events')
-    expect(m.compatibleTags).toContain('media')
-    expect(m.relatedTags).toContain('portfolio')
-    expect(m.relatedTags).toContain('agency')
+  it('returns the categories for a known canonical industry slug', () => {
+    const m = getMappingForIndustry('dtc-ecommerce')
+    expect(m.industry).toBe('dtc-ecommerce')
+    expect(m.label).toBe('Direct-to-Consumer E-Commerce')
+    expect(m.categories).toContain('Fashion and Lifestyle Store')
+    expect(m.categories).toContain('Digital Product Store')
   })
 
   it('falls back to "other" for an unknown industry', () => {
@@ -21,10 +19,10 @@ describe('getMappingForIndustry', () => {
     expect(m.industry).toBe('other')
   })
 
-  it('returns "other" mapping with empty compatibleTags (no filtering) for "other"', () => {
+  it('returns "other" mapping with empty categories (no filtering) for "other"', () => {
     const m = getMappingForIndustry('other')
     expect(m.industry).toBe('other')
-    expect(m.compatibleTags).toHaveLength(0)
+    expect(m.categories).toEqual([])
   })
 
   it('works with an empty string (falls back to "other")', () => {
@@ -34,42 +32,30 @@ describe('getMappingForIndustry', () => {
 })
 
 describe('resolveIndustryKey', () => {
-  it('maps every canonical v3.0 industry slug to a template family', () => {
-    expect(resolveIndustryKey('service-commerce')).toBe('ecommerce')
-    expect(resolveIndustryKey('dtc-ecommerce')).toBe('ecommerce')
-    expect(resolveIndustryKey('retail-multi-branch')).toBe('ecommerce')
-    expect(resolveIndustryKey('wholesale-distribution')).toBe('ecommerce')
-    expect(resolveIndustryKey('manufacturing-fabrication')).toBe('construction')
-    expect(resolveIndustryKey('warehousing-storage')).toBe('construction')
-    expect(resolveIndustryKey('logistics-transportation')).toBe('travel')
+  it('maps every canonical v3.2 industry slug directly to itself', () => {
+    expect(resolveIndustryKey('service-commerce')).toBe('service-commerce')
+    expect(resolveIndustryKey('dtc-ecommerce')).toBe('dtc-ecommerce')
+    expect(resolveIndustryKey('retail-multi-branch')).toBe('retail-multi-branch')
+    expect(resolveIndustryKey('wholesale-distribution')).toBe('wholesale-distribution')
+    expect(resolveIndustryKey('manufacturing-fabrication')).toBe('manufacturing-fabrication')
+    expect(resolveIndustryKey('warehousing-storage')).toBe('warehousing-storage')
+    expect(resolveIndustryKey('logistics-transportation')).toBe('logistics-transportation')
   })
 
-  it('maps a known display name to its key', () => {
-    expect(resolveIndustryKey('E-Commerce')).toBe('ecommerce')
-    expect(resolveIndustryKey('Food & Beverage')).toBe('restaurant')
-    expect(resolveIndustryKey('Non-Profit')).toBe('nonprofit')
-    expect(resolveIndustryKey('Real Estate')).toBe('real-estate')
-    expect(resolveIndustryKey('Technology')).toBe('technology')
-    expect(resolveIndustryKey('Healthcare')).toBe('healthcare')
-    expect(resolveIndustryKey('Finance')).toBe('finance')
-    expect(resolveIndustryKey('Education')).toBe('education')
-    expect(resolveIndustryKey('Legal')).toBe('legal')
-    expect(resolveIndustryKey('Entertainment')).toBe('entertainment')
+  it('maps a known display label to its slug', () => {
+    expect(resolveIndustryKey('Service-Based Commerce')).toBe('service-commerce')
+    expect(resolveIndustryKey('Direct-to-Consumer E-Commerce')).toBe('dtc-ecommerce')
+    expect(resolveIndustryKey('Wholesale & Distribution')).toBe('wholesale-distribution')
+    expect(resolveIndustryKey('Logistics & Transportation')).toBe('logistics-transportation')
   })
 
   it('maps the "Other" display name', () => {
     expect(resolveIndustryKey('Other')).toBe('other')
   })
 
-  it('mapsMarketing to "other" (no alias)', () => {
+  it('maps an unmapped industry to "other"', () => {
+    expect(resolveIndustryKey('Technology')).toBe('other')
     expect(resolveIndustryKey('Marketing')).toBe('other')
-  })
-
-  it('mapsLogistics to "other" (unmapped)', () => {
-    expect(resolveIndustryKey('Logistics')).toBe('other')
-  })
-
-  it('mapsGovernment to "other"', () => {
     expect(resolveIndustryKey('Government')).toBe('other')
   })
 
@@ -80,7 +66,7 @@ describe('resolveIndustryKey', () => {
 
 describe('INDUSTRY_TEMPLATE_MAP integrity', () => {
   it('has exactly one entry per industry key (no duplicates)', () => {
-    const keys = INDUSTRY_TEMPLATE_MAP.map(m => m.industry)
+    const keys = INDUSTRY_TEMPLATE_MAP.map((m) => m.industry)
     expect(keys).toHaveLength(new Set(keys).size)
   })
 
@@ -90,10 +76,19 @@ describe('INDUSTRY_TEMPLATE_MAP integrity', () => {
     }
   })
 
-  it('the "other" entry has empty compatibleTags and relatedTags', () => {
-    const other = INDUSTRY_TEMPLATE_MAP.find(m => m.industry === 'other')
+  it('the "other" entry has empty categories', () => {
+    const other = INDUSTRY_TEMPLATE_MAP.find((m) => m.industry === 'other')
     expect(other).toBeDefined()
-    expect(other!.compatibleTags).toEqual([])
-    expect(other!.relatedTags).toEqual([])
+    expect(other!.categories).toEqual([])
+  })
+
+  it('catalogues exactly 7 canonical industries plus "other"', () => {
+    const canonical = INDUSTRY_TEMPLATE_MAP.filter((m) => m.industry !== 'other')
+    expect(canonical).toHaveLength(7)
+    const categoryCount = canonical.reduce(
+      (sum, m) => sum + m.categories.length,
+      0,
+    )
+    expect(categoryCount).toBe(29)
   })
 })

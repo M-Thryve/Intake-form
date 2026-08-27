@@ -131,7 +131,7 @@ function seedIntake() {
       tier: "custom",
       buildPath: "custom",
       assets: { qualification: "ready", statuses: {}, requestedServices: [], uploads: [] },
-      template: { templateId: "apex", projectVersion: "desktop", colorPreset: "original" },
+      template: { templateId: "apex", colorPreset: "original" },
       scope: { pages: [], features: [], coreFeatures: [], extensions: [], customFeatures: [] },
       design: { styles: [], inspirationLink: "" },
       outcome: "draft",

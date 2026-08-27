@@ -16,7 +16,7 @@ import InlineWarning from './components/InlineWarning'
 import AssetUploader from './components/AssetUploader'
 import { Icon, type IconName } from './components/icons/Icons'
 import { Field, OperatorSpiel as AuroraOperatorSpiel, ReviewBlock, ReviewRow, StepHeader } from './components/aurora/AuroraPrimitives'
-import { auroraColors, auroraStyles, auroraTypography, ghostButtonStyle, operatorPalette, primaryButtonStyle, versionButtonStyle } from './styles/aurora'
+import { auroraColors, auroraStyles, auroraTypography, ghostButtonStyle, operatorPalette, primaryButtonStyle } from './styles/aurora'
 import {
   submitIntakeForReview,
   saveDraft,
@@ -27,7 +27,7 @@ import {
   rehydrateDraftState,
 } from './api/intake'
 import type { AssetBinding } from './api/assets'
-import { TEMPLATES, type TemplateDefinition } from './data/templates'
+import { TEMPLATES, TEMPLATE_CATEGORY_NAMES, type TemplateDefinition } from './data/templates'
 import { filterTemplatesByIndustry } from './data/template-filter'
 import { getMappingForIndustry } from './data/industry-template-map'
 import {
@@ -68,7 +68,7 @@ const EMPTY_FORM: FormData = {
   resourceNotes: {},
   resourceAddOnCosts: {},
   tier: '',
-  templateCategory: '', templateId: '', projectVersion: '', colorPreset: '',
+  templateCategory: '', templateId: '', colorPreset: '',
   customSizes: false, allSizes: false,
   projectVision: '', targetUsers: '', userRoles: '', businessWorkflows: '',
   integrations: '', existingSystems: '', dataSecurityReqs: '', scalabilityReqs: '',
@@ -120,7 +120,7 @@ const INDUSTRIES = [
   { value: 'logistics-transportation', label: 'Logistics & Transportation' },
 ]
 
-const TEMPLATE_CATEGORIES = ['All', 'Business', 'E-Commerce', 'Portfolio', 'Restaurant', 'Real Estate', 'Booking']
+const TEMPLATE_CATEGORIES = ['All', ...TEMPLATE_CATEGORY_NAMES]
 
 interface ColorOption { id: string; name: string; color: string }
 const COLOR_OPTIONS: ColorOption[] = [
@@ -230,16 +230,23 @@ function getPageDef(name: string): PageDef { return PAGE_DEFS[name] ?? DEFAULT_P
 
 // ── Pricing helpers ────────────────────────────────────────────────────────────
 
-function calcPrice(template: TemplateDefinition | undefined, version: string) {
-  if (!template) return { base: 0, total: 0, delivery: 0, versionLabel: '—' }
-  const base = version === 'mobile' ? template.mobilePrice
-    : version === 'both' ? template.bothPrice
-    : template.desktopPrice
-  const delivery = version === 'mobile' ? template.deliveryMobile
-    : version === 'both' ? template.deliveryBoth
-    : template.deliveryDesktop
-  const versionLabel = version === 'mobile' ? 'Mobile App' : version === 'both' ? 'Website + Mobile App' : 'Website'
-  return { base, total: base, delivery, versionLabel }
+// v3.1: New pricing model — single base with tier/product multipliers.
+const PRICE_BASE_PHP = 20000
+
+function calcPrice(tier: Tier, projectType: string, template?: TemplateDefinition): { base: number; total: number; delivery: number } {
+  switch (tier) {
+    case 'template':
+      return { base: PRICE_BASE_PHP, total: PRICE_BASE_PHP, delivery: template?.delivery ?? 7 }
+    case 'custom':
+      if (projectType === 'ai-assisted-website') {
+        return { base: PRICE_BASE_PHP, total: Math.round(PRICE_BASE_PHP * 1.2), delivery: template?.delivery ?? 10 }
+      }
+      return { base: PRICE_BASE_PHP, total: PRICE_BASE_PHP, delivery: template?.delivery ?? 7 }
+    case 'enterprise':
+      return { base: PRICE_BASE_PHP, total: Math.round(PRICE_BASE_PHP * 1.5), delivery: 0 }
+    default:
+      return { base: PRICE_BASE_PHP, total: PRICE_BASE_PHP, delivery: template?.delivery ?? 7 }
+  }
 }
 
 function getPreviewAccent(templateAccent: string, colorId: string): string {
@@ -248,7 +255,7 @@ function getPreviewAccent(templateAccent: string, colorId: string): string {
   return opt.color
 }
 
-function formatPhp(n: number) { return '₱' + n.toLocaleString('en-PH') }
+function formatPhp(n: number | undefined | null) { return '₱' + (n ?? 0).toLocaleString('en-PH') }
 
 function deliveryDate(workingDays: number): string {
   if (!workingDays) return '—'
@@ -340,8 +347,8 @@ const FAQ_DATA: Record<string, Array<{ q: string; a: string }>> = {
     { q: 'Can I customize this template?', a: "In Drag & Drop, the layout and structure stay fixed — only your content and brand assets are replaced. In Custom Made, limited structural changes are allowed." },
     { q: 'Why are some options unavailable?', a: "Some features and formats are restricted by tier. Upgrade to Custom Made or Enterprise if you need options outside the current tier's scope." },
     { q: 'Are colors free?', a: "Yes. All color styles are included at no additional cost. Changing your color selection will never affect your project price or delivery time." },
-    { q: 'What is included in the template price?', a: "The template price includes the selected platform (Website, Mobile App, or both), your chosen color style, and all page content areas." },
-    { q: 'What is the difference between Website and Mobile App?', a: "Website delivers a responsive web experience. Mobile App delivers a native iOS/Android application. Website + Mobile App delivers both." },
+    { q: 'What is included in the base price?', a: "The base price includes your chosen website template, your color style, and all page content areas. All 11 optional extensions are also included at no extra cost." },
+    { q: 'Are extensions included in the price?', a: "Yes. Every optional extension is included at no extra cost — select whichever ones you need, with no upsell or add-on charges." },
   ],
   'pages-features': [
     { q: 'What counts as a required feature?', a: "Required features are the ones your product cannot launch without. Nice to Have features are improvements you can defer to a later phase." },
@@ -360,13 +367,14 @@ const FAQ_DATA: Record<string, Array<{ q: string; a: string }>> = {
     { q: 'Is this the final quotation?', a: "No. This is a preliminary receipt subject to M-THRYVE owner review and final approval. Final pricing will be confirmed in your approved agreement." },
     { q: 'Can I edit my answers?', a: "Yes. Use the Edit links next to each section to return and make changes before submitting." },
     { q: 'Why is a price still pending?', a: "Enterprise projects require detailed review before a final price is confirmed. Preliminary prices are estimates only." },
-    { q: 'What happens before payment?', a: "After submission, the owner reviews your intake. Final scope, pricing, and payment terms are confirmed in a separate approved agreement before billing begins." },
+    { q: 'What happens before payment?', a: "After submission, the owner reviews your intake and issues your Build Card. Payment becomes due when that card is issued for your review; final scope, pricing, and payment terms are confirmed in the approved agreement." },
   ],
   'payment': [
     { q: 'Which payment plan should I choose?', a: "One-Time is simplest and includes free maintenance for the first three months. Monthly and Annual plans include mandatory ongoing maintenance. Choose based on your preferred billing structure." },
     { q: 'What does maintenance cover?', a: "Standard maintenance includes routine updates, security patches, monitoring, backups, basic support, and compatibility adjustments. It does not include major new features or redesigns." },
-    { q: 'How does the voucher discount work?', a: "Enter a valid referral voucher code and click Apply. If verified, the configured discount will appear on your receipt." },
-    { q: 'When will my first payment happen?', a: "Billing begins only after the owner approves your project and a final agreement is signed. Your submission today does not trigger an immediate charge." },
+    { q: 'How does the voucher discount work?', a: "The Client Voucher is a redeemable code for discounted builds — earned by referring another business, or by coming back for your next project. Enter a valid code and click Apply; if verified, the configured discount appears on your receipt." },
+    { q: 'When will my first payment happen?', a: "Your first payment is due once your Build Card is issued for your review. You can review the scope and pricing, then pay to unlock the full Build Card. Nothing is charged during the intake or before the card is issued." },
+    { q: 'Do I pay during intake?', a: "No. Nothing is charged during the Discovery Call or intake. Payment becomes due only when your Build Card is generated for your review." },
     { q: 'Is the payment amount final?', a: "No. All payment amounts shown here are preliminary and subject to owner review and final approval." },
   ],
   'final-confirm': [
@@ -376,9 +384,10 @@ const FAQ_DATA: Record<string, Array<{ q: string; a: string }>> = {
     { q: 'When do I receive my Build Reference Number?', a: "Your Build Reference Number is generated immediately after your intake is successfully submitted. It will appear on your submitted Build Card." },
   ],
   'build-card': [
-    { q: 'What does Waiting for Owner Review mean?', a: "Your intake has been successfully submitted and your Build Card is in the M-THRYVE owner's review queue. The owner will evaluate your project and reach out within 24 hours." },
+    { q: 'What happens after I submit?', a: "After you submit, you receive a preliminary estimate for your project. The owner reviews the intake, and once approved your Build Card is prepared over 2-3 days and then issued to you for review and payment." },
     { q: 'Where is my Build Reference Number?', a: "Your Build Reference Number is displayed at the top of your submitted Build Card. Copy it — you'll use it in all future communications with M-THRYVE." },
-    { q: 'How does my referral voucher work?', a: "Share your unique referral code with someone who wants to build with M-THRYVE. When an eligible referral completes the required conditions, you may earn a configured discount." },
+    { q: 'What is the Client Voucher?', a: "A redeemable code for discounted builds — earned by referring another business, or by coming back for your next project." },
+    { q: 'How does my referral voucher work?', a: "Your Client Voucher is a redeemable code for discounted builds — earned by referring another business, or by coming back for your next project. Share your unique code with someone who wants to build with M-THRYVE; when an eligible referral completes the required conditions, you may earn a configured discount." },
     { q: 'When does development begin?', a: "Development begins only after the owner approves your project in the Factory Console and a final agreement is signed." },
     { q: 'How will I receive updates?', a: "M-THRYVE will contact you at the email address you provided. Keep an eye on your inbox for your project review update within 24 hours." },
   ],
@@ -1196,7 +1205,6 @@ export default function App() {
   const [templateCatFilter, setTemplateCatFilter] = useState('All')
   const [currentPageIndex, setCurrentPageIndex] = useState(0)
   const [pageContents, setPageContents] = useState<Record<string, Record<string, string>>>({})
-  const [previewVersion, setPreviewVersion] = useState<'desktop' | 'mobile'>('desktop')
   const [copiedRef, setCopiedRef] = useState(false)
   const [copiedVoucher, setCopiedVoucher] = useState(false)
   const [conciergeOpen, setConciergeOpen] = useState(false)
@@ -1332,7 +1340,6 @@ export default function App() {
       if (prev.projectType === 'templated-website' && newType !== 'templated-website') {
         updates.templateId = ''
         updates.templateCategory = ''
-        updates.projectVersion = ''
         updates.colorPreset = ''
       }
       if (prev.projectType === 'ai-assisted-website' && newType !== 'ai-assisted-website') {
@@ -1366,7 +1373,7 @@ export default function App() {
       ...prev, tier: t,
       // Clear project type if it's not valid for the new tier
       projectType: typeCleared ? '' : prev.projectType,
-      templateId: '', templateCategory: '', projectVersion: '', colorPreset: '',
+      templateId: '', templateCategory: '', colorPreset: '',
       projectVision: '', features: [], customFeatures: [], designStyles: [], inspirationLink: '',
       targetUsers: '', userRoles: '', businessWorkflows: '', integrations: '',
       existingSystems: '', dataSecurityReqs: '', scalabilityReqs: '',
@@ -1448,6 +1455,12 @@ export default function App() {
     setSubmitting(true)
     setSubmissionError('')
     try {
+      try {
+        const apiBase = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
+        await fetch(`${apiBase}/api/intakes`, { method: 'OPTIONS' })
+      } catch {
+        throw new Error('API server not reachable. Start it with: cd server && npm run dev')
+      }
       const payload = toSubmissionPayload(
         { ...form, missingRequirements: missingReqSnapshot },
         pageContents,
@@ -1504,11 +1517,14 @@ export default function App() {
       return { intakeId: savedIntakeId, clientId: savedClientId, referenceNumber: savedReferenceNumber }
     }
     if (!isValidEmail(form.email)) {
-      throw new Error('Save the draft first — this attaches your files to the intake reference.')
+      throw new Error('A valid email is required before files can be attached. Please fill in your email address.')
     }
     if (!assetBindingPromise.current) {
       assetBindingPromise.current = persistDraft(false).then(binding => {
-        if (!binding) throw new Error('The draft could not be saved, so the file was not uploaded.')
+        if (!binding) {
+          const detail = submissionError || 'Draft save failed — check required fields and try again.'
+          throw new Error(detail)
+        }
         return binding
       }).finally(() => {
         assetBindingPromise.current = null
@@ -1627,7 +1643,7 @@ export default function App() {
   }
 
   const selectedTemplate = TEMPLATES.find(t => t.id === form.templateId)
-  const pricing = calcPrice(selectedTemplate, form.projectVersion)
+  const pricing = calcPrice(form.tier, form.projectType, selectedTemplate)
   const allFeatures = [...form.features, ...form.customFeatures]
   const complexity = getComplexity(form.selectedExtensions, form.projectType, form.tier)
   const techStack = form.tier !== 'enterprise'
@@ -1643,7 +1659,7 @@ export default function App() {
     templateCatFilter === 'All' ? list : list.filter(t => t.category === templateCatFilter)
 
   const filterMapping = getMappingForIndustry(form.industry)
-  const industryActive = !!form.industry.trim() && filterMapping.compatibleTags.length > 0
+  const industryActive = !!form.industry.trim() && filterMapping.categories.length > 0
   const hasPrimary = industryFilter.primary.length > 0
   const hasRecommended = industryFilter.recommended.length > 0
   const override = templateFilterOverride
@@ -1651,8 +1667,8 @@ export default function App() {
   /** Whether the selected template is a primary match for the current industry. */
   const isPrimaryTemplateMatch = (t: TemplateDefinition): boolean => {
     const m = getMappingForIndustry(form.industry)
-    if (m.compatibleTags.length === 0) return true
-    return t.tags.some(tag => m.compatibleTags.includes(tag))
+    if (m.categories.length === 0) return true
+    return m.categories.includes(t.category)
   }
 
   const handleTemplateSelect = (t: TemplateDefinition) => {
@@ -1660,12 +1676,11 @@ export default function App() {
     set('templateCategory', t.category)
     setCurrentPageIndex(0)
     touchField('field-templateId')
-    touchField('field-projectVersion')
 
     if (
       form.industry &&
       form.industry !== 'Other' &&
-      filterMapping.compatibleTags.length > 0 &&
+      filterMapping.categories.length > 0 &&
       !isPrimaryTemplateMatch(t)
     ) {
       const mapping = getMappingForIndustry(form.industry)
@@ -1999,9 +2014,9 @@ export default function App() {
                   badge: 'Template-based',
                   badgeColor: '#46A873',
                   desc: 'Start from an existing template and layer in the features and content the template already supports. Requests outside the supported catalog are flagged for owner review.',
-                  price: 'Preliminary — configured per template',
-                  priceNote: 'Base template price plus supported extensions',
-                  bullets: ['Template foundation', 'Supported extensions only', 'Preliminary cost per feature', 'Faster path to delivery'],
+                  price: formatPhp(PRICE_BASE_PHP),
+                  priceNote: 'Base price. AI-Assisted Website is +20% (₱24,000)',
+                  bullets: ['Template foundation', 'All 11 extensions included at no cost', 'Faster path to delivery', 'Unsupported requests flagged for owner review'],
                   disabled: false,
                 },
                 {
@@ -2010,8 +2025,8 @@ export default function App() {
                   badge: 'From scratch',
                   badgeColor: '#AAB6C4',
                   desc: 'Full discovery of vision, workflows, roles, integrations, and design direction for a from-scratch product. Preliminary scope and cost are confirmed only after owner review.',
-                  price: 'Preliminary — confirmed after owner review',
-                  priceNote: 'Depends on scope, integrations, and design discovery',
+                  price: `from ${formatPhp(Math.round(PRICE_BASE_PHP * 1.5))}`,
+                  priceNote: 'Base + 50%. Confirmed after owner review.',
                   bullets: ['Built from scratch', 'Custom architecture', 'Custom workflows & features', 'Requires detailed review'],
                   disabled: false,
                 },
@@ -2230,8 +2245,8 @@ export default function App() {
                           <div style={{ fontSize: '12px', fontWeight: 600, color: sel ? '#46A873' : '#AAB6C4', marginBottom: '2px' }}>{t.name}</div>
                           <div style={{ fontSize: '10px', color: '#AAB6C4', marginBottom: '5px' }}>{t.purpose}</div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', fontWeight: 600, color: sel ? '#46A873' : '#7C8794' }}>{formatPhp(t.desktopPrice)}</span>
-                            <span style={{ fontSize: '10px', color: '#AAB6C4' }}>{t.deliveryDesktop}d</span>
+                            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', fontWeight: 600, color: sel ? '#46A873' : '#7C8794' }}>{formatPhp(PRICE_BASE_PHP)}</span>
+                            <span style={{ fontSize: '10px', color: '#AAB6C4' }}>{t.delivery}d</span>
                           </div>
                         </div>
                       </button>
@@ -2296,14 +2311,6 @@ export default function App() {
                 <div style={{ height: '1px', background: '#1A1C22', marginBottom: '24px' }} />
 
                 <div style={{ marginBottom: '20px' }}>
-                  <div id="field-projectVersion-label" style={labelStyle}>Choose Your Platform <span aria-hidden="true" style={{ color: '#EF4444', marginLeft: '4px' }}>Required</span></div>
-                  <div id="field-projectVersion" role="group" aria-labelledby="field-projectVersion-label" aria-required="true" aria-describedby="field-projectVersion-warning" onBlur={() => touchField('field-projectVersion')} style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px', ...groupWarningStyle('field-projectVersion') }}>
-                    {[['desktop', 'Website'], ['mobile', 'Mobile App'], ['both', 'Website + Mobile App']].map(([v, label]) => (
-                      <button type="button" key={v} aria-pressed={form.projectVersion === v} onClick={() => { set('projectVersion', v); touchField('field-projectVersion') }} style={versionButtonStyle(form.projectVersion === v)}>{label}</button>
-                    ))}
-                  </div>
-                  <InlineWarning fieldId="field-projectVersion" message={getWarning('field-projectVersion')} />
-
                   {form.tier === 'template' && (
                     <div style={{ padding: '14px 16px', background: '#0D0F12', border: '1px solid #1A1C22', borderRadius: '10px', marginBottom: '12px' }}>
                       <div style={{ ...monoLabel, marginBottom: '10px', color: '#AAB6C4' }}>Optional Add-Ons</div>
@@ -2328,12 +2335,10 @@ export default function App() {
                     </div>
                   )}
 
-                  {form.projectVersion && (
-                    <div style={{ padding: '10px 14px', background: '#0D0F12', border: '1px solid #1A1C22', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                      <span style={{ color: '#AAB6C4' }}>{pricing.versionLabel} · {pricing.delivery} working days</span>
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: '#46A873' }}>{formatPhp(pricing.base)}</span>
-                    </div>
-                  )}
+                  <div style={{ padding: '10px 14px', background: '#0D0F12', border: '1px solid #1A1C22', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                    <span style={{ color: '#AAB6C4' }}>{pricing.delivery} working days</span>
+                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: '#46A873' }}>{formatPhp(pricing.base)}</span>
+                  </div>
                 </div>
 
                 <div role="group" aria-labelledby="field-colorPreset-label" style={{ marginBottom: '28px' }}>
@@ -2357,7 +2362,6 @@ export default function App() {
                 {(() => {
                   const multiPage = templatePages.length > 1
                   const accent = getPreviewAccent(selectedTemplate.accent, form.colorPreset)
-                  const showMobile = form.projectVersion === 'mobile' || (form.projectVersion === 'both' && previewVersion === 'mobile')
                   return (
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
@@ -2373,50 +2377,18 @@ export default function App() {
                           <button aria-label="Next template page" onClick={() => setCurrentPageIndex(i => (i + 1) % templatePages.length)} disabled={!multiPage} style={{ width: '30px', height: '30px', borderRadius: '7px', border: '1px solid #242830', background: '#0D0F12', cursor: multiPage ? 'pointer' : 'not-allowed', color: multiPage ? '#7C8794' : '#242830', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="arrow-right" size={14} /></button>
                         </div>
                       </div>
-                      {form.projectVersion === 'both' && (
-                        <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
-                          {['desktop', 'mobile'].map(v => <button key={v} onClick={() => setPreviewVersion(v as 'desktop' | 'mobile')} style={{ padding: '4px 12px', borderRadius: '6px', border: `1px solid ${previewVersion === v ? '#46A873' : '#242830'}`, background: previewVersion === v ? 'rgba(70,168,115,0.08)' : 'transparent', color: previewVersion === v ? '#46A873' : '#333944', fontSize: '11px', cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif", textTransform: 'capitalize' }}>{v} Preview</button>)}
-                        </div>
-                      )}
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: showMobile ? 'center' : 'stretch', marginBottom: '20px' }}>
-                        {showMobile ? (
-                          <>
-                            <div style={{ width: '160px', height: '347px', background: '#12151A', borderRadius: '24px', border: '2px solid #242830', boxShadow: '0 0 0 6px #12151A, 0 8px 24px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', overflow: 'hidden', transition: 'all 0.3s' }}>
-                              <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '8px', paddingBottom: '4px' }}>
-                                <div style={{ width: '40px', height: '5px', background: '#1A1C22', borderRadius: '3px' }} />
-                              </div>
-                              <div style={{ flex: 1, background: selectedTemplate.bg, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                                <div style={{ padding: '6px 10px', display: 'flex', alignItems: 'center', borderBottom: `1px solid ${accent}18` }}>
-                                  <div style={{ width: '24px', height: '3px', borderRadius: '2px', background: accent, transition: 'background 0.3s' }} />
-                                </div>
-                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '12px', gap: '6px' }}>
-                                  <div style={{ width: '75%', height: '5px', borderRadius: '3px', background: accent, opacity: 0.85, transition: 'background 0.3s' }} />
-                                  <div style={{ width: '58%', height: '3px', borderRadius: '2px', background: `${accent}60`, transition: 'background 0.3s' }} />
-                                  <div style={{ width: '38%', height: '7px', borderRadius: '4px', background: accent, marginTop: '4px', opacity: 0.7, transition: 'background 0.3s' }} />
-                                </div>
-                                <div style={{ padding: '5px 10px', borderTop: `1px solid ${accent}15` }}>
-                                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', color: '#AAB6C4', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{currentPageName} · Mobile App</div>
-                                </div>
-                              </div>
-                              <div style={{ display: 'flex', justifyContent: 'center', padding: '5px 0' }}>
-                                <div style={{ width: '32px', height: '3px', background: '#242830', borderRadius: '2px' }} />
-                              </div>
-                            </div>
-                            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', color: '#AAB6C4', letterSpacing: '0.06em', textTransform: 'uppercase', marginTop: '6px' }}>Mobile preview · 390 × 844</div>
-                          </>
-                        ) : (
-                          <div style={{ width: '100%', height: '130px', background: selectedTemplate.bg, borderRadius: '10px', overflow: 'hidden', border: `1px solid ${accent}30`, display: 'flex', flexDirection: 'column', transition: 'all 0.3s' }}>
-                            <div style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${accent}20` }}>
-                              <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: accent, transition: 'background 0.3s' }} />
-                              <div style={{ display: 'flex', gap: '10px' }}>{templatePages.slice(0, 4).map(p => <div key={p} style={{ width: '24px', height: '3px', borderRadius: '1px', background: `${accent}50`, transition: 'background 0.3s' }} />)}</div>
-                            </div>
-                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '12px', gap: '7px' }}>
-                              <div style={{ width: '40%', height: '5px', borderRadius: '3px', background: accent, opacity: 0.8, transition: 'background 0.3s' }} />
-                              <div style={{ width: '30%', height: '3px', borderRadius: '2px', background: `${accent}60`, transition: 'background 0.3s' }} />
-                              <div style={{ width: '18%', height: '8px', borderRadius: '4px', background: accent, marginTop: '4px', opacity: 0.7, transition: 'background 0.3s' }} />
-                            </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', marginBottom: '20px' }}>
+                        <div style={{ width: '100%', height: '130px', background: selectedTemplate.bg, borderRadius: '10px', overflow: 'hidden', border: `1px solid ${accent}30`, display: 'flex', flexDirection: 'column', transition: 'all 0.3s' }}>
+                          <div style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${accent}20` }}>
+                            <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: accent, transition: 'background 0.3s' }} />
+                            <div style={{ display: 'flex', gap: '10px' }}>{templatePages.slice(0, 4).map(p => <div key={p} style={{ width: '24px', height: '3px', borderRadius: '1px', background: `${accent}50`, transition: 'background 0.3s' }} />)}</div>
                           </div>
-                        )}
+                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '12px', gap: '7px' }}>
+                            <div style={{ width: '40%', height: '5px', borderRadius: '3px', background: accent, opacity: 0.8, transition: 'background 0.3s' }} />
+                            <div style={{ width: '30%', height: '3px', borderRadius: '2px', background: `${accent}60`, transition: 'background 0.3s' }} />
+                            <div style={{ width: '18%', height: '8px', borderRadius: '4px', background: accent, marginTop: '4px', opacity: 0.7, transition: 'background 0.3s' }} />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )
@@ -2459,15 +2431,13 @@ export default function App() {
                   </div>
                 </div>
 
-                {form.projectVersion && (
-                  <div style={{ padding: '14px 18px', background: 'rgba(70,168,115,0.04)', border: '1px solid rgba(70,168,115,0.18)', borderRadius: '10px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                      <span style={{ ...monoLabel, margin: 0 }}>Preliminary Total</span>
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '18px', fontWeight: 700, color: '#46A873' }}>{formatPhp(pricing.total)}</span>
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#AAB6C4' }}>{selectedTemplate.name} · {pricing.versionLabel} · {pricing.delivery} working days · Subject to owner review</div>
+                <div style={{ padding: '14px 18px', background: 'rgba(70,168,115,0.04)', border: '1px solid rgba(70,168,115,0.18)', borderRadius: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <span style={{ ...monoLabel, margin: 0 }}>Preliminary Total</span>
+                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '18px', fontWeight: 700, color: '#46A873' }}>{formatPhp(pricing.total)}</span>
                   </div>
-                )}
+                  <div style={{ fontSize: '12px', color: '#AAB6C4' }}>{selectedTemplate.name} · {pricing.delivery} working days · Subject to owner review</div>
+                </div>
               </div>
             )}
             </>
@@ -2548,7 +2518,7 @@ export default function App() {
             <StepHeader
               tag="Step 5 — Optional Extensions"
               title="Add optional extensions."
-              desc="Every M-THRYVE website includes all 8 core features. Select any optional extensions below — or continue without adding any."
+              desc="Every M-THRYVE website includes all 8 core features. The 11 extensions below are included at no extra cost — select any you want, or continue without adding any."
             />
 
             {/* ── Category filter ── */}
@@ -2646,7 +2616,6 @@ export default function App() {
                 <ReviewRow label="Path" value={TIER_LABELS[form.tier] || '—'} />
                 {form.projectType && <ReviewRow label="Project Type" value={PROJECT_TYPES_FULL.find(t => t.id === form.projectType)?.label || '—'} />}
                 {form.projectType === 'templated-website' && selectedTemplate && <ReviewRow label="Template" value={selectedTemplate.name} />}
-                {form.projectType === 'templated-website' && form.projectVersion && <ReviewRow label="Platform" value={pricing.versionLabel} />}
                 {form.projectType === 'templated-website' && form.colorPreset && <ReviewRow label="Color Style" value={COLOR_OPTIONS.find(c => c.id === form.colorPreset)?.name || '—'} />}
               </ReviewBlock>
 
@@ -2761,11 +2730,13 @@ export default function App() {
                 </div>
               )}
 
-              {form.projectType === 'templated-website' && selectedTemplate && form.projectVersion && (
+              {form.tier === 'custom' && selectedTemplate && (
                 <div style={{ ...cardStyle, border: '1px solid rgba(70,168,115,0.25)' }}>
-                  <div style={{ ...monoLabel, color: '#46A873' }}>Preliminary Project Receipt</div>
-                  <ReviewRow label="Base template" value={formatPhp(pricing.base)} />
-                  <ReviewRow label="Platform" value={`${pricing.versionLabel} — Included`} />
+                  <div style={{ ...monoLabel, color: '#46A873' }}>
+                    {form.projectType === 'ai-assisted-website' ? 'AI-Assisted Preliminary Receipt' : 'Preliminary Project Receipt'}
+                  </div>
+                  <ReviewRow label="Base price" value={formatPhp(pricing.base)} />
+                  {form.projectType === 'ai-assisted-website' && <ReviewRow label="AI-Assisted premium (+20%)" value={formatPhp(Math.round(PRICE_BASE_PHP * 0.2))} />}
                   {form.colorPreset && <ReviewRow label="Color style" value={`${COLOR_OPTIONS.find(c => c.id === form.colorPreset)?.name || '—'} — Included`} />}
                   {form.selectedAssetServices.length > 0 && <ReviewRow label="Asset services" value="Price pending configuration" />}
                   <div style={{ height: '1px', background: '#242830', margin: '12px 0' }} />
@@ -2780,7 +2751,11 @@ export default function App() {
               {form.tier === 'enterprise' && (
                 <div style={{ ...cardStyle, border: '1px solid rgba(170,182,196,0.25)' }}>
                   <div style={{ ...monoLabel, color: '#AAB6C4' }}>Enterprise Preliminary Estimate</div>
-                  <div style={{ fontSize: '13px', color: '#AAB6C4', lineHeight: 1.6 }}>Your preliminary price and timeline will be confirmed by the M-THRYVE owner after intake analysis. A formal agreement will be prepared before any billing begins.</div>
+                  <ReviewRow label="Base price" value={formatPhp(PRICE_BASE_PHP)} />
+                  <ReviewRow label="Enterprise premium (+50%)" value={formatPhp(Math.round(PRICE_BASE_PHP * 0.5))} />
+                  <div style={{ height: '1px', background: '#242830', margin: '12px 0' }} />
+                  <ReviewRow label="Preliminary Total (from)" value={formatPhp(pricing.total)} bold />
+                  <div style={{ fontSize: '12px', color: '#AAB6C4', lineHeight: 1.6, marginTop: '10px' }}>Subject to M-THRYVE owner review and final approval. Detailed scope, price, timeline, and payment terms are prepared after discovery.</div>
                 </div>
               )}
 
@@ -3011,7 +2986,14 @@ export default function App() {
             </button>
             {submissionError && (
               <div style={{ marginTop: '12px', padding: '14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '10px', fontSize: '13px', color: '#EF4444' }}>
-                {submissionError}
+                <div style={{ marginBottom: '10px' }}>{submissionError}</div>
+                <button
+                  onClick={handleSaveDraft}
+                  disabled={submitting}
+                  style={{ padding: '8px 16px', borderRadius: '7px', border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.15)', cursor: submitting ? 'not-allowed' : 'pointer', color: '#EF4444', fontSize: '12px', fontWeight: 600, opacity: submitting ? 0.6 : 1 }}
+                >
+                  {submitting ? 'Retrying…' : 'Retry Draft Save'}
+                </button>
               </div>
             )}
           </div>
@@ -3045,7 +3027,7 @@ export default function App() {
             <div style={{ ...cardStyle, marginBottom: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                 <div>
-                  <div style={{ ...monoLabel, color: '#F5B400', marginBottom: '6px' }}>Preliminary Build Card — Subject to Owner Review</div>
+                  <div style={{ ...monoLabel, color: '#F5B400', marginBottom: '6px' }}>Preliminary Estimate — Subject to Owner Review</div>
                   <div style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#E5E7EB' }}>{form.projectName || 'Your Project'}</div>
                   <div style={{ fontSize: '13px', color: '#AAB6C4', marginTop: '2px' }}>{form.company || 'M-THRYVE Client'} · {TIER_LABELS[form.tier]}</div>
                 </div>
@@ -3122,7 +3104,20 @@ export default function App() {
                 <ReviewRow label="Submission date" value={new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} />
                 <ReviewRow label="Status" value="Waiting for Owner Review" bold />
                 <div style={{ marginTop: '10px', padding: '10px 12px', background: '#12151A', border: '1px solid #1A1C22', borderRadius: '6px', fontSize: '11px', color: '#AAB6C4', lineHeight: 1.6 }}>
-                  Payment, agreement, and billing are handled in a separate workflow after owner approval. This intake does not capture or authorize any charge.
+                  Payment, agreement, and billing are handled in a separate workflow. This intake does not capture or authorize any charge — payment becomes due only when your Build Card is issued for your review.
+                </div>
+              </div>
+
+              <div style={{ padding: '12px 14px', background: '#0D0F12', borderRadius: '8px', border: '1px solid #1A1C22', marginTop: '10px' }}>
+                <div style={{ ...monoLabel, marginBottom: '6px', fontSize: '10px' }}>Client Voucher</div>
+                {clientVoucher ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '16px', fontWeight: 700, color: '#46A873', letterSpacing: '0.08em' }}>{clientVoucher}</div>
+                    <button onClick={() => copyToClipboard(clientVoucher, 'voucher')} style={{ padding: '6px 12px', borderRadius: '7px', border: '1px solid rgba(70,168,115,0.3)', background: copiedVoucher ? 'rgba(70,168,115,0.15)' : 'transparent', cursor: 'pointer', color: copiedVoucher ? '#46A873' : '#333944', fontSize: '12px', fontWeight: 600, fontFamily: "'Inter', system-ui, sans-serif" }}>{copiedVoucher ? 'Copied' : 'Copy'}</button>
+                  </div>
+                ) : null}
+                <div style={{ fontSize: '11px', color: '#AAB6C4', lineHeight: 1.6 }}>
+                  A redeemable code for discounted builds — earned by referring another business, or by coming back for your next project.
                 </div>
               </div>
             </div>

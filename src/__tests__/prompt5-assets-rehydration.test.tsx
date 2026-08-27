@@ -39,7 +39,7 @@ function formFixture(): FormData {
     assetQualification: 'ready', assetStatuses: {}, selectedAssetServices: [], uploadedAssets: [ASSET],
     deckExists: 'partial', deckSectionStatuses: { overview: 'provide_later' }, deckSectionNotes: { overview: 'Client follows up' },
     resourceStatuses: { logo: 'available' }, resourceNotes: { logo: 'Uploaded' }, resourceAddOnCosts: {},
-    tier: 'custom', templateCategory: '', templateId: '', projectVersion: '', colorPreset: '', customSizes: false, allSizes: false,
+    tier: 'custom', templateCategory: '', templateId: '', colorPreset: '', customSizes: false, allSizes: false,
     projectVision: '', targetUsers: '', userRoles: '', businessWorkflows: '', integrations: '', existingSystems: '', dataSecurityReqs: '', scalabilityReqs: '', designInspiration: '', competitors: '', successCriteria: '',
     selectedExtensions: ['EXT-001'], websiteQuestionnaire: { businessDescription: 'A company', primaryGoal: 'Leads' },
     features: [], featurePriorities: {}, customFeatures: ['Member area later'], designStyles: [], inspirationLink: '',

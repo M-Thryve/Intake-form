@@ -113,7 +113,6 @@ function makePayload(overrides: Record<string, unknown> = {}) {
     tier: "custom",
     template: {
       templateId: "starter-portfolio",
-      projectVersion: "desktop",
       colorPreset: "blue",
     },
     scope: {

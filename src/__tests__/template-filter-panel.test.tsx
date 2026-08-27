@@ -15,6 +15,7 @@ function makeTemplate(
   return {
     id: overrides.id ?? "test",
     name: overrides.name ?? "Test",
+    industry: overrides.industry ?? "service-commerce",
     category: overrides.category ?? "Business",
     accent: "#ccc",
     bg: "#111",
@@ -22,13 +23,8 @@ function makeTemplate(
     features: [],
     purpose: "Test template",
     tags: overrides.tags ?? [],
-    projectTypes: ["website", "mobile"],
-    desktopPrice: 1000,
-    mobilePrice: 1000,
-    bothPrice: 1000,
-    deliveryDesktop: 1,
-    deliveryMobile: 1,
-    deliveryBoth: 1,
+    projectTypes: ["website"],
+    delivery: overrides.delivery ?? 1,
   }
 }
 
@@ -71,7 +67,7 @@ describe("TemplateFilterPanel", () => {
 
     render(
       <TemplateFilterPanel
-        industry="Technology"
+        industry="service-commerce"
         onSelectTemplate={() => {}}
         onOverrideTemplate={() => {}}
       />,
@@ -91,7 +87,7 @@ describe("TemplateFilterPanel", () => {
 
     render(
       <TemplateFilterPanel
-        industry="Technology"
+        industry="service-commerce"
         onSelectTemplate={() => {}}
         onOverrideTemplate={() => {}}
       />,
@@ -113,7 +109,7 @@ describe("TemplateFilterPanel", () => {
 
     render(
       <TemplateFilterPanel
-        industry="Technology"
+        industry="service-commerce"
         onSelectTemplate={() => {}}
         onOverrideTemplate={() => {}}
       />,
@@ -135,7 +131,7 @@ describe("TemplateFilterPanel", () => {
 
     render(
       <TemplateFilterPanel
-        industry="Technology"
+        industry="service-commerce"
         onSelectTemplate={() => {}}
         onOverrideTemplate={() => {}}
       />,
@@ -163,7 +159,7 @@ describe("TemplateFilterPanel", () => {
 
     render(
       <TemplateFilterPanel
-        industry="Technology"
+        industry="service-commerce"
         onSelectTemplate={() => {}}
         onOverrideTemplate={() => {}}
       />,
@@ -202,7 +198,7 @@ describe("TemplateFilterPanel", () => {
 
     render(
       <TemplateFilterPanel
-        industry="Technology"
+        industry="service-commerce"
         onSelectTemplate={() => {}}
         onOverrideTemplate={handleOverride}
       />,
@@ -253,7 +249,7 @@ describe("TemplateFilterPanel", () => {
 
     render(
       <TemplateFilterPanel
-        industry="Technology"
+        industry="service-commerce"
         onSelectTemplate={handleSelect}
         onOverrideTemplate={() => {}}
       />,

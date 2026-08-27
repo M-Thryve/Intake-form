@@ -143,7 +143,7 @@ export type PricingTimelineOutput = z.infer<typeof pricingTimelineOutputSchema>;
 
 export const buildCardOutputSchema = z.object({
   generatedAt: z.string(),
-  status: z.enum(["draft", "waiting_owner_review"]),
+  status: z.enum(["preparing", "issued"]),
   buildReferenceNumber: z.string(),
   clientSummary: z.object({
     name: z.string(),

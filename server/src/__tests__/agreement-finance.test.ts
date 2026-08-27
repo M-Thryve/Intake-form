@@ -104,7 +104,7 @@ function enq(data: unknown) {
 function enqEligible() {
   enq({ id: INTAKE_ID, status: "approved", build_reference_number: "MTH-1", commercial_stage: null });
   enq([{ id: "d1", decision: "approve", decision_reason: "ok", decided_by: "u1", decided_at: "2026-01-01T00:00:00Z", reviewed_build_card_version: "1.0.0", reviewed_analysis_version: "1.0.0" }]);
-  enq({ id: "bc1", version: 1, status: "approved", preliminary_price_php: 100000 });
+  enq({ id: "bc1", version: 1, status: "issued", preliminary_price_php: 100000 });
   enq([{ scan_status: "clean" }]);
   enq([{ status: "completed", server_role: "build_card" }]);
 }

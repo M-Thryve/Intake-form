@@ -156,7 +156,6 @@ function templateSelectWarnings(form: FormData): Record<string, string | null> {
   if (form.projectType !== 'templated-website') return {}
   return {
     'field-templateId': isNonEmpty(form.templateId) ? null : 'Please select a template',
-    'field-projectVersion': isNonEmpty(form.projectVersion) ? null : 'Please select a project version',
   }
 }
 

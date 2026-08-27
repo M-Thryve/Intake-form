@@ -109,7 +109,7 @@ describe("checkEligibility", () => {
     enqList([
       { id: "d1", decision: "approve", decision_reason: "ok", decided_by: "u1", decided_at: "2026-01-01T00:00:00Z", reviewed_build_card_version: "1.0.0", reviewed_analysis_version: "1.0.0" },
     ]);
-    enqSingle({ id: "bc1", version: 1, status: "approved", preliminary_price_php: 100000 });
+    enqSingle({ id: "bc1", version: 1, status: "issued", preliminary_price_php: 100000 });
     enqList([{ scan_status: "blocked" }]);
     enqList([{ status: "completed", server_role: "build_card" }]);
     const res = await checkEligibility(INTAKE_ID);
@@ -122,7 +122,7 @@ describe("checkEligibility", () => {
     enqList([
       { id: "d1", decision: "approve", decision_reason: "ok", decided_by: "u1", decided_at: "2026-01-01T00:00:00Z", reviewed_build_card_version: "1.0.0", reviewed_analysis_version: "1.0.0" },
     ]);
-    enqSingle({ id: "bc1", version: 1, status: "approved", preliminary_price_php: 100000 });
+    enqSingle({ id: "bc1", version: 1, status: "issued", preliminary_price_php: 100000 });
     enqList([{ scan_status: "clean" }, { scan_status: "clean" }]);
     enqList([{ status: "completed", server_role: "build_card" }]);
     const res = await checkEligibility(INTAKE_ID);
@@ -137,7 +137,7 @@ describe("checkEligibility", () => {
     enqList([
       { id: "d1", decision: "approve", decision_reason: "ok", decided_by: "u1", decided_at: "2026-01-01T00:00:00Z", reviewed_build_card_version: "1.0.0", reviewed_analysis_version: "1.0.0" },
     ]);
-    enqSingle({ id: "bc1", version: 1, status: "approved", preliminary_price_php: 100000 });
+    enqSingle({ id: "bc1", version: 1, status: "issued", preliminary_price_php: 100000 });
     enqList([]);
     enqList([{ status: "failed", server_role: "build_card" }, { status: "timed_out", server_role: "voucher" }]);
     const res = await checkEligibility(INTAKE_ID);

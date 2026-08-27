@@ -12,12 +12,18 @@ describe("client portal", () => {
     expect(screen.queryByText(/waiting_owner_review|finance_review_pending|analysis_pending/i)).not.toBeInTheDocument()
   })
 
-  it("opens the read-only project workspace and keeps preliminary labels visible", () => {
+  it("gates the full Build Card behind payment, then unlocks on pay (Change 5)", () => {
     render(<ClientPortal />)
 
     fireEvent.click(screen.getByRole("button", { name: /open project workspace/i }))
     fireEvent.click(screen.getByRole("button", { name: "Build Card" }))
 
+    // Locked preview: payment required, full detail hidden.
+    expect(screen.getByText(/Payment required to unlock the full Build Card/i)).toBeInTheDocument()
+    expect(screen.queryByText(/Preliminary — subject to final agreement/i)).not.toBeInTheDocument()
+
+    // Client pays → full Build Card revealed.
+    fireEvent.click(screen.getByRole("button", { name: /Pay.*unlock the full Build Card/i }))
     expect(screen.getByText("A focused first release")).toBeInTheDocument()
     expect(screen.getByText(/Preliminary — subject to final agreement/i)).toBeInTheDocument()
     expect(screen.queryByText(/payment capture|owner review|operator/i)).not.toBeInTheDocument()

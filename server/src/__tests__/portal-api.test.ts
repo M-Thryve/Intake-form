@@ -18,6 +18,7 @@ const fromMock = vi.fn((table: string) => {
   chain.select = () => chain
   chain.eq = () => chain
   chain.in = () => chain
+  chain.lte = () => chain
   chain.order = () => chain
   chain.limit = () => chain
   chain.maybeSingle = () =>
@@ -103,11 +104,11 @@ describe("client portal projection and tenant boundary", () => {
     expect(response.status).toBe(404)
   })
 
-  it("returns an approved build card", async () => {
+  it("returns an issued build card", async () => {
     state.single.intakes = intake
     state.single.build_cards = {
       id: "card-1",
-      status: "approved",
+      status: "issued",
       summary: "Safe",
     }
     const app = await portalApp()
@@ -115,7 +116,7 @@ describe("client portal projection and tenant boundary", () => {
       `/api/portal/intakes/${intake.id}/build-card`,
     )
     expect(response.status).toBe(200)
-    expect(response.body.buildCard.status).toBe("approved")
+    expect(response.body.buildCard.status).toBe("issued")
   })
 
   it("does not expose a finance-pending agreement", async () => {

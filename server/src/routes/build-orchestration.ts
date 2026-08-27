@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
-import { supabase } from "../lib/supabase.js";
+import { supabase } from "../lib/supabase.js"
+import { PAYMENT_DUE_NOTE } from "../lib/payments.js";
 import { requireRole } from "../middleware/auth.js";
 import { checkBuildEligibility } from "../lib/build-eligibility.js";
 import {
@@ -230,7 +231,7 @@ buildOrchestrationRouter.post(
       success: true,
       orchestration: created,
       message:
-        "Build queued. The build worker will consume this record. No payment has been captured by this action.",
+        `Build queued. The build worker will consume this record. No payment has been captured by this action. ${PAYMENT_DUE_NOTE}`,
     });
   },
 );

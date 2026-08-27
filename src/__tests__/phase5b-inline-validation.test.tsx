@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import App from '../App'
 
@@ -10,6 +10,12 @@ vi.mock('../api/intake', async (importOriginal) => {
     saveDraft: vi.fn().mockResolvedValue({ success: true, intakeId: 'mock-intake-id', clientId: 'mock-client-id', buildReferenceNumber: 'MTH-TEST-001', status: 'draft' }),
     submitIntake: vi.fn().mockResolvedValue({ success: true, intakeId: 'mock-intake-id', buildReferenceNumber: 'MTH-TEST-001', clientId: 'mock-client-id' }),
   }
+})
+
+// persistDraft probes API reachability with an OPTIONS preflight before
+// dispatching. jsdom has no backend — answer it with a success response.
+beforeAll(() => {
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 200 })))
 })
 
 // v2.0 flow: intro → build-approach → client-details → …
@@ -99,8 +105,7 @@ describe('PHASE_5B_REV01 — draft save toast message', () => {
     next() // → template-select
 
     fireEvent.click(screen.getByRole('button', { name: /Apex Business/ }))
-    fireEvent.click(screen.getByRole('button', { name: 'Website' }))
-    next() // → pages-features
+    next() // → pages-features (v3.1: no platform version selection)
 
     next() // → review (extensions are optional — no selection needed)
 

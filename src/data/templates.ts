@@ -1,248 +1,306 @@
 /**
- * v2.0 Template catalogue — static frontend definition.
+ * v3.2 Template catalogue — static frontend definition.
  *
- * Every template must carry `tags` for the REV-03 industry filter.
- * Tags should use lowercase slugs drawn from the compatibleTags lists
- * in `industry-template-map.ts`.
+ * The catalogue is organised as 7 canonical industries, each containing one
+ * or more categories. Template filtering is a DIRECT mapping from the selected
+ * industry to its categories (see industry-template-map.ts) — the previous
+ * tag-matching layer has been removed.
+ *
+ * The authoritative data supplied by the owner is the template NAME and its
+ * CATEGORY (grouped under one of 7 canonical industries). Per-template
+ * supporting fields (pages, features, accent, bg, delivery, purpose) are
+ * prototype defaults derived from the template's industry — they are not part
+ * of the owner-supplied catalogue and may be refined later.
+ *
+ * v3.1: Platform version selection is removed from the offer. Pricing is now
+ * derived from a single base (see App.tsx calcPrice). Delivery estimates
+ * remain per-template.
  */
+export const PRICE_BASE_PHP = 20000
+
+export type IndustrySlug =
+  | 'service-commerce'
+  | 'dtc-ecommerce'
+  | 'retail-multi-branch'
+  | 'wholesale-distribution'
+  | 'manufacturing-fabrication'
+  | 'warehousing-storage'
+  | 'logistics-transportation'
 
 export interface TemplateDefinition {
   id: string
   name: string
+  /** Canonical industry slug this template belongs to. */
+  industry: string
+  /** Category label (one of the 29 catalogue categories). */
   category: string
   accent: string
   bg: string
   pages: string[]
   features: string[]
   purpose: string
-  /** Industry tags for REV-03 filter. */
+  /** Deprecated: retained for interface stability. Filtering no longer uses tags. */
   tags: string[]
-  /** Supported project types for REV-02 custom path (website, mobile, or both). */
+  /** Supported project types for REV-02 custom path (website only — mobile removed v3.1). */
   projectTypes: string[]
-  desktopPrice: number
-  mobilePrice: number
-  bothPrice: number
-  deliveryDesktop: number
-  deliveryMobile: number
-  deliveryBoth: number
+  /** Delivery estimate in working days (prototype default per industry). */
+  delivery: number
 }
 
-// NOTE: All prices in PHP. Prototype/demonstration values only.
-export const TEMPLATES: TemplateDefinition[] = [
+interface IndustryDefaults {
+  slug: IndustrySlug
+  label: string
+  accent: string
+  bg: string
+  pages: string[]
+  features: string[]
+  purpose: string
+  delivery: number
+  categories: { label: string; templates: string[] }[]
+}
+
+// ── Authoritative catalogue: 7 industries → 29 categories → 69 templates ──────
+const CATALOG: IndustryDefaults[] = [
   {
-    id: 'apex',
-    name: 'Apex Business',
-    category: 'Business',
+    slug: 'service-commerce',
+    label: 'Service-Based Commerce',
     accent: '#39D6C7',
     bg: '#0D2035',
-    purpose: 'Professional corporate website',
     pages: ['Home', 'About', 'Services', 'Contact'],
-    features: ['Contact Form', 'Blog', 'Team Page', 'Newsletter'],
-    tags: ['business', 'corporate'],
-    projectTypes: ['website', 'mobile'],
-    desktopPrice: 25000,
-    mobilePrice: 20000,
-    bothPrice: 32000,
-    deliveryDesktop: 7,
-    deliveryMobile: 5,
-    deliveryBoth: 10,
+    features: ['Contact Form', 'Service Listings', 'Lead Capture', 'Testimonials'],
+    purpose: 'Service & consulting website',
+    delivery: 7,
+    categories: [
+      {
+        label: 'Marketing Agency',
+        templates: ['Modern Marketing Agency', 'Social Media Agency'],
+      },
+      {
+        label: 'Creative Agency and Studio',
+        templates: ['Creative Portfolio', 'Production Studio', 'Design Agency'],
+      },
+      {
+        label: 'Professional Consultant',
+        templates: ['Personal Consultant', 'Consulting Firm', 'Expert Profile'],
+      },
+    ],
   },
   {
-    id: 'vertex',
-    name: 'Vertex Pro',
-    category: 'Business',
-    accent: '#7C6FCD',
-    bg: '#1A0F2E',
-    purpose: 'Agency and portfolio showcase',
-    pages: ['Home', 'About', 'Services', 'Portfolio', 'Contact'],
-    features: ['Portfolio Gallery', 'Contact Form', 'Testimonials'],
-    tags: ['agency', 'portfolio', 'creative'],
-    projectTypes: ['website', 'mobile'],
-    desktopPrice: 28000,
-    mobilePrice: 22000,
-    bothPrice: 36000,
-    deliveryDesktop: 8,
-    deliveryMobile: 6,
-    deliveryBoth: 12,
-  },
-  {
-    id: 'meridian',
-    name: 'Meridian',
-    category: 'Business',
-    accent: '#22C55E',
-    bg: '#051A0E',
-    purpose: 'Consulting and service firm',
-    pages: ['Home', 'Services', 'Pricing', 'Contact'],
-    features: ['Pricing Table', 'Lead Form', 'Newsletter', 'FAQ'],
-    tags: ['business', 'corporate', 'professional'],
-    projectTypes: ['website', 'mobile'],
-    desktopPrice: 22000,
-    mobilePrice: 18000,
-    bothPrice: 28000,
-    deliveryDesktop: 6,
-    deliveryMobile: 5,
-    deliveryBoth: 9,
-  },
-  {
-    id: 'storex',
-    name: 'StoreX',
-    category: 'E-Commerce',
+    slug: 'dtc-ecommerce',
+    label: 'Direct-to-Consumer E-Commerce',
     accent: '#F97316',
     bg: '#1C0800',
-    purpose: 'Full-featured online store',
     pages: ['Home', 'Shop', 'Product', 'Cart', 'Checkout'],
-    features: ['Product Catalog', 'Shopping Cart', 'Stripe Payments', 'Order Tracking'],
-    tags: ['ecommerce', 'retail', 'shop'],
-    projectTypes: ['website', 'mobile'],
-    desktopPrice: 38000,
-    mobilePrice: 32000,
-    bothPrice: 48000,
-    deliveryDesktop: 10,
-    deliveryMobile: 8,
-    deliveryBoth: 14,
+    features: ['Product Catalog', 'Shopping Cart', 'Payments', 'Order Tracking'],
+    purpose: 'Online store',
+    delivery: 10,
+    categories: [
+      {
+        label: 'Fashion and Lifestyle Store',
+        templates: ['Fashion Editorial', 'Minimal Fashion Store', 'Streetwear Store'],
+      },
+      {
+        label: 'Beauty and Personal Care Store',
+        templates: ['Skincare Brand', 'Cosmetics Store', 'Beauty Boutique'],
+      },
+      {
+        label: 'Food and Beverage Product Store',
+        templates: ['Specialty Food Brand', 'Coffee and Tea Store', 'Snack Brand'],
+      },
+      {
+        label: 'Home and Living Store',
+        templates: ['Furniture Store', 'Home Décor Brand', 'Minimal Living Store'],
+      },
+      {
+        label: 'Electronics and Accessories Store',
+        templates: ['Electronics Store', 'Gadget Brand', 'Gaming Products Store'],
+      },
+      {
+        label: 'Specialty Product Store',
+        templates: ['Pet Store', 'Baby and Kids Store', 'Toy and Learning Store'],
+      },
+      {
+        label: 'Digital Product Store',
+        templates: ['Digital Download Store', 'Template Marketplace', 'Creator Resource Store'],
+      },
+    ],
   },
   {
-    id: 'boutique',
-    name: 'Boutique',
-    category: 'E-Commerce',
-    accent: '#EC4899',
-    bg: '#200A1E',
-    purpose: 'Elegant fashion and lifestyle store',
-    pages: ['Home', 'Collections', 'Product', 'Cart', 'Checkout'],
-    features: ['Collections', 'Wishlist', 'Stripe Payments', 'Reviews'],
-    tags: ['ecommerce', 'fashion', 'retail'],
-    projectTypes: ['website', 'mobile'],
-    desktopPrice: 35000,
-    mobilePrice: 30000,
-    bothPrice: 44000,
-    deliveryDesktop: 9,
-    deliveryMobile: 7,
-    deliveryBoth: 13,
+    slug: 'retail-multi-branch',
+    label: 'Retail & Multi-Branch Commerce',
+    accent: '#22C55E',
+    bg: '#051A0E',
+    pages: ['Home', 'Locations', 'Products', 'Contact'],
+    features: ['Store Locator', 'Branch Listings', 'Product Catalog', 'Hours & Info'],
+    purpose: 'Multi-branch retail website',
+    delivery: 9,
+    categories: [
+      {
+        label: 'General Retail Chain',
+        templates: ['Standard', 'Specialty / Lifestyle'],
+      },
+      {
+        label: 'Grocery and Convenience Retail',
+        templates: ['Standard', 'Convenience / Specialty'],
+      },
+      {
+        label: 'Pharmacy and Health Retail',
+        templates: ['Pharmacy', 'Wellness'],
+      },
+      {
+        label: 'Hardware, Furniture, and Appliance Retail',
+        templates: ['General', 'Furniture & Appliance', 'Automotive Parts'],
+      },
+    ],
   },
   {
-    id: 'marketpro',
-    name: 'MarketPro',
-    category: 'E-Commerce',
+    slug: 'wholesale-distribution',
+    label: 'Wholesale & Distribution',
+    accent: '#7C6FCD',
+    bg: '#1A0F2E',
+    pages: ['Home', 'Catalog', 'About', 'Contact'],
+    features: ['Product Catalog', 'Bulk Order Inquiry', 'Account Portal', 'Pricing Tiers'],
+    purpose: 'Wholesale & distribution website',
+    delivery: 9,
+    categories: [
+      {
+        label: 'General Wholesale Distributor',
+        templates: ['Standard', 'Multi-Brand'],
+      },
+      {
+        label: 'Food & Beverage Distributor',
+        templates: ['Standard', 'Hospitality Supplier'],
+      },
+      {
+        label: 'Industrial Supplier',
+        templates: ['Technical', 'Packaging'],
+      },
+      {
+        label: 'Specialized Distributor',
+        templates: ['Medical', 'Beauty & Agricultural', 'Automotive'],
+      },
+    ],
+  },
+  {
+    slug: 'manufacturing-fabrication',
+    label: 'Manufacturing & Fabrication',
     accent: '#EAB308',
     bg: '#1A1200',
-    purpose: 'Multi-category marketplace',
-    pages: ['Home', 'Categories', 'Product', 'Cart', 'Checkout'],
-    features: ['Multi-category', 'Search', 'Payments', 'Promo Codes'],
-    tags: ['ecommerce', 'marketplace', 'retail'],
-    projectTypes: ['website', 'mobile'],
-    desktopPrice: 40000,
-    mobilePrice: 34000,
-    bothPrice: 50000,
-    deliveryDesktop: 11,
-    deliveryMobile: 9,
-    deliveryBoth: 15,
+    pages: ['Home', 'Capabilities', 'Products', 'Contact'],
+    features: ['Capabilities Showcase', 'Product Catalog', 'Quote Request', 'Certifications'],
+    purpose: 'Manufacturing & fabrication website',
+    delivery: 11,
+    categories: [
+      {
+        label: 'General Manufacturer',
+        templates: ['Corporate', 'Consumer'],
+      },
+      {
+        label: 'Industrial Manufacturer',
+        templates: ['Heavy Equipment', 'Packaging'],
+      },
+      {
+        label: 'Custom Fabricator',
+        templates: ['Corporate', 'Design-Led'],
+      },
+      {
+        label: 'Contract and Private-Label Manufacturer',
+        templates: ['Standard', 'Private-Label'],
+      },
+    ],
   },
   {
-    id: 'folio',
-    name: 'Nexus Portfolio',
-    category: 'Portfolio',
-    accent: '#94A3B8',
-    bg: '#080E16',
-    purpose: 'Minimal creative portfolio',
-    pages: ['Home', 'Work', 'About', 'Contact'],
-    features: ['Project Gallery', 'Case Studies', 'Contact Form'],
-    tags: ['portfolio', 'creative'],
-    projectTypes: ['website', 'mobile'],
-    desktopPrice: 18000,
-    mobilePrice: 15000,
-    bothPrice: 24000,
-    deliveryDesktop: 5,
-    deliveryMobile: 4,
-    deliveryBoth: 7,
-  },
-  {
-    id: 'studio',
-    name: 'Studio',
-    category: 'Portfolio',
-    accent: '#F59E0B',
-    bg: '#180E00',
-    purpose: 'Creative studio showcase',
-    pages: ['Home', 'Projects', 'Process', 'Contact'],
-    features: ['Project Gallery', 'Video Reel', 'Client Logos'],
-    tags: ['portfolio', 'creative', 'design'],
-    projectTypes: ['website', 'mobile'],
-    desktopPrice: 20000,
-    mobilePrice: 16000,
-    bothPrice: 26000,
-    deliveryDesktop: 6,
-    deliveryMobile: 5,
-    deliveryBoth: 8,
-  },
-  {
-    id: 'dine',
-    name: 'Dine',
-    category: 'Restaurant',
-    accent: '#EF4444',
-    bg: '#1A0500',
-    purpose: 'Premium dining experience',
-    pages: ['Home', 'Menu', 'Reservations', 'About', 'Contact'],
-    features: ['Online Menu', 'Table Reservations', 'Hours & Location', 'Gallery'],
-    tags: ['restaurant', 'food', 'cafe'],
-    projectTypes: ['website', 'mobile'],
-    desktopPrice: 30000,
-    mobilePrice: 25000,
-    bothPrice: 38000,
-    deliveryDesktop: 8,
-    deliveryMobile: 6,
-    deliveryBoth: 11,
-  },
-  {
-    id: 'saveur',
-    name: 'Saveur',
-    category: 'Restaurant',
-    accent: '#D97706',
-    bg: '#1A0D00',
-    purpose: 'Restaurant with events and gift cards',
-    pages: ['Home', 'Menu', 'Events', 'Reservations', 'Contact'],
-    features: ['Online Menu', 'Event Booking', 'Gift Cards', 'Newsletter'],
-    tags: ['restaurant', 'events', 'food'],
-    projectTypes: ['website', 'mobile'],
-    desktopPrice: 32000,
-    mobilePrice: 27000,
-    bothPrice: 40000,
-    deliveryDesktop: 9,
-    deliveryMobile: 7,
-    deliveryBoth: 12,
-  },
-  {
-    id: 'property',
-    name: 'Property Pro',
-    category: 'Real Estate',
-    accent: '#10B981',
-    bg: '#051A10',
-    purpose: 'Real estate agency listings',
-    pages: ['Home', 'Listings', 'Property Detail', 'About', 'Contact'],
-    features: ['Property Listings', 'Search & Filter', 'Map View', 'Lead Capture'],
-    tags: ['real-estate', 'property', 'listings'],
-    projectTypes: ['website', 'mobile'],
-    desktopPrice: 35000,
-    mobilePrice: 29000,
-    bothPrice: 44000,
-    deliveryDesktop: 9,
-    deliveryMobile: 7,
-    deliveryBoth: 13,
-  },
-  {
-    id: 'reserve',
-    name: 'Commerce Starter',
-    category: 'Booking',
+    slug: 'warehousing-storage',
+    label: 'Warehousing & Storage',
     accent: '#0EA5E9',
     bg: '#021018',
-    purpose: 'Service business booking system',
-    pages: ['Home', 'Services', 'Book', 'Confirmation', 'Contact'],
-    features: ['Online Booking', 'Calendar', 'Service Selection', 'SMS Notifications'],
-    tags: ['booking', 'business', 'services'],
-    projectTypes: ['website', 'mobile'],
-    desktopPrice: 38000,
-    mobilePrice: 32000,
-    bothPrice: 48000,
-    deliveryDesktop: 10,
-    deliveryMobile: 8,
-    deliveryBoth: 14,
+    pages: ['Home', 'Services', 'Facilities', 'Contact'],
+    features: ['Service Listings', 'Facility Gallery', 'Request a Quote', 'FAQ'],
+    purpose: 'Warehousing & storage website',
+    delivery: 8,
+    categories: [
+      {
+        label: 'General Warehouse Provider',
+        templates: ['General Warehouse', 'Distribution Center'],
+      },
+      {
+        label: 'E-Commerce Fulfillment',
+        templates: ['Standard', 'Regional Fulfillment Hub'],
+      },
+      {
+        label: 'Specialized Storage',
+        templates: ['Temperature-Controlled', 'General'],
+      },
+    ],
+  },
+  {
+    slug: 'logistics-transportation',
+    label: 'Logistics & Transportation',
+    accent: '#EF4444',
+    bg: '#1A0500',
+    pages: ['Home', 'Services', 'Track', 'Contact'],
+    features: ['Service Listings', 'Shipment Tracking', 'Quote Request', 'Coverage Map'],
+    purpose: 'Logistics & transportation website',
+    delivery: 9,
+    categories: [
+      {
+        label: 'Courier & Last-Mile Delivery',
+        templates: ['Local Courier', 'E-Commerce Delivery'],
+      },
+      {
+        label: 'Trucking & Freight Transport',
+        templates: ['Trucking Company', 'Heavy Freight'],
+      },
+      {
+        label: 'Freight Forwarding',
+        templates: ['International Logistics', 'Air & Sea Freight'],
+      },
+      {
+        label: 'Specialized Logistics',
+        templates: ['Cold Chain & Medical Logistics', 'Moving & Third-Party Logistics'],
+      },
+    ],
   },
 ]
+
+function slug(s: string): string {
+  return s
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+export const TEMPLATES: TemplateDefinition[] = CATALOG.flatMap((ind) =>
+  ind.categories.flatMap((cat) =>
+    cat.templates.map((name) => ({
+      id: `${ind.slug}-${slug(cat.label)}-${slug(name)}`,
+      name,
+      industry: ind.slug,
+      category: cat.label,
+      accent: ind.accent,
+      bg: ind.bg,
+      pages: ind.pages,
+      features: ind.features,
+      purpose: ind.purpose,
+      tags: [] as string[],
+      projectTypes: ['website'] as string[],
+      delivery: ind.delivery,
+    })),
+  ),
+)
+
+/** Flat list of the 29 category labels, in catalogue order. */
+export const TEMPLATE_CATEGORY_NAMES: string[] = CATALOG.flatMap((ind) =>
+  ind.categories.map((c) => c.label),
+)
+
+/** Canonical industry slug → display label. */
+export const INDUSTRY_LABELS: Record<IndustrySlug, string> = CATALOG.reduce(
+  (acc, ind) => {
+    acc[ind.slug] = ind.label
+    return acc
+  },
+  {} as Record<IndustrySlug, string>,
+)

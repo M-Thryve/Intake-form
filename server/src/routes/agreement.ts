@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
-import { supabase } from "../lib/supabase.js";
+import { supabase } from "../lib/supabase.js"
+import { PAYMENT_DUE_NOTE } from "../lib/payments.js";
 import { requireRole } from "../middleware/auth.js";
 import { checkEligibility } from "../lib/agreement-eligibility.js";
 import { buildAgreementPackage, nextVersionFor } from "../lib/agreement-draft.js";
@@ -201,7 +202,7 @@ agreementRouter.post(
     res.status(201).json({
       success: true,
       draft: created,
-      message: "Agreement draft prepared. Not legally executed. No payment captured. No build started.",
+      message: `Agreement draft prepared. Not legally executed. No payment captured. No build started. ${PAYMENT_DUE_NOTE}`,
     });
   },
 );

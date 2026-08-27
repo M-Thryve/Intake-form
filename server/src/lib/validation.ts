@@ -17,12 +17,6 @@ const MAX_UPLOADS = 100;
 // definitions so draft and submit schemas never drift.
 // ═══════════════════════════════════════════════════════════
 
-const templateFields = {
-  templateId: z.string(),
-  projectVersion: z.enum(["desktop", "mobile", "both"]),
-  colorPreset: z.string(),
-};
-
 const enterpriseFields = {
   projectVision: z.string().max(MAX_LONG),
   targetUsers: z.string().max(MAX_LONG),
@@ -89,9 +83,13 @@ const assetsSubmitSchema = z.object({
 
 const templateSubmitSchema = z.object({
   templateId: z.string().min(1, "Template ID is required"),
-  projectVersion: z.enum(["desktop", "mobile", "both"], {
-    errorMap: () => ({ message: "Invalid project version" }),
-  }),
+  // v3.1 removed platform version selection. New submissions omit this
+  // field; historical clients may still send desktop/mobile/both, and old
+  // records carry it — tolerated on read, never required.
+  projectVersion: z
+    .enum(["desktop", "mobile", "both"])
+    .optional()
+    .nullable(),
   colorPreset: z.string().default(""),
 });
 
@@ -309,6 +307,8 @@ const assetsDraftSchema = z
 const templateDraftSchema = z
   .object({
     templateId: z.string().default(""),
+    // v3.1: platform versions removed from the offer. Accepted on read for
+    // legacy drafts; never required and never written for new selections.
     projectVersion: z
       .union([z.enum(["desktop", "mobile", "both"]), z.literal("")])
       .optional()
@@ -641,12 +641,10 @@ function collectDraftMissingRequirements(data: DraftPayload): MissingRequirement
   }
 
   // Template required only for Templated Website builds.
+  // v3.1: projectVersion is no longer part of the discovery contract.
   if (data.project?.projectType === "templated-website") {
     if (!data.template?.templateId?.trim()) {
       missing.push({ field: "template.templateId", message: "Template selection is required" });
-    }
-    if (!data.template?.projectVersion) {
-      missing.push({ field: "template.projectVersion", message: "Project version is required" });
     }
   }
 

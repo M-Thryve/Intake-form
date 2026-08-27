@@ -392,7 +392,7 @@ export function runBuildCard(params: {
 
   return {
     generatedAt: new Date().toISOString(),
-    status: "waiting_owner_review",
+    status: "preparing",
     buildReferenceNumber: params.context.buildReferenceNumber,
     clientSummary: {
       name: "[client name — available in full intake]",

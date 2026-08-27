@@ -12,7 +12,7 @@ function emptyForm(): FormData {
     deckSectionStatuses: {}, deckSectionNotes: {},
     resourceStatuses: {}, resourceNotes: {}, resourceAddOnCosts: {},
     tier: '',
-    templateCategory: '', templateId: '', projectVersion: '', colorPreset: '',
+    templateCategory: '', templateId: '', colorPreset: '',
     customSizes: false, allSizes: false,
     projectVision: '', targetUsers: '', userRoles: '', businessWorkflows: '',
     integrations: '', existingSystems: '', dataSecurityReqs: '', scalabilityReqs: '',

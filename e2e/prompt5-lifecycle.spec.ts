@@ -59,7 +59,6 @@ function draftReadResponse() {
         buildPath: "custom",
         template: {
           templateId: "apex",
-          projectVersion: "desktop",
           colorPreset: "original",
         },
         assets: {

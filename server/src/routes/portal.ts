@@ -10,6 +10,7 @@ import {
   projectClientStatus,
   type ClientFacingState,
 } from "../lib/client-status-projection.js"
+import { promoteDueBuildCards } from "../lib/mcp-orchestration.js"
 
 export const portalRouter = Router()
 
@@ -186,13 +187,17 @@ portalRouter.get(
     const intake = await loadScopedIntake(req, res, req.params.intakeId, "id")
     if (!intake) return
 
+    // Promote any Build Card whose prep window has elapsed (preparing -> issued)
+    // before deciding what the client may see.
+    await promoteDueBuildCards()
+
     const { data: buildCard, error } = await supabase
       .from("build_cards")
       .select(
         "id, version, status, summary, complexity_label, preliminary_price_php, preliminary_timeline_days, build_reference_number, created_at, updated_at",
       )
       .eq("intake_id", intake.id)
-      .eq("status", "approved")
+      .eq("status", "issued")
       .order("version", { ascending: false })
       .limit(1)
       .maybeSingle()
@@ -206,7 +211,7 @@ portalRouter.get(
     if (!buildCard) {
       res
         .status(404)
-        .json({ success: false, error: "Approved build card not found" })
+        .json({ success: false, error: "Issued build card not found" })
       return
     }
 

@@ -201,6 +201,45 @@ async function runBuildCardGeneration(
   }
 }
 
+// ═══════════════════════════════════════════════════════════
+// Build Card prep lifecycle (Change 6)
+// ═══════════════════════════════════════════════════════════
+
+// True 2-3 day prep window that starts when the owner approves the intake.
+export const BUILD_CARD_PREP_DAYS = 3;
+export function computePreparedAt(from: Date = new Date()): string {
+  return new Date(from.getTime() + BUILD_CARD_PREP_DAYS * 24 * 60 * 60 * 1000).toISOString();
+}
+
+// Promote Build Cards whose prep window has elapsed: preparing -> issued, and
+// flip the intake to payment_pending so the client can review and pay.
+export async function promoteDueBuildCards(): Promise<number> {
+  const nowIso = new Date().toISOString();
+  const { data: due, error } = await supabase
+    .from("build_cards")
+    .select("intake_id")
+    .eq("status", "preparing")
+    .lte("prepared_at", nowIso);
+
+  if (error || !due || due.length === 0) return 0;
+
+  let promoted = 0;
+  for (const row of due) {
+    const intakeId = (row as Record<string, unknown>).intake_id as string;
+    await supabase
+      .from("build_cards")
+      .update({ status: "issued", updated_at: nowIso })
+      .eq("intake_id", intakeId)
+      .eq("status", "preparing");
+    await supabase
+      .from("intakes")
+      .update({ commercial_stage: "payment_pending", updated_at: nowIso })
+      .eq("id", intakeId);
+    promoted++;
+  }
+  return promoted;
+}
+
 export async function retryMcpRun(runId: string): Promise<{ success: boolean; error?: string }> {
   try {
     const count = await incrementRetryCount(runId);

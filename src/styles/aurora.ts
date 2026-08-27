@@ -97,19 +97,6 @@ export const ghostButtonStyle: CSSProperties = {
   fontFamily: auroraTypography.body,
 }
 
-export const versionButtonStyle = (selected: boolean): CSSProperties => ({
-  padding: '10px 18px',
-  borderRadius: '8px',
-  border: `1px solid ${selected ? auroraColors.emerald : auroraColors.rim}`,
-  background: selected ? 'color-mix(in srgb, var(--a-emerald) 8%, transparent)' : auroraColors.void,
-  color: selected ? auroraColors.emerald : auroraColors.rimMid,
-  fontWeight: selected ? 600 : 400,
-  fontSize: '13px',
-  cursor: 'pointer',
-  fontFamily: auroraTypography.body,
-  transition: 'all 0.15s',
-})
-
 export const operatorPalette = {
   default: {
     border: 'color-mix(in srgb, var(--a-emerald) 22%, transparent)',

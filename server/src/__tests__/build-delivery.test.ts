@@ -132,7 +132,7 @@ function enqEligibleNoPackageRequired() {
     reviewed_build_card_version: "2",
     reviewed_analysis_version: "3",
   });
-  enq({ id: "bc1", version: 3, status: "approved" });
+  enq({ id: "bc1", version: 3, status: "issued" });
   enq([{ scan_status: "clean" }]);
   enq([{ status: "completed", server_role: "build_card" }]);
   enq(null); // latest package (none yet)
@@ -157,7 +157,7 @@ function enqEligibleWithFreshPackage() {
     reviewed_build_card_version: "2",
     reviewed_analysis_version: "3",
   });
-  enq({ id: "bc1", version: 3, status: "approved" });
+  enq({ id: "bc1", version: 3, status: "issued" });
   enq([{ scan_status: "clean" }]);
   enq([{ status: "completed", server_role: "build_card" }]);
   enq({
@@ -197,7 +197,7 @@ function enqPackagePayloadReads() {
   enq({
     id: "bc1",
     version: 3,
-    status: "approved",
+    status: "issued",
     preliminary_price_php: 300000,
     preliminary_timeline_days: 45,
     complexity_label: "medium",
@@ -343,7 +343,7 @@ describe("Delivery package creation", () => {
       reviewed_build_card_version: "2",
       reviewed_analysis_version: "3",
     });
-    enq({ id: "bc1", version: 3, status: "approved" });
+    enq({ id: "bc1", version: 3, status: "issued" });
     enq([{ scan_status: "clean" }]);
     enq([{ status: "completed", server_role: "build_card" }]);
     enq(null); // no existing package
@@ -419,7 +419,7 @@ describe("Orchestration queue gate", () => {
       reviewed_build_card_version: "2",
       reviewed_analysis_version: "3",
     });
-    enq({ id: "bc1", version: 3, status: "approved" });
+    enq({ id: "bc1", version: 3, status: "issued" });
     enq([{ scan_status: "clean" }]);
     enq([{ status: "completed", server_role: "build_card" }]);
     enq(null); // no package
@@ -450,7 +450,7 @@ describe("Orchestration queue gate", () => {
       reviewed_build_card_version: "2",
       reviewed_analysis_version: "3",
     });
-    enq({ id: "bc1", version: 3, status: "approved" });
+    enq({ id: "bc1", version: 3, status: "issued" });
     enq([{ scan_status: "clean" }]);
     enq([{ status: "completed", server_role: "build_card" }]);
     enq({

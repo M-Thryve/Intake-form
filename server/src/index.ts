@@ -11,6 +11,7 @@ import { financeRouter } from "./routes/finance.js"
 import { buildDeliveryRouter } from "./routes/build-delivery.js"
 import { buildOrchestrationRouter } from "./routes/build-orchestration.js"
 import { portalRouter } from "./routes/portal.js"
+import { paymentRouter } from "./routes/payments.js"
 import { internalOutboxRouter } from "./routes/internal-outbox.js"
 import { requireInternalService } from "./middleware/internal-auth.js"
 
@@ -67,6 +68,7 @@ app.use("/api/agreement", requireAuth, agreementRouter)
 app.use("/api/finance", requireAuth, financeRouter)
 app.use("/api/build-delivery", requireAuth, buildDeliveryRouter)
 app.use("/api/build-orchestration", requireAuth, buildOrchestrationRouter)
+app.use("/api/payments", paymentRouter)
 app.use("/api/internal/outbox", requireInternalService, internalOutboxRouter)
 
 app.use((_req, res) => {
