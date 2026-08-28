@@ -388,7 +388,8 @@ async function lifecycleOp(
       body: JSON.stringify({ intake: payload, idempotencyKey, command, ...(intakeId ? { intakeId } : {}) }),
     })
 
-    const data: IntakeSubmissionResponse = await response.json()
+    const text = await response.text()
+    const data: IntakeSubmissionResponse = text ? (JSON.parse(text) as IntakeSubmissionResponse) : ({} as IntakeSubmissionResponse)
 
     if (!response.ok) {
       return { success: false, error: data.error || `${command} failed` }
