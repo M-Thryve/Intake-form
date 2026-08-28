@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import ConsoleApp from './console/ConsoleApp'
+import LoginGate from './components/LoginGate'
 import './index.css'
 import './styles/aurora.css'
 
@@ -15,7 +16,11 @@ function Root() {
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
 
-  return showConsole ? <ConsoleApp /> : <App />
+  return (
+    <LoginGate>
+      {showConsole ? <ConsoleApp /> : <App />}
+    </LoginGate>
+  )
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
