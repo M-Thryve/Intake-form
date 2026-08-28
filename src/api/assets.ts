@@ -50,14 +50,29 @@ export class AssetApiError extends Error {
   }
 }
 
+/** Cookies only same-origin; see the note in api/intake.ts lifecycleOp. */
+const CREDENTIALS: RequestCredentials = API_BASE_URL ? 'omit' : 'include'
+
 async function readJson<T>(response: Response): Promise<T> {
-  const data = await response.json().catch(() => ({})) as Record<string, unknown>
+  const raw = await response.text()
+  let data: Record<string, unknown>
+  try {
+    data = raw ? JSON.parse(raw) as Record<string, unknown> : {}
+  } catch {
+    throw new AssetApiError(
+      `HTTP ${response.status} from ${response.url || ASSET_API}, non-JSON body: ${raw.slice(0, 200)}`,
+      response.status,
+    )
+  }
   if (!response.ok) {
     if (response.status === 401 || response.status === 403) {
       throw new AssetApiError(
-        `Your operator session is not valid (${data.error || 'not authorized'}). Sign out and sign in again, then retry.`,
+        `Not authorized (HTTP ${response.status}): ${data.error || 'no detail'}. Sign out and sign in again, then retry.`,
         response.status,
       )
+    }
+    if (!data.error) {
+      throw new AssetApiError(`HTTP ${response.status} (empty response body)`, response.status)
     }
     const detailRows = Array.isArray(data.details) ? data.details : []
     const details = detailRows.map(item => {
@@ -73,7 +88,7 @@ async function readJson<T>(response: Response): Promise<T> {
 export async function requestUpload(input: UploadRequestInput): Promise<UploadRequestResult> {
   const response = await fetch(`${ASSET_API}/upload-request`, {
     method: 'POST',
-    credentials: 'include',
+    credentials: CREDENTIALS,
     headers: { ...await getApiAuthHeaders(), 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   })
@@ -109,7 +124,7 @@ export function uploadToSignedUrl(
 export async function confirmUpload(assetId: string, binding: AssetBinding): Promise<UploadedAssetRef> {
   const response = await fetch(`${ASSET_API}/${encodeURIComponent(assetId)}/confirm-upload`, {
     method: 'POST',
-    credentials: 'include',
+    credentials: CREDENTIALS,
     headers: { ...await getApiAuthHeaders(), 'Content-Type': 'application/json' },
     body: JSON.stringify(binding),
   })
@@ -123,7 +138,7 @@ export async function listIntakeAssets(binding: AssetBinding): Promise<AssetList
   })
   const response = await fetch(
     `${ASSET_API}/intake/${encodeURIComponent(binding.intakeId)}?${query.toString()}`,
-    { credentials: 'include', headers: await getApiAuthHeaders() },
+    { credentials: CREDENTIALS, headers: await getApiAuthHeaders() },
   )
   return readJson<AssetListResult>(response)
 }
@@ -136,7 +151,7 @@ export async function updateAssetStatus(
 ): Promise<UploadedAssetRef> {
   const response = await fetch(`${ASSET_API}/${encodeURIComponent(assetId)}/status`, {
     method: 'PATCH',
-    credentials: 'include',
+    credentials: CREDENTIALS,
     headers: { ...await getApiAuthHeaders(), 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...binding, status, reason }),
   })
@@ -146,7 +161,7 @@ export async function updateAssetStatus(
 export async function removeAsset(assetId: string, binding: AssetBinding): Promise<void> {
   const response = await fetch(`${ASSET_API}/${encodeURIComponent(assetId)}`, {
     method: 'DELETE',
-    credentials: 'include',
+    credentials: CREDENTIALS,
     headers: { ...await getApiAuthHeaders(), 'Content-Type': 'application/json' },
     body: JSON.stringify(binding),
   })

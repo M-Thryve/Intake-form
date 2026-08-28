@@ -1477,8 +1477,13 @@ export default function App() {
       try {
         const apiBase = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
         await fetch(`${apiBase}/api/intakes`, { method: 'OPTIONS' })
-      } catch {
-        throw new Error('API server not reachable. Start it with: cd server && npm run dev')
+      } catch (reachError) {
+        const detail = reachError instanceof Error ? reachError.message : 'unknown error'
+        throw new Error(
+          import.meta.env.DEV
+            ? `API server not reachable (${detail}). Start it with: cd server && npm run dev`
+            : `API server not reachable (${detail}).`,
+        )
       }
       const payload = toSubmissionPayload(
         { ...form, missingRequirements: missingReqSnapshot },

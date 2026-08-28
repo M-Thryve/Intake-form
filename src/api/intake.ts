@@ -377,11 +377,16 @@ async function lifecycleOp(
   intakeId?: string,
 ): Promise<IntakeSubmissionResponse> {
   try {
+    const authHeaders = await getApiAuthHeaders()
     const response = await fetch(`${API_BASE_URL}${API_ENDPOINT}`, {
       method: 'POST',
-      credentials: 'include',
+      // Only send cookies same-origin. When VITE_API_BASE_URL points at a
+      // separate API host, 'include' requires the server to return
+      // Access-Control-Allow-Credentials, which it does not set — the browser
+      // would then discard an otherwise valid response.
+      credentials: API_BASE_URL ? 'omit' : 'include',
       headers: {
-        ...await getApiAuthHeaders(),
+        ...authHeaders,
         'Content-Type': 'application/json',
         'Idempotency-Key': idempotencyKey,
         'X-Intake-Command': command,
@@ -390,16 +395,32 @@ async function lifecycleOp(
     })
 
     const text = await response.text()
-    const data: IntakeSubmissionResponse = text ? (JSON.parse(text) as IntakeSubmissionResponse) : ({} as IntakeSubmissionResponse)
+    let data: IntakeSubmissionResponse
+    try {
+      data = text ? (JSON.parse(text) as IntakeSubmissionResponse) : ({} as IntakeSubmissionResponse)
+    } catch {
+      // A non-JSON body means something between the browser and the API
+      // answered — a proxy, a gateway, an HTML error page. Surface it verbatim
+      // rather than collapsing it into a generic failure.
+      return {
+        success: false,
+        error: `${command} failed — HTTP ${response.status} from ${response.url || API_ENDPOINT}, non-JSON body: ${text.slice(0, 200)}`,
+      }
+    }
 
     if (!response.ok) {
       if (response.status === 401 || response.status === 403) {
         return {
           success: false,
-          error: `Your operator session is not valid (${data.error || 'not authorized'}). Sign out and sign in again, then retry.`,
+          error: `Not authorized (HTTP ${response.status}${authHeaders.Authorization ? '' : ', no token was attached'}): ${data.error || 'no detail'}. Sign out and sign in again, then retry.`,
         }
       }
-      return { success: false, error: data.error || `${command} failed` }
+      // Always name the status. "save_draft failed" with no status is
+      // undiagnosable from a screenshot.
+      return {
+        success: false,
+        error: `${command} failed — HTTP ${response.status}${data.error ? `: ${data.error}` : ' (empty response body)'}`,
+      }
     }
 
     return data
