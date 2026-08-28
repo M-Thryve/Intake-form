@@ -13,7 +13,13 @@ export default function LoginGate({ children }: LoginGateProps) {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  const supabaseConfigured = getBrowserClient() !== null
+  // Matches the server's DEV_AUTH_BYPASS. `import.meta.env.DEV` is statically
+  // false in a production build, so this can never unlock a deployed bundle
+  // however the variable is set.
+  const devBypass = import.meta.env.DEV
+    && String(import.meta.env.VITE_DEV_AUTH_BYPASS ?? '').trim() === 'true'
+
+  const supabaseConfigured = getBrowserClient() !== null && !devBypass
 
   useEffect(() => {
     // If Supabase is not configured, skip the gate entirely (local dev without env vars)
@@ -25,8 +31,11 @@ export default function LoginGate({ children }: LoginGateProps) {
     return onAuthStateChange(s => setSession(s))
   }, [supabaseConfigured])
 
-  // No Supabase config → render app without auth gate (local dev fallback)
-  if (!supabaseConfigured || session === null) {
+  // No Supabase config (or an explicit dev bypass) → render the app ungated.
+  // A configured project with no session must fall through to the sign-in form:
+  // the API rejects every unauthenticated call, so rendering the wizard here
+  // produced silent 401s on every draft save, submit, and asset upload.
+  if (!supabaseConfigured) {
     return <>{children}</>
   }
 

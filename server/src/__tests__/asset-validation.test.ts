@@ -51,12 +51,13 @@ describe("validateAssetUpload", () => {
     expect(result.errors.some((e) => e.includes("exceeds maximum"))).toBe(true);
   });
 
-  it("rejects disallowed MIME types", () => {
+  // MIME allow-listing was removed deliberately (d09904e) — operators upload
+  // arbitrary client material. Dangerous *extensions* remain the gate.
+  it("does not gate on MIME type", () => {
     const result = validateAssetUpload(validUpload({
       mimeType: "application/x-executable",
     }));
-    expect(result.valid).toBe(false);
-    expect(result.errors.some((e) => e.includes("not allowed"))).toBe(true);
+    expect(result.valid).toBe(true);
   });
 
   it("rejects dangerous file extensions", () => {
@@ -90,6 +91,17 @@ describe("validateAssetUpload", () => {
     }));
     expect(result.valid).toBe(true);
     expect(result.sanitizedFilename).toBe("my_logo.png");
+  });
+
+  it.each([
+    ["Screenshot (1).png", "Screenshot_1_.png"],
+    ["Q3 Report, final.pdf", "Q3_Report_final.pdf"],
+    ["brand & logo.svg", "brand_logo.svg"],
+    ["_leading.png", "leading.png"],
+  ])("accepts and sanitizes real-world filename %s", (filename, expected) => {
+    const result = validateAssetUpload(validUpload({ filename }));
+    expect(result.valid).toBe(true);
+    expect(result.sanitizedFilename).toBe(expected);
   });
 
   it("builds storage key with intake ID prefix", () => {

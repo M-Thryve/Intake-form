@@ -9,7 +9,6 @@ const DANGEROUS_EXTENSIONS = new Set([
 ]);
 
 const FILENAME_MAX_LENGTH = 255;
-const FILENAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._\- ]*$/;
 
 export const uploadRequestSchema = z.object({
   intakeId: z.string().uuid("intakeId must be a valid UUID"),
@@ -46,6 +45,9 @@ export function validateAssetUpload(req: UploadRequest): AssetValidationResult {
   }
 
   const basename = path.basename(req.filename);
+  if (!basename.trim()) {
+    errors.push("Filename is required");
+  }
   if (basename !== req.filename) {
     errors.push("Filename must not contain path separators");
   }
@@ -54,9 +56,10 @@ export function validateAssetUpload(req: UploadRequest): AssetValidationResult {
     errors.push("Filename must not contain path traversal sequences");
   }
 
-  if (!FILENAME_PATTERN.test(basename)) {
-    errors.push("Filename contains invalid characters. Use letters, numbers, dots, hyphens, underscores, and spaces only.");
-  }
+  // No character-class rejection here. Operators upload files named
+  // "Screenshot (1).png" or "Q3 Report, final.pdf"; the storage key is built
+  // from sanitizeFilename(), which already neutralizes every character outside
+  // the safe set. Path separators and traversal remain hard rejections above.
 
   if (errors.length > 0) {
     return { valid: false, errors };
@@ -69,10 +72,13 @@ export function validateAssetUpload(req: UploadRequest): AssetValidationResult {
 }
 
 function sanitizeFilename(filename: string): string {
-  return filename
+  const sanitized = filename
     .replace(/[^a-zA-Z0-9._\- ]/g, "_")
     .replace(/\s+/g, "_")
-    .replace(/_{2,}/g, "_");
+    .replace(/_{2,}/g, "_")
+    // A leading dot or separator would produce a hidden or malformed object key.
+    .replace(/^[._-]+/, "");
+  return sanitized || "file";
 }
 
 function buildStorageKey(intakeId: string, filename: string): string {

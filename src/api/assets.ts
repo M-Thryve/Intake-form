@@ -53,6 +53,12 @@ export class AssetApiError extends Error {
 async function readJson<T>(response: Response): Promise<T> {
   const data = await response.json().catch(() => ({})) as Record<string, unknown>
   if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw new AssetApiError(
+        `Your operator session is not valid (${data.error || 'not authorized'}). Sign out and sign in again, then retry.`,
+        response.status,
+      )
+    }
     const detailRows = Array.isArray(data.details) ? data.details : []
     const details = detailRows.map(item => {
       if (typeof item === 'string') return item

@@ -379,6 +379,7 @@ async function lifecycleOp(
   try {
     const response = await fetch(`${API_BASE_URL}${API_ENDPOINT}`, {
       method: 'POST',
+      credentials: 'include',
       headers: {
         ...await getApiAuthHeaders(),
         'Content-Type': 'application/json',
@@ -392,6 +393,12 @@ async function lifecycleOp(
     const data: IntakeSubmissionResponse = text ? (JSON.parse(text) as IntakeSubmissionResponse) : ({} as IntakeSubmissionResponse)
 
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        return {
+          success: false,
+          error: `Your operator session is not valid (${data.error || 'not authorized'}). Sign out and sign in again, then retry.`,
+        }
+      }
       return { success: false, error: data.error || `${command} failed` }
     }
 
