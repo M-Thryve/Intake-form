@@ -269,19 +269,19 @@ const phase2IntakeSubmitSchema = z.object({
 // apply; enum values where present are still validated.
 // ═══════════════════════════════════════════════════════════
 
-// email is required — missing or invalid email → 422 on draft save.
+// Draft: email optional (validated if provided). Missing requirements collected below.
 const clientDraftSchema = z.object({
   fullName: z.string().max(MAX_SHORT).default(""),
   company: z.string().max(MAX_SHORT).default(""),
   email: z
     .string()
     .trim()
-    .min(1, "A valid client email is required")
     .email("A valid client email is required")
-    .max(MAX_SHORT),
+    .max(MAX_SHORT)
+    .optional()
+    .nullable(),
   phone: z.string().max(MAX_SHORT).default(""),
-});
-// NOTE: no .default({}) — email is required, so the object itself is required.
+}).default({});
 
 const projectDraftSchema = z
   .object({
@@ -614,7 +614,12 @@ export function validateDraftPayload(payload: unknown): DraftValidationResult {
 function collectDraftMissingRequirements(data: DraftPayload): MissingRequirementItem[] {
   const missing: MissingRequirementItem[] = [];
 
-  // email is validated at schema level (→ 422 when invalid); only fullName is checked here.
+  if (!data.client?.email?.trim()) {
+    missing.push({ field: "client.email", message: "Client email is required" });
+  } else if (!data.client.email.includes("@")) {
+    missing.push({ field: "client.email", message: "A valid client email is required" });
+  }
+
   if (!data.client?.fullName?.trim()) {
     missing.push({ field: "client.fullName", message: "Full name is required" });
   }

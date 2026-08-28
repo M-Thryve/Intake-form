@@ -2,32 +2,6 @@ import { z } from "zod";
 import { getConfig } from "./config.js";
 import path from "path";
 
-const ALLOWED_MIME_TYPES = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/gif",
-  "image/webp",
-  "image/svg+xml",
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "application/vnd.ms-powerpoint",
-  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  "text/plain",
-  "text/csv",
-  "application/zip",
-  "font/ttf",
-  "font/otf",
-  "font/woff",
-  "font/woff2",
-  "video/mp4",
-  "video/webm",
-  "audio/mpeg",
-  "audio/wav",
-]);
-
 const DANGEROUS_EXTENSIONS = new Set([
   ".exe", ".bat", ".cmd", ".com", ".msi", ".scr", ".pif",
   ".sh", ".bash", ".ps1", ".vbs", ".js", ".wsf", ".jar",
@@ -64,10 +38,6 @@ export function validateAssetUpload(req: UploadRequest): AssetValidationResult {
 
   if (req.fileSizeBytes > maxBytes) {
     errors.push(`File size ${formatBytes(req.fileSizeBytes)} exceeds maximum ${config.MAX_UPLOAD_SIZE_MB}MB`);
-  }
-
-  if (!ALLOWED_MIME_TYPES.has(req.mimeType.toLowerCase())) {
-    errors.push(`MIME type '${req.mimeType}' is not allowed`);
   }
 
   const ext = path.extname(req.filename).toLowerCase();

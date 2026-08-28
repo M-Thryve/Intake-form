@@ -48,7 +48,7 @@ const configSchema = z.object({
     .string()
     .min(1)
     .default("intake-assets"),
-  MAX_UPLOAD_SIZE_MB: z.coerce.number().int().min(1).max(100).default(25),
+  MAX_UPLOAD_SIZE_MB: z.coerce.number().int().min(1).max(100).default(50),
   ALLOWED_ORIGINS: z
     .string()
     .default(""),
