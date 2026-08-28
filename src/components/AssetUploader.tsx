@@ -281,11 +281,6 @@ export default function AssetUploader({
         </div>
       )}
 
-      {!binding && (
-        <div style={{ fontSize: '11px', color: '#F59E0B', marginTop: '8px' }}>
-          The first file will save this intake as a draft and attach the server-issued identifiers.
-        </div>
-      )}
       {controlError && <div role="alert" style={{ fontSize: '11px', color: '#EF4444', marginTop: '8px' }}>{controlError}</div>}
     </section>
   )

@@ -147,16 +147,12 @@ export async function removeAsset(assetId: string, binding: AssetBinding): Promi
   await readJson<{ success: true }>(response)
 }
 
-const FILENAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._\- ]*$/
 const MAX_UPLOAD_BYTES = Number(import.meta.env.VITE_MAX_UPLOAD_SIZE_MB || 50) * 1024 * 1024
 
 /** Fast operator feedback only; the server remains authoritative. */
 export function validateFileHint(file: File): string | null {
   if (!file.name || file.name.length > 255 || file.name.includes('..') || /[\\/]/.test(file.name)) {
     return 'Use a filename between 1 and 255 characters without folders or path sequences.'
-  }
-  if (!FILENAME_PATTERN.test(file.name)) {
-    return 'Use letters, numbers, dots, hyphens, underscores, and spaces in the filename.'
   }
   if (file.size <= 0) return 'The selected file is empty.'
   if (file.size > MAX_UPLOAD_BYTES) return `The selected file exceeds the ${MAX_UPLOAD_BYTES / 1024 / 1024} MB limit.`
