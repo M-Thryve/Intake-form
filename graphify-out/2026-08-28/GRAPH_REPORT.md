@@ -1,21 +1,21 @@
 # Graph Report - Intake-form  (2026-08-28)
 
 ## Corpus Check
-- 343 files · ~285,148 words
+- 342 files · ~268,996 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3380 nodes · 4568 edges · 264 communities (206 shown, 58 thin omitted)
+- 3376 nodes · 4548 edges · 258 communities (200 shown, 58 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 57 edges (avg confidence: 0.64)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `a6c8bce5`
+- Built from commit: `857eb442`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- api/console.ts
+- IntakeDetail.tsx
 - mcp-orchestration.ts
 - App.tsx
 - devDependencies
@@ -29,21 +29,21 @@
 - field-validators.ts
 - compilerOptions
 - api/assets.ts
-- ReviewQueue.tsx
+- BM25
 - generate-favicons.mjs
 - compilerOptions
 - Query
 - vercel.json
 - gray
-- agreement.ts
+- finance.ts
 - lib/payments.ts
 - M-THRYVE Intake Form Technical Handover
 - search
-- IntakeDetail.tsx
+- routes/assets.ts
 - dev-all.mjs
 - package.json
 - voucher-service.ts
-- BM25
+- search
 - Template Color Options
 - Submitted Build Card
 - New Tier Selection Step
@@ -127,7 +127,7 @@
 - Workflow
 - Design System
 - Tailwind CSS Customization
-- DesignSystemGenerator
+- _palette_is_dark
 - spacing
 - Routing by Task Type
 - generate-slide.py
@@ -163,17 +163,15 @@
 - Tailwind Integration
 - xl
 - Layout Patterns
-- .generate
+- DesignSystemGenerator
 - brand/references/update.md
 - Logo Design Reference
 - Token Architecture
 - build-delivery.test.ts
-- Icons.tsx
 - Detailed Findings
 - Primitive Tokens
 - validate-tokens.cjs
 - card
-- console-integration.test.tsx
 - ShadcnInstaller
 - .add_components
 - test_tailwind_config_gen.py
@@ -189,8 +187,7 @@
 - logo/generate.py
 - Component Tokens
 - generate-tokens.cjs
-- api/auth.ts
-- duration
+- primitive
 - Slide Strategies
 - _run
 - sync-brand-to-tokens.cjs
@@ -198,19 +195,14 @@
 - Slides Reference
 - HTML Slide Template
 - HTML Slide Template
-- McpStatusPanel.tsx
-- 16
-- 1
 - Q: Does the Prompt 1 implementation satisfy the v3.0 contract?
 - graphify reference: query, path, explain
 - Slides
-- 3
-- 8
-- primary
 - Brand Guidelines Template
+- md
 - button
 - none
-- sm
+- shadow
 - supabase
 - _select_palette_for_mode
 - graphify reference: add a URL and watch a folder
@@ -225,6 +217,7 @@
 - destructive-foreground
 - graphify reference: GitHub clone and cross-repo merge
 - graphify reference: transcribe video and audio
+- destructive
 - slides-create.md
 - extraction-spec.md
 - create.md
@@ -255,6 +248,7 @@
 - .test_init_dry_run
 - Q: Generate Prompt 3, carry on the remaining fixes, and explain why verification fails.
 - Q: Verify the supplied Prompt 3 completion report against the current codebase.
+- padding-y
 - dependencies
 - ring
 - .test_add_components_no_components
@@ -292,9 +286,9 @@
 - `Operational Escalation Path` --conceptually_related_to--> `Human Owner Review Gate`  [INFERRED]
   docs/support/troubleshooting.md → TECHNICAL_HANDOVER.md
 - `buildApp()` --indirect_call--> `requireAuth()`  [INFERRED]
+  server/src/__tests__/agreement-finance.test.ts → server/src/middleware/auth.ts
+- `buildApp()` --indirect_call--> `requireAuth()`  [INFERRED]
   server/src/__tests__/build-delivery.test.ts → server/src/middleware/auth.ts
-- `AGENTS.md Instruction Reference` --references--> `EKOMS AI Router and Project Guide`  [EXTRACTED]
-  CLAUDE.md → AGENTS.md
 
 ## Import Cycles
 - None detected.
@@ -304,19 +298,19 @@
 - **Template Preview Constraint Set** — src_imports_updates_live_color_preview, src_imports_updates_mobile_viewport, src_imports_updates_page_loop, src_imports_updates_price_invariance [EXTRACTED 1.00]
 - **Intake to Owner Review Flow** — src_imports_pasted_text_m_thryve_ai_intake_update_workflow, src_imports_pasted_text_m_thryve_intake_update_submitted_build_card, server_mcp_build_card, server_phase_6_no_build_payment, server_phase_7_queue_gate [INFERRED 0.85]
 
-## Communities (264 total, 58 thin omitted)
+## Communities (258 total, 58 thin omitted)
 
-### Community 0 - "api/console.ts"
-Cohesion: 0.13
-Nodes (16): AuditEvent, DecisionRequest, DecisionResponse, DetailResponse, fetchAudit(), IntakeDetail, PackageResponse, QueueResponse (+8 more)
+### Community 0 - "IntakeDetail.tsx"
+Cohesion: 0.05
+Nodes (52): AuditEvent, DecisionRequest, DecisionResponse, DetailResponse, fetchAnalysisPackage(), fetchAnalysisRuns(), fetchAudit(), fetchIntakeDetail() (+44 more)
 
 ### Community 1 - "mcp-orchestration.ts"
-Cohesion: 0.09
-Nodes (50): AssetReadinessOutput, assetReadinessOutputSchema, BuildCardOutput, buildCardOutputSchema, FINDING_SEVERITY, FindingSeverity, IntakeValidationOutput, intakeValidationOutputSchema (+42 more)
+Cohesion: 0.07
+Nodes (57): AssetReadinessOutput, assetReadinessOutputSchema, BuildCardOutput, buildCardOutputSchema, FINDING_SEVERITY, FindingSeverity, IntakeValidationOutput, intakeValidationOutputSchema (+49 more)
 
 ### Community 2 - "App.tsx"
 Cohesion: 0.05
-Nodes (53): App(), ASSET_CHECKLIST, ASSET_SERVICES, ASSET_STATUS_OPTIONS, calcPrice(), COLOR_OPTIONS, ColorOption, DEFAULT_PAGE_DEF (+45 more)
+Nodes (52): App(), ASSET_CHECKLIST, ASSET_SERVICES, ASSET_STATUS_OPTIONS, calcPrice(), COLOR_OPTIONS, ColorOption, DEFAULT_PAGE_DEF (+44 more)
 
 ### Community 3 - "devDependencies"
 Cohesion: 0.13
@@ -328,7 +322,7 @@ Nodes (38): cors, express, dependencies, cors, express, @supabase/supabase-js, z
 
 ### Community 5 - "lib/validation.ts"
 Cohesion: 0.05
-Nodes (42): assetMetadataFields, assetsDraftSchema, assetsSubmitSchema, clientDraftSchema, clientSubmitSchema, confirmationsDraftSchema, confirmationsSubmitSchema, contentDraftSchema (+34 more)
+Nodes (43): assetMetadataFields, assetsDraftSchema, assetsSubmitSchema, clientDraftSchema, clientSubmitSchema, confirmationsDraftSchema, confirmationsSubmitSchema, contentDraftSchema (+35 more)
 
 ### Community 6 - "Product"
 Cohesion: 0.18
@@ -340,7 +334,7 @@ Nodes (34): cancelBtn, confirmBanner, overrideBox, overrideBtn, overrideTitle, p
 
 ### Community 8 - "types/intake.ts"
 Cohesion: 0.08
-Nodes (31): API_BASE_URL, discardIntake(), generateIdempotencyKey(), getIntakeDraft(), lifecycleOp(), rehydrateDraftState(), saveDraft(), submitIntake() (+23 more)
+Nodes (30): API_BASE_URL, discardIntake(), generateIdempotencyKey(), getIntakeDraft(), lifecycleOp(), rehydrateDraftState(), saveDraft(), submitIntake() (+22 more)
 
 ### Community 9 - "intake-submit/validation.ts"
 Cohesion: 0.13
@@ -351,20 +345,20 @@ Cohesion: 0.07
 Nodes (44): CompanyAssetsStep(), ReadinessPills(), ResourceReviewBlock(), ADD_ON_SPIEL, AI_AGENT_EXTRA, AI_DECK_EXTRA, CompanyDeckSectionDef, CORE_DECK (+36 more)
 
 ### Community 11 - "field-validators.ts"
-Cohesion: 0.16
-Nodes (23): RehydratedDraftState, buildApproachWarnings(), businessDescWarning(), clientDetailsWarnings(), companyAssetsWarnings(), companyWarning(), ctxFor(), ENTERPRISE_RECOMMENDED (+15 more)
+Cohesion: 0.15
+Nodes (24): RehydratedDraftState, buildApproachWarnings(), businessDescWarning(), clientDetailsWarnings(), companyAssetsWarnings(), companyWarning(), ctxFor(), ENTERPRISE_RECOMMENDED (+16 more)
 
 ### Community 12 - "compilerOptions"
 Cohesion: 0.08
 Nodes (24): DOM, DOM.Iterable, ES2020, node, vite.config.ts, compilerOptions, allowImportingTsExtensions, baseUrl (+16 more)
 
 ### Community 13 - "api/assets.ts"
-Cohesion: 0.17
-Nodes (23): API_BASE_URL, AssetApiError, AssetBinding, AssetListResult, confirmUpload(), listIntakeAssets(), readJson(), removeAsset() (+15 more)
+Cohesion: 0.15
+Nodes (25): ALLOWED_MIME_TYPES, API_BASE_URL, AssetApiError, AssetBinding, AssetListResult, confirmUpload(), listIntakeAssets(), readJson() (+17 more)
 
-### Community 14 - "ReviewQueue.tsx"
-Cohesion: 0.18
-Nodes (13): fetchQueue(), QueueItem, BuildCardView(), BuildCardViewProps, StatusBadge(), FILTERS, ReviewQueue(), ReviewQueueProps (+5 more)
+### Community 14 - "BM25"
+Cohesion: 0.28
+Nodes (5): BM25, BM25 ranking algorithm for text search, Lowercase, split, remove punctuation, filter short words, Build BM25 index from documents, Score all documents against query
 
 ### Community 15 - "generate-favicons.mjs"
 Cohesion: 0.29
@@ -382,25 +376,25 @@ Nodes (5): buildCommand, framework, headers, outputDirectory, rewrites
 Cohesion: 0.05
 Nodes (53): $type, $value, $type, $value, $type, $value, $type, $value (+45 more)
 
-### Community 20 - "agreement.ts"
-Cohesion: 0.06
-Nodes (28): AgreementPackage, AgreementStatus, buildAgreementPackage(), DraftContext, nextVersionFor(), BuildCardRow, checkEligibility(), DecisionRow (+20 more)
+### Community 20 - "finance.ts"
+Cohesion: 0.09
+Nodes (21): checkEligibility(), agreementRouter, AGREEMENT_STATUSES, AgreementStatus, applyTransition(), audit(), financeRouter, handleTransition() (+13 more)
 
 ### Community 21 - "lib/payments.ts"
-Cohesion: 0.17
-Nodes (12): confirmPayment(), CreateIntentInput, getPaymentProvider(), issueBuildCardPayment(), PAYMENT_DUE_NOTE, PaymentIntent, PaymentProvider, PaymentStatus (+4 more)
+Cohesion: 0.15
+Nodes (14): confirmPayment(), CreateIntentInput, getPaymentProvider(), issueBuildCardPayment(), PAYMENT_DUE_NOTE, PaymentIntent, PaymentProvider, PaymentStatus (+6 more)
 
 ### Community 22 - "M-THRYVE Intake Form Technical Handover"
 Cohesion: 0.06
 Nodes (43): Production Deployment Checklist, Backup and Rollback Readiness, Production Environment Security, Production Migration Readiness, Production Monitoring and Alerts, Discard Procedure, Admin-Only Discard Reversal, Discard Reason Codes (+35 more)
 
 ### Community 23 - "search"
-Cohesion: 0.19
-Nodes (8): Main search function with auto-domain detection, Search stack-specific guidelines, search(), search_stack(), format_output(), Format results for Claude consumption (token-optimized), Known query -> expected top-domain sanity checks (not exact-row pinning, since…, TestSearchDomains
+Cohesion: 0.14
+Nodes (11): All indexed terms, for suggestion/typo-recovery purposes., Nearest known vocabulary terms for a query that returned 0 hits, so the caller…, Main search function with auto-domain detection, Search stack-specific guidelines, search(), search_stack(), _suggest_terms(), format_output() (+3 more)
 
-### Community 24 - "IntakeDetail.tsx"
-Cohesion: 0.19
-Nodes (9): fetchAnalysisPackage(), fetchAnalysisRuns(), fetchIntakeDetail(), handleResponse(), IntakeDetailView(), IntakeDetailViewProps, SECTION_LABELS, SectionId (+1 more)
+### Community 24 - "routes/assets.ts"
+Cohesion: 0.11
+Nodes (20): ALLOWED_MIME_TYPES, AssetStatus, AssetValidationResult, buildStorageKey(), DANGEROUS_EXTENSIONS, formatBytes(), isValidTransition(), sanitizeFilename() (+12 more)
 
 ### Community 25 - "dev-all.mjs"
 Cohesion: 0.50
@@ -414,9 +408,9 @@ Nodes (4): name, private, type, version
 Cohesion: 0.14
 Nodes (13): computeDiscountPhp(), IntakeRow, recordVoucherRedemption(), RedemptionRow, reject(), REJECT_MESSAGES, validateVoucher(), VoucherRow (+5 more)
 
-### Community 29 - "BM25"
-Cohesion: 0.07
-Nodes (42): BM25, detect_domain(), get_cip_brief(), _load_csv(), Load CSV and return list of dicts, Core search function using BM25, Auto-detect the most relevant domain from query, Main search function with auto-domain detection (+34 more)
+### Community 29 - "search"
+Cohesion: 0.08
+Nodes (37): detect_domain(), get_cip_brief(), _load_csv(), Load CSV and return list of dicts, Core search function using BM25, Auto-detect the most relevant domain from query, Main search function with auto-domain detection, Search across all domains and combine results (+29 more)
 
 ### Community 30 - "Template Color Options"
 Cohesion: 0.20
@@ -435,8 +429,8 @@ Cohesion: 0.25
 Nodes (8): React Vite Tailwind Dependencies, Vite Development Server, EKOMS AI Router and Project Guide, EKOMS Bootstrap, Figma Make App, React Project Structure, AI Write Rules, AGENTS.md Instruction Reference
 
 ### Community 34 - "supabase.ts"
-Cohesion: 0.20
-Nodes (9): ClientIdentityInput, ClientIdentityResult, normalizeClientEmail(), resolveOrCreateClient(), supabase, internalOutboxRouter, patchSchema, querySchema (+1 more)
+Cohesion: 0.08
+Nodes (22): AgreementPackage, AgreementStatus, buildAgreementPackage(), DraftContext, nextVersionFor(), BuildCardRow, DecisionRow, EligibilityFailure (+14 more)
 
 ### Community 35 - "data/features.ts"
 Cohesion: 0.27
@@ -459,8 +453,8 @@ Cohesion: 0.05
 Nodes (43): Arbitrary Values, Aspect Ratio, Background Colors, Border Color, Border Radius, Border Style, Border Width, Borders (+35 more)
 
 ### Community 42 - "ClientPortal.tsx"
-Cohesion: 0.11
-Nodes (9): Asset, ClientPortal(), NAV_ITEMS, Overview(), PortalView, Project, PROJECTS, ProjectTab (+1 more)
+Cohesion: 0.07
+Nodes (18): Icon(), IconName, IconProps, paths, InlineWarning(), InlineWarningProps, Props, ValidationWarning() (+10 more)
 
 ### Community 44 - "Intake Submission API"
 Cohesion: 0.40
@@ -487,8 +481,8 @@ Cohesion: 0.60
 Nodes (5): $type, $value, border, border, border
 
 ### Community 50 - "radius"
-Cohesion: 0.19
-Nodes (14): $type, $value, $type, $value, $type, $value, primitive, radius (+6 more)
+Cohesion: 0.29
+Nodes (8): $type, $value, $type, $value, radius, default, full, default
 
 ### Community 51 - "Payment and Maintenance Plans"
 Cohesion: 0.40
@@ -535,8 +529,8 @@ Cohesion: 0.67
 Nodes (3): Consultant Concierge Avatar, Enterprise SaaS Content Voice, Frontend Enhancement Design System
 
 ### Community 86 - "portal.ts"
-Cohesion: 0.10
-Nodes (21): CLIENT_FACING_STATES, ClientFacingState, COMMERCIAL_STAGE_MAPPING, INTERNAL_STATUS_MAPPING, KNOWN_INTERNAL_STATUSES, KnownInternalStatus, projectClientStatus(), promoteDueBuildCards() (+13 more)
+Cohesion: 0.12
+Nodes (19): uploadRequestSchema, CLIENT_FACING_STATES, ClientFacingState, COMMERCIAL_STAGE_MAPPING, INTERNAL_STATUS_MAPPING, KNOWN_INTERNAL_STATUSES, KnownInternalStatus, projectClientStatus() (+11 more)
 
 ### Community 87 - "Workflows"
 Cohesion: 0.15
@@ -575,16 +569,16 @@ Cohesion: 0.06
 Nodes (30): Accessibility, Base System, Best Practices, Clean & Modern, Common Font Pairings, Contrast Requirements, CSS Implementation, Editorial (+22 more)
 
 ### Community 97 - "BM25"
-Cohesion: 0.11
-Nodes (19): BM25, _domain_keywords(), _get_bm25(), _load_csv(), _load_product_keywords(), _normalize(), Apply synonym substitution before tokenizing., BM25 ranking algorithm for text search (+11 more)
+Cohesion: 0.13
+Nodes (16): BM25, _domain_keywords(), _get_bm25(), _load_csv(), _load_product_keywords(), _normalize(), Apply synonym substitution before tokenizing., BM25 ranking algorithm for text search (+8 more)
 
 ### Community 98 - "client-auth.test.ts"
 Cohesion: 0.33
 Nodes (4): clientRecord, configState, fromMock, state
 
 ### Community 99 - "design_system.py"
-Cohesion: 0.11
-Nodes (25): ansi_ljust(), _detect_page_type(), format_ascii_box(), format_markdown(), format_master_md(), format_page_override_md(), generate_design_system(), _generate_intelligent_overrides() (+17 more)
+Cohesion: 0.12
+Nodes (20): ansi_ljust(), _detect_page_type(), format_ascii_box(), format_markdown(), format_master_md(), format_page_override_md(), _generate_intelligent_overrides(), hex_to_ansi() (+12 more)
 
 ### Community 100 - "flow.ts"
 Cohesion: 0.53
@@ -615,8 +609,8 @@ Cohesion: 0.08
 Nodes (25): Accessibility, Archival, Asset Approval Checklist, Automation Support, Color Compliance, Common Issues & Fixes, Content Accessibility, Content Quality (+17 more)
 
 ### Community 108 - "src/index.ts"
-Cohesion: 0.06
-Nodes (41): app, config, preflight, AssetStatus, AssetValidationResult, buildStorageKey(), DANGEROUS_EXTENSIONS, formatBytes() (+33 more)
+Cohesion: 0.11
+Nodes (19): app, config, preflight, configSchema, envFile, getConfig(), getEnvironment(), preflightCheck() (+11 more)
 
 ### Community 109 - "Logo AI Prompt Engineering"
 Cohesion: 0.08
@@ -658,13 +652,13 @@ Nodes (22): Best Practices, Chart.js Integration, Command, Component Spec Patter
 Cohesion: 0.09
 Nodes (22): @apply Directive, Best Practices, Color Customization, Complete Tailwind Config, Configuration Examples, Content Configuration, Custom Color Palette, Custom Font Sizes (+14 more)
 
-### Community 119 - "DesignSystemGenerator"
-Cohesion: 0.14
-Nodes (11): DesignSystemGenerator, _palette_is_dark(), WCAG relative luminance of a #RRGGBB string, or None if unparseable., True when a colors.csv row's Background is a dark surface., Generates design system recommendations from aggregated searches., Load reasoning rules from CSV., _relative_luminance(), TestReasoningMatch (+3 more)
+### Community 119 - "_palette_is_dark"
+Cohesion: 0.18
+Nodes (7): _palette_is_dark(), WCAG relative luminance of a #RRGGBB string, or None if unparseable., True when a colors.csv row's Background is a dark surface., _relative_luminance(), The exact reproduction from issue #428., TestEndToEndCoherence, TestLuminance
 
 ### Community 120 - "spacing"
-Cohesion: 0.09
-Nodes (22): $type, $value, $type, $value, $type, $value, $type, $value (+14 more)
+Cohesion: 0.06
+Nodes (34): $type, $value, $type, $value, $type, $value, $type, $value (+26 more)
 
 ### Community 121 - "Routing by Task Type"
 Cohesion: 0.10
@@ -696,7 +690,7 @@ Nodes (18): 1. Wordmark (Logotype), 2. Lettermark (Monogram), 3. Pictorial Mark 
 
 ### Community 128 - "color"
 Cohesion: 0.11
-Nodes (19): $type, $value, background, destructive, foreground, muted-foreground, primary-hover, secondary (+11 more)
+Nodes (19): $type, $value, background, foreground, muted-foreground, primary, primary-hover, secondary (+11 more)
 
 ### Community 129 - "test_design_system_mode.py"
 Cohesion: 0.16
@@ -719,8 +713,8 @@ Cohesion: 0.17
 Nodes (17): generate_css_for_background(), get_background_image(), get_curated_images(), get_overlay_css(), get_pexels_search_url(), load_backgrounds_config(), load_brand_colors(), main() (+9 more)
 
 ### Community 134 - "middleware/auth.ts"
-Cohesion: 0.07
-Nodes (30): computePreparedAt(), getMcpRun(), getMcpRunsForIntake(), AuthenticatedClient, AuthenticatedUser, CLIENT_ROLE, ClientRole, Express (+22 more)
+Cohesion: 0.11
+Nodes (20): computePreparedAt(), AuthenticatedClient, CLIENT_ROLE, ClientRole, Express, INTERNAL_ROLES, Request, requireAuth() (+12 more)
 
 ### Community 135 - "TestShadcnInstaller"
 Cohesion: 0.12
@@ -798,9 +792,9 @@ Nodes (4): xl, xl, $type, $value
 Cohesion: 0.14
 Nodes (13): Card Styles, Component Variants, CSS Structures, Feature Grid (3 columns), Layout Decision Flow, Layout Patterns, Layout Selection by Use Case, Metric Styles (+5 more)
 
-### Community 155 - ".generate"
-Cohesion: 0.14
-Nodes (8): Execute searches across multiple domains., Find matching reasoning rule for a category., Apply reasoning rules to search results., Select best matching result based on priority keywords., Extract results list from search result dict., Generate complete design system recommendation. variance/motion/density are…, Bucket a 1-10 dial value into its tier config. Returns None if value is None., _resolve_dial()
+### Community 155 - "DesignSystemGenerator"
+Cohesion: 0.10
+Nodes (17): DesignSystemGenerator, generate_design_system(), persist_design_system(), Generates design system recommendations from aggregated searches., Load reasoning rules from CSV., Execute searches across multiple domains., Find matching reasoning rule for a category., Apply reasoning rules to search results. (+9 more)
 
 ### Community 156 - "brand/references/update.md"
 Cohesion: 0.15
@@ -818,10 +812,6 @@ Nodes (12): Categories, Dark Mode, File Organization, Layer 1: Primitive Tokens,
 Cohesion: 0.21
 Nodes (9): buildDeliveryRouter, buildOrchestrationRouter, buildApp(), chain, enq(), enqEligibleNoPackageRequired(), enqEligibleWithFreshPackage(), enqPackagePayloadReads() (+1 more)
 
-### Community 160 - "Icons.tsx"
-Cohesion: 0.19
-Nodes (9): Icon(), IconName, IconProps, paths, InlineWarning(), InlineWarningProps, Props, ValidationWarning() (+1 more)
-
 ### Community 161 - "Detailed Findings"
 Cohesion: 0.15
 Nodes (12): Detailed Findings, Files Audited, Phase 6 — UI Review, Pillar 1: Copywriting (3/4), Pillar 2: Visuals (3/4), Pillar 3: Color (2/4), Pillar 4: Typography (2/4), Pillar 5: Spacing (2/4) (+4 more)
@@ -837,10 +827,6 @@ Nodes (11): extensions, formatReport(), fs, getFiles(), main(), parseArgs(), pat
 ### Community 164 - "card"
 Cohesion: 0.20
 Nodes (12): $type, $value, bg, bg, padding, shadow, card, bg (+4 more)
-
-### Community 165 - "console-integration.test.tsx"
-Cohesion: 0.17
-Nodes (9): ConsoleApp(), mockFetchAnalysisPackage, mockFetchAnalysisRuns, mockFetchAudit, mockFetchIntakeDetail, mockFetchQueue, mockRetryMcpRun, mockSubmitDecision (+1 more)
 
 ### Community 166 - "ShadcnInstaller"
 Cohesion: 0.20
@@ -902,13 +888,9 @@ Nodes (9): Alert Tokens, Badge Tokens, Button Tokens, Card Tokens, Component Tok
 Cohesion: 0.36
 Nodes (9): flattenTokens(), fs, generateCSS(), generateTailwind(), main(), parseArgs(), path, resolveReference() (+1 more)
 
-### Community 181 - "api/auth.ts"
-Cohesion: 0.49
-Nodes (7): getBrowserClient(), getSession(), onAuthStateChange(), signInWithPassword(), signOut(), LoginGate(), LoginGateProps
-
-### Community 182 - "duration"
-Cohesion: 0.20
-Nodes (10): fast, normal, slow, $type, $value, $type, $value, duration (+2 more)
+### Community 182 - "primitive"
+Cohesion: 0.18
+Nodes (11): fast, normal, slow, $type, $value, $type, $value, primitive (+3 more)
 
 ### Community 183 - "Slide Strategies"
 Cohesion: 0.20
@@ -938,18 +920,6 @@ Nodes (6): Animation Classes, Background Images, Base Structure, Chart.js Integr
 Cohesion: 0.29
 Nodes (6): Animation Classes, Background Images, Base Structure, Chart.js Integration, CSS Variables Reference, HTML Slide Template
 
-### Community 190 - "McpStatusPanel.tsx"
-Cohesion: 0.33
-Nodes (5): McpRun, retryMcpRun(), McpStatusPanel(), McpStatusPanelProps, ROLE_LABELS
-
-### Community 191 - "16"
-Cohesion: 0.67
-Nodes (3): $type, $value, 16
-
-### Community 192 - "1"
-Cohesion: 0.67
-Nodes (3): $type, $value, 1
-
 ### Community 193 - "Q: Does the Prompt 1 implementation satisfy the v3.0 contract?"
 Cohesion: 0.40
 Nodes (4): Answer, Outcome, Q: Does the Prompt 1 implementation satisfy the v3.0 contract?, Source Nodes
@@ -962,21 +932,13 @@ Nodes (5): For /graphify explain, For /graphify path, graphify reference: query,
 Cohesion: 0.33
 Nodes (5): References (Knowledge Base), Routing, Slides, Subcommands, When to Use
 
-### Community 196 - "3"
-Cohesion: 0.67
-Nodes (3): $type, $value, 3
-
-### Community 197 - "8"
-Cohesion: 0.67
-Nodes (3): $type, $value, 8
-
-### Community 198 - "primary"
-Cohesion: 0.67
-Nodes (3): primary, $type, $value
-
 ### Community 199 - "Brand Guidelines Template"
 Cohesion: 0.40
 Nodes (4): Brand Guidelines Template, Document Structure, Extractable Fields, Usage
+
+### Community 200 - "md"
+Cohesion: 0.67
+Nodes (4): $type, $value, md, md
 
 ### Community 201 - "button"
 Cohesion: 0.20
@@ -986,9 +948,9 @@ Nodes (10): fg, font-size, hover-bg, button, $type, $value, $type, $value (+2 mo
 Cohesion: 0.67
 Nodes (4): $type, $value, none, none
 
-### Community 203 - "sm"
-Cohesion: 0.60
-Nodes (5): sm, sm, sm, $type, $value
+### Community 203 - "shadow"
+Cohesion: 0.47
+Nodes (6): sm, shadow, sm, sm, $type, $value
 
 ### Community 206 - "supabase"
 Cohesion: 0.22
@@ -1019,12 +981,16 @@ Cohesion: 0.07
 Nodes (26): AgreementRow, BuildCardRow, BuildEligibilityFailure, BuildEligibilityResult, BuildEligibilitySnapshot, checkBuildEligibility(), DecisionRow, DeliveryPackageRow (+18 more)
 
 ### Community 224 - "input"
-Cohesion: 0.20
-Nodes (12): padding-x, padding-y, input, $type, $value, focus-ring, padding-x, padding-y (+4 more)
+Cohesion: 0.29
+Nodes (8): padding-x, input, $type, $value, focus-ring, padding-x, $type, $value
 
 ### Community 225 - "destructive-foreground"
 Cohesion: 0.67
 Nodes (3): destructive-foreground, $type, $value
+
+### Community 228 - "destructive"
+Cohesion: 0.67
+Nodes (3): destructive, $type, $value
 
 ### Community 235 - "lg"
 Cohesion: 0.60
@@ -1059,8 +1025,8 @@ Cohesion: 0.43
 Nodes (3): detect_domain(), Auto-detect the most relevant domain from query. Matches are weighted by…, TestDomainDetection
 
 ### Community 265 - "intakes.ts"
-Cohesion: 0.17
-Nodes (18): CORE_FEATURE_CODE_LIST, CORE_FEATURE_CODES, CORE_FEATURE_NAMES, EXTENSION_CODES, EXTENSION_NAMES, FEATURE_CATEGORIES, V3_CUSTOM_PROJECT_TYPES, V3_ENTERPRISE_PROJECT_TYPES (+10 more)
+Cohesion: 0.16
+Nodes (20): CORE_FEATURE_CODE_LIST, CORE_FEATURE_CODES, CORE_FEATURE_NAMES, EXTENSION_CODES, EXTENSION_NAMES, FEATURE_CATEGORIES, V3_CUSTOM_PROJECT_TYPES, V3_ENTERPRISE_PROJECT_TYPES (+12 more)
 
 ### Community 266 - "Q: contextualize with the current codebase"
 Cohesion: 0.40
@@ -1078,6 +1044,10 @@ Nodes (4): Answer, Outcome, Q: Generate Prompt 3, carry on the remaining fixes, 
 Cohesion: 0.40
 Nodes (4): Answer, Outcome, Q: Verify the supplied Prompt 3 completion report against the current codebase., Source Nodes
 
+### Community 275 - "padding-y"
+Cohesion: 0.67
+Nodes (4): padding-y, padding-y, $type, $value
+
 ### Community 276 - "dependencies"
 Cohesion: 0.25
 Nodes (8): dependencies, react, react-dom, @supabase/supabase-js, @supabase/supabase-js, react, react-dom, Root()
@@ -1091,8 +1061,8 @@ Cohesion: 0.22
 Nodes (9): scripts, build, dev, dev:all, dev:web, format, preview, test (+1 more)
 
 ### Community 285 - "e2e-intake-lifecycle.test.ts"
-Cohesion: 0.25
-Nodes (5): MAX_RETRIES, generateBuildReferenceNumber(), handleSubmitOrDiscard(), appSupabase, state
+Cohesion: 0.33
+Nodes (3): MAX_RETRIES, appSupabase, state
 
 ### Community 286 - "start-real-service.mjs"
 Cohesion: 0.50
@@ -1103,7 +1073,7 @@ Nodes (3): child, cwd, env
   src/imports/Updates.txt · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **1484 isolated node(s):** `$schema`, `.opencode/plugins/graphify.js`, `type`, `url`, `enabled` (+1479 more)
+- **1485 isolated node(s):** `$schema`, `.opencode/plugins/graphify.js`, `type`, `url`, `enabled` (+1480 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **58 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -1112,15 +1082,15 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **What is the exact relationship between `Remove Compare All Tiers` and `Compare Tiers Modal`?**
   _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
-- **Why does `dependencies` connect `dependencies` to `package.json`?**
+- **Why does `Root()` connect `dependencies` to `App.tsx`?**
   _High betweenness centrality (0.011) - this node is a cross-community bridge._
-- **Why does `Root()` connect `dependencies` to `api/auth.ts`?**
+- **Why does `dependencies` connect `dependencies` to `package.json`?**
   _High betweenness centrality (0.011) - this node is a cross-community bridge._
 - **Are the 2 inferred relationships involving `TailwindConfigGenerator` (e.g. with `TestGeneratedConfigIsValidJs` and `TestTailwindConfigGenerator`) actually correct?**
   _`TailwindConfigGenerator` has 2 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 10 inferred relationships involving `DesignSystemGenerator` (e.g. with `TestDomainDetection` and `TestPersistence`) actually correct?**
   _`DesignSystemGenerator` has 10 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `$schema`, `.opencode/plugins/graphify.js`, `type` to the rest of the system?**
-  _1484 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `api/console.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.13450292397660818 - nodes in this community are weakly interconnected._
+  _1485 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `IntakeDetail.tsx` be split into smaller, more focused modules?**
+  _Cohesion score 0.05070422535211268 - nodes in this community are weakly interconnected._
