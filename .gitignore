@@ -25,9 +25,9 @@ blob-report/
 # Graphify cache
 graphify-out/cache/
 
-# Source assets (keep only public/)
-LOGO.png
-BANNER.png
+# Source assets at root (keep only public/)
+/LOGO.png
+/BANNER.png
 
 # Internal docs & planning
 .planning/

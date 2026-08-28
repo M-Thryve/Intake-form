@@ -144,3 +144,9 @@
 *.stl                filter=lfs diff=lfs merge=lfs -text
 *.nc                 filter=lfs diff=lfs merge=lfs -text
 *.mat                filter=lfs diff=lfs merge=lfs -text
+
+# ---------------------------------------------------------------------------
+# Vercel deployment override
+# public/ assets must be regular git objects — Vercel does not fetch LFS
+# ---------------------------------------------------------------------------
+public/**            filter= diff= merge= -text
