@@ -430,16 +430,35 @@ function AuroraPlate() {
       ? true
       : !window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches)
 
+  const ref = useRef<HTMLVideoElement>(null)
+
+  useEffect(() => {
+    const v = ref.current
+    if (!v) return
+    const onTimeUpdate = () => {
+      if (v.duration > 0 && v.currentTime >= v.duration - 0.08) {
+        v.currentTime = 0
+      }
+    }
+    const onEnded = () => { v.currentTime = 0; v.play().catch(() => {}) }
+    v.addEventListener('timeupdate', onTimeUpdate)
+    v.addEventListener('ended', onEnded)
+    return () => {
+      v.removeEventListener('timeupdate', onTimeUpdate)
+      v.removeEventListener('ended', onEnded)
+    }
+  }, [])
+
   if (!motionOK) {
     return <div className="aurora-plate aurora-plate--still" aria-hidden="true" />
   }
 
   return (
     <video
+      ref={ref}
       className="aurora-plate"
       autoPlay
       muted
-      loop
       playsInline
       preload="auto"
       poster="/aurora/sky-a.webp"
