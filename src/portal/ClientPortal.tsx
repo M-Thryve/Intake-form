@@ -110,7 +110,7 @@ function StatusPill({ status, tone }: { status: string; tone: Project["statusTon
 function PortalLogo() {
   return (
     <div className="portal-logo" aria-label="M-Thryve client portal">
-      <span className="portal-logo-mark"><span /><span /><span /></span>
+      <img src="/logo.png" alt="M-THRYVE" style={{ height: '28px', width: 'auto' }} />
       <span><strong>M-THRYVE</strong><small>CLIENT PORTAL</small></span>
     </div>
   )

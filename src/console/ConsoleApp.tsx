@@ -32,6 +32,7 @@ export default function ConsoleApp() {
     <div style={styles.container}>
       <header style={styles.header}>
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <img src="/logo.png" alt="M-THRYVE" style={{ height: '24px', width: 'auto' }} />
           <span style={styles.title}>Factory Console</span>
           <span style={{ fontSize: "12px", color: "#64748B" }}>M-THRYVE Internal</span>
         </div>

@@ -430,23 +430,45 @@ function AuroraPlate() {
       ? true
       : !window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches)
 
+  const ref0 = useRef<HTMLVideoElement>(null)
+  const ref1 = useRef<HTMLVideoElement>(null)
+  const [top, setTop] = useState(0)
+  const scheduled = useRef(false)
+
+  useEffect(() => {
+    if (!motionOK) return
+    const FADE = 1.5
+    const current = top === 0 ? ref0.current : ref1.current
+    const next    = top === 0 ? ref1.current : ref0.current
+    if (!current || !next) return
+    const onTimeUpdate = () => {
+      if (!current.duration || scheduled.current) return
+      if (current.duration - current.currentTime <= FADE) {
+        scheduled.current = true
+        next.currentTime = 0
+        next.play().catch(() => {})
+        setTimeout(() => { setTop(t => t === 0 ? 1 : 0); scheduled.current = false }, FADE * 1000)
+      }
+    }
+    current.addEventListener('timeupdate', onTimeUpdate)
+    return () => current.removeEventListener('timeupdate', onTimeUpdate)
+  }, [top, motionOK])
+
   if (!motionOK) {
     return <div className="aurora-plate aurora-plate--still" aria-hidden="true" />
   }
 
+  const src = '/aurora/sky.mp4'
+  const shared = { muted: true, playsInline: true, preload: 'auto' as const, poster: '/aurora/sky-a.webp' }
   return (
-    <video
-      className="aurora-plate"
-      autoPlay
-      muted
-      loop
-      playsInline
-      preload="auto"
-      poster="/aurora/sky-a.webp"
-      aria-hidden="true"
-    >
-      <source src="/aurora/sky.mp4" type="video/mp4" />
-    </video>
+    <>
+      <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', opacity: top === 0 ? 1 : 0, transition: 'opacity 1.5s ease' }}>
+        <video ref={ref0} className="aurora-plate" autoPlay {...shared}><source src={src} type="video/mp4" /></video>
+      </div>
+      <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', opacity: top === 1 ? 1 : 0, transition: 'opacity 1.5s ease' }}>
+        <video ref={ref1} className="aurora-plate" {...shared}><source src={src} type="video/mp4" /></video>
+      </div>
+    </>
   )
 }
 function AuroraCanvas() {
@@ -1721,11 +1743,8 @@ export default function App() {
       {/* ── Top bar ── */}
       <header>
       <div style={{ height: '56px', borderBottom: '1px solid rgba(170,182,196,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 28px', position: 'sticky', top: 0, zIndex: 50, background: 'rgba(10,12,15,0.85)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ width: '28px', height: '28px', background: '#2E6F46', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ color: '#FFFFFF', fontWeight: 800, fontSize: '14px' }}>M</span>
-          </div>
-          <span style={{ fontWeight: 600, fontSize: '15px', letterSpacing: '-0.01em' }}>M-THRYVE</span>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <img src="/BANNER.png" alt="M-THRYVE" style={{ height: '32px', width: 'auto' }} />
         </div>
         {currentStep !== 'intro' && currentStep !== 'build-card' && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
