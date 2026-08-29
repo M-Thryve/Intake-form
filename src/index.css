@@ -70,3 +70,27 @@ body {
   margin: 0;
   min-height: 100vh;
 }
+
+/* ── Internal identifiers disclosure ─────────────────────────────────────── */
+details summary {
+  list-style: none;
+}
+details summary::-webkit-details-marker {
+  display: none;
+}
+
+details[open] summary svg {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  details summary svg {
+    transition: none !important;
+  }
+}
+
+summary:focus-visible {
+  outline: 2px solid var(--a-warning);
+  outline-offset: 2px;
+  border-radius: 4px;
+}

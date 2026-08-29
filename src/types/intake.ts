@@ -267,6 +267,7 @@ export interface OutcomeMetadata {
  * `payment` and `final-confirm` are retained for legacy render compatibility.
  */
 export type StepId =
+  | 'entry'
   | 'intro'
   | 'client-details'
   | 'company-assets'
@@ -572,6 +573,8 @@ export interface IntakeDraftResponse {
   success: boolean
   intake?: IntakeDraftRecord
   error?: string
+  /** HTTP status code exposed by resumeByReference for per-status error mapping. */
+  httpStatus?: number
 }
 
 export interface ValidationError {

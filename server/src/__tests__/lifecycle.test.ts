@@ -346,6 +346,22 @@ describe("Intake Lifecycle API", () => {
     expect(res.body.ownerReviewStatus).toBeUndefined();
   });
 
+  it("returns 503 when the reference generator exhausts its retries", async () => {
+    const { generateBuildReferenceNumber } = await import("../lib/reference.js");
+    const mocked = vi.mocked(generateBuildReferenceNumber);
+    mocked.mockRejectedValueOnce(new Error("REFERENCE_GENERATION_FAILED"));
+
+    const res = await request(app)
+      .post("/api/intakes")
+      .send(buildBody({ command: "save_draft", idempotencyKey: "ref-gen-fail-key" }));
+
+    expect(res.status).toBe(503);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error).toBe("Could not issue a reference number. Please retry.");
+
+    mocked.mockResolvedValue("MTH-20260806-FAKE-TEST");
+  });
+
   it("REV-05: submission with empty design styles succeeds", async () => {
     const res = await request(app)
       .post("/api/intakes")

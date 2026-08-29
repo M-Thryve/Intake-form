@@ -268,6 +268,29 @@ export async function discardIntake(
   return lifecycleOp('discard', { ...payload, outcome: 'discarded', discardReason }, idempotencyKey, intakeId)
 }
 
+export async function resumeByReference(reference: string): Promise<IntakeDraftResponse> {
+  try {
+    const response = await fetch(
+      `${INTAKE_API}/by-reference/${encodeURIComponent(reference)}`,
+      {
+        credentials: 'include',
+        headers: await getApiAuthHeaders(),
+      },
+    )
+    const data = await response.json() as IntakeDraftResponse
+    if (!response.ok) {
+      return { success: false, error: data.error || 'Failed to reopen intake', httpStatus: response.status }
+    }
+    return data
+  } catch (error) {
+    return {
+      success: false,
+      error: `Draft rehydration error: ${error instanceof Error ? error.message : 'Network error'}`,
+      httpStatus: 0,
+    }
+  }
+}
+
 export async function getIntakeDraft(intakeId: string): Promise<IntakeDraftResponse> {
   try {
     const response = await fetch(`${INTAKE_API}/${encodeURIComponent(intakeId)}`, {

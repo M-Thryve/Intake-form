@@ -18,11 +18,15 @@ beforeAll(() => {
   vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 200 })))
 })
 
-// v2.0 flow: intro → build-approach → client-details → company-assets → template-select → …
-// Clicking "Start Project Intake" lands on build-approach (index 1), not client-details.
+// v3.0 flow: entry → intro → build-approach → client-details → company-assets → template-select → …
+// The app now opens on the entry chooser. "Start a new intake" reaches intro,
+// then "Start Project Intake" advances to build-approach.
 // startAtClientDetails selects Custom Build and continues to reach client-details.
 function startAtClientDetails() {
   render(<App />)
+  // On entry — choose to start a new intake
+  fireEvent.click(screen.getByRole('button', { name: /Start a new intake/ }))
+  // On intro — advance to build-approach
   fireEvent.click(screen.getByRole('button', { name: /Start Project Intake/ }))
   // Now on build-approach — navigate to client-details
   fireEvent.click(screen.getByRole('button', { name: /Custom Build/ }))
@@ -114,9 +118,10 @@ describe('inline validation — client details', () => {
 })
 
 describe('inline validation — build approach', () => {
-  // After "Start Project Intake" the flow lands directly on build-approach.
+  // After entry → intro → "Start Project Intake" the flow lands on build-approach.
   it('warns when the section is blurred without a selection', () => {
     render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /Start a new intake/ }))
     fireEvent.click(screen.getByRole('button', { name: /Start Project Intake/ }))
     // Already on build-approach
     const tierGroup = document.getElementById('field-tier')
@@ -127,6 +132,7 @@ describe('inline validation — build approach', () => {
 
   it('clears the warning once a build approach is selected', () => {
     render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /Start a new intake/ }))
     fireEvent.click(screen.getByRole('button', { name: /Start Project Intake/ }))
     // Already on build-approach
     fireEvent.blur(document.getElementById('field-tier')!)
@@ -140,6 +146,7 @@ describe('inline validation — build approach', () => {
 describe('inline validation — draft save with active warnings', () => {
   it('draft save succeeds even with active inline warnings', async () => {
     render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /Start a new intake/ }))
     fireEvent.click(screen.getByRole('button', { name: /Start Project Intake/ }))
     // On build-approach
     fireEvent.click(screen.getByRole('button', { name: /Custom Build/ }))
@@ -156,7 +163,7 @@ describe('inline validation — draft save with active warnings', () => {
     fireEvent.click(screen.getByRole('button', { name: /full deck available/ }))
     clickContinue() // → template-select
 
-    fireEvent.click(screen.getByRole('button', { name: /Apex Business/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Distribution Center/ }))
     clickContinue() // → pages-features
 
     // v3.0: features are optional and have no priority system; navigation is not blocked.
@@ -171,6 +178,7 @@ describe('inline validation — draft save with active warnings', () => {
 
   it('shows extension catalog and allows continuing without selection (v3.0: extensions optional)', () => {
     render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /Start a new intake/ }))
     fireEvent.click(screen.getByRole('button', { name: /Start Project Intake/ }))
     // On build-approach
     fireEvent.click(screen.getByRole('button', { name: /Custom Build/ }))
@@ -179,7 +187,7 @@ describe('inline validation — draft save with active warnings', () => {
     clickContinue() // → company-assets
     fireEvent.click(screen.getByRole('button', { name: /full deck available/ }))
     clickContinue() // → template-select
-    fireEvent.click(screen.getByRole('button', { name: /Apex Business/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Distribution Center/ }))
     clickContinue() // → pages-features
 
     // Extension catalog is present — category dropdown and extension cards
@@ -192,9 +200,10 @@ describe('inline validation — draft save with active warnings', () => {
 
 // ── REV-03: industry template filter ─────────────────────────────────────
 
-// v2.0 flow: build-approach → client-details → company-assets → template-select
+// v3.0 flow: entry → intro → build-approach → client-details → company-assets → template-select
 function navigateToTemplateSelect(industry: string) {
   render(<App />)
+  fireEvent.click(screen.getByRole('button', { name: /Start a new intake/ }))
   fireEvent.click(screen.getByRole('button', { name: /Start Project Intake/ }))
   // On build-approach
   fireEvent.click(screen.getByRole('button', { name: /Custom Build/ }))
@@ -215,21 +224,21 @@ function navigateToTemplateSelect(industry: string) {
 describe('REV-03 — industry template filter', () => {
   it('shows filter indicator with correct industry label', () => {
     navigateToTemplateSelect('dtc-ecommerce')
-    expect(screen.getByText(/Showing starting points for: E-Commerce & Retail/)).toBeInTheDocument()
+    expect(screen.getByText(/Showing starting points for: Direct-to-Consumer E-Commerce/)).toBeInTheDocument()
     expect(screen.getByText('Show all templates')).toBeInTheDocument()
-    // Primary ecommerce templates should be visible.
-    expect(screen.getByText('StoreX')).toBeInTheDocument()
-    expect(screen.getByText('Boutique')).toBeInTheDocument()
-    expect(screen.getByText('MarketPro')).toBeInTheDocument()
+    // Primary ecommerce templates should be visible (v3.2 catalogue names).
+    expect(screen.getByText('Fashion Editorial')).toBeInTheDocument()
+    expect(screen.getByText('Minimal Fashion Store')).toBeInTheDocument()
+    expect(screen.getByText('Streetwear Store')).toBeInTheDocument()
   })
 
   it('shows all templates with sections when override is toggled', () => {
     navigateToTemplateSelect('dtc-ecommerce')
     fireEvent.click(screen.getByRole('button', { name: 'Show all templates' }))
     expect(screen.getByText('Showing all starting points')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Reset to E-Commerce & Retail/ })).toBeInTheDocument()
-    // Override section for primary matches always renders.
-    expect(screen.getByText(/Recommended for E-Commerce & Retail/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Reset to Direct-to-Consumer E-Commerce/ })).toBeInTheDocument()
+    // Override section for primary matches always renders (v3.2: "Recommended for <label>").
+    expect(screen.getByText(/Recommended for Direct-to-Consumer E-Commerce/)).toBeInTheDocument()
     // "All other templates" section should be visible (templates outside e-commerce).
     expect(screen.getByText('All other templates')).toBeInTheDocument()
   })
@@ -237,30 +246,30 @@ describe('REV-03 — industry template filter', () => {
   it('reset to industry link returns to filtered view', () => {
     navigateToTemplateSelect('dtc-ecommerce')
     fireEvent.click(screen.getByRole('button', { name: 'Show all templates' }))
-    fireEvent.click(screen.getByRole('button', { name: /Reset to E-Commerce & Retail/ }))
-    expect(screen.getByText(/Showing starting points for: E-Commerce & Retail/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Reset to Direct-to-Consumer E-Commerce/ }))
+    expect(screen.getByText(/Showing starting points for: Direct-to-Consumer E-Commerce/)).toBeInTheDocument()
     expect(screen.queryByText('Showing all starting points')).not.toBeInTheDocument()
   })
 
   it('selects a non-matching template in override mode, triggering the audit note', () => {
     navigateToTemplateSelect('dtc-ecommerce')
     fireEvent.click(screen.getByRole('button', { name: 'Show all templates' }))
-    // Scroll to / find a non-primary template in "All other templates".
-    // Studio has tags ['portfolio','creative','design'] — not ecommerce.
-    fireEvent.click(screen.getByRole('button', { name: /Studio/ }))
+    // Select a template from "All other templates" (service-commerce — not ecommerce).
+    // v3.2: use a unique service-commerce template name to avoid ambiguity with category buttons.
+    fireEvent.click(screen.getByRole('button', { name: /Modern Marketing Agency/ }))
     // Verifying the template was selected: the preliminary total panel appears.
     // v3.1: platform version picker removed — selection is confirmed by pricing.
     expect(screen.getByText('Preliminary Total')).toBeInTheDocument()
   })
 
-  it('recommended alternatives are shown for an industry with no primary matches', () => {
-    // Manufacturing has no primary-match templates (none carry construction/contractor/etc tags).
-    // But several carry 'business' / 'corporate' / 'portfolio' → related matches.
+  it('shows primary templates for manufacturing-fabrication industry', () => {
+    // v3.2: all seven canonical industries have primary templates via direct category mapping.
+    // Manufacturing & Fabrication templates include: Corporate, Consumer, Heavy Equipment, etc.
     navigateToTemplateSelect('manufacturing-fabrication')
-    expect(screen.getByText(/Recommended alternatives for Construction & Trades/)).toBeInTheDocument()
+    expect(screen.getByText(/Showing starting points for: Manufacturing & Fabrication/)).toBeInTheDocument()
     expect(screen.getByText('Show all templates')).toBeInTheDocument()
-    // Verify that a recommended template is present.
-    expect(screen.getByText('Apex Business')).toBeInTheDocument() // corporate/business tag
+    // Verify that a primary manufacturing template is present.
+    expect(screen.getByText('Heavy Equipment')).toBeInTheDocument()
   })
 
   it('resets override when industry is changed in client-details', () => {
@@ -274,7 +283,7 @@ describe('REV-03 — industry template filter', () => {
     fireEvent.click(goBack()) // → company-assets
     fireEvent.click(goBack()) // → client-details
 
-    // Change the industry (still ecommerce family — override should still reset).
+    // Change the industry to a different one — override should reset to the new industry's filter.
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'retail-multi-branch' } })
 
     // Resume forward.
@@ -282,21 +291,22 @@ describe('REV-03 — industry template filter', () => {
     fireEvent.click(goNext()) // → company-assets
     fireEvent.click(goNext()) // → template-select
 
-    // The filter should have reset to the new industry.
-    expect(screen.getByText(/Showing starting points for: E-Commerce & Retail/)).toBeInTheDocument()
+    // The filter should have reset to the new industry (retail-multi-branch).
+    expect(screen.getByText(/Showing starting points for: Retail & Multi-Branch Commerce/)).toBeInTheDocument()
     expect(screen.queryByText('Showing all starting points')).not.toBeInTheDocument()
-    // Primary ecommerce templates should be visible.
-    expect(screen.getByText('StoreX')).toBeInTheDocument()
-    expect(screen.getByText('Boutique')).toBeInTheDocument()
+    // Primary retail templates should be visible (v3.2 catalogue names).
+    expect(screen.getByText('Pharmacy')).toBeInTheDocument()
+    expect(screen.getByText('Wellness')).toBeInTheDocument()
   })
 
-  it('maps warehousing-storage to the construction template family', () => {
+  it('shows warehousing-storage primary templates (v3.2: direct industry mapping)', () => {
     render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /Start a new intake/ }))
     fireEvent.click(screen.getByRole('button', { name: /Start Project Intake/ }))
     // On build-approach
     fireEvent.click(screen.getByRole('button', { name: /Custom Build/ }))
     fireEvent.click(screen.getByRole('button', { name: /Continue/ }))
-    // On client-details — fill required fields but use 'Other' industry
+    // On client-details — fill required fields with warehousing-storage industry
     fireEvent.change(screen.getByPlaceholderText('Alex Johnson'), { target: { value: 'Alex Johnson' } })
     fireEvent.change(screen.getByPlaceholderText('alex@acmecorp.com'), { target: { value: 'alex@acmecorp.com' } })
     fireEvent.change(screen.getByPlaceholderText('e.g. Acme Client Portal'), { target: { value: 'Client Portal' } })
@@ -308,8 +318,9 @@ describe('REV-03 — industry template filter', () => {
     fireEvent.click(screen.getByRole('button', { name: /Continue/ }))
     // On template-select
 
-    expect(screen.getByText(/Recommended alternatives for Construction & Trades/)).toBeInTheDocument()
+    // v3.2: warehousing-storage has its own primary templates (not "recommended alternatives").
+    expect(screen.getByText(/Showing starting points for: Warehousing & Storage/)).toBeInTheDocument()
     expect(screen.getByText('Show all templates')).toBeInTheDocument()
-    expect(screen.getByText('Apex Business')).toBeInTheDocument()
+    expect(screen.getByText('Distribution Center')).toBeInTheDocument()
   })
 })

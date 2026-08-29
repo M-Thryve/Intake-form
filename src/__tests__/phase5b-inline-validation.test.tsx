@@ -18,10 +18,11 @@ beforeAll(() => {
   vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 200 })))
 })
 
-// v2.0 flow: intro → build-approach → client-details → …
-// "Start Project Intake" lands on build-approach; navigate through it first.
+// v3.0 flow: entry → intro → build-approach → client-details → …
+// "Start a new intake" reaches intro; "Start Project Intake" lands on build-approach.
 function startAtClientDetails() {
   render(<App />)
+  fireEvent.click(screen.getByRole('button', { name: /Start a new intake/ }))
   fireEvent.click(screen.getByRole('button', { name: /Start Project Intake/ }))
   fireEvent.click(screen.getByRole('button', { name: /Custom Build/ }))
   fireEvent.click(screen.getByRole('button', { name: /Continue/ }))
@@ -83,8 +84,9 @@ describe('PHASE_5B_REV01 — project_description warning', () => {
 describe('PHASE_5B_REV01 — draft save toast message', () => {
   it('shows the updated draft save toast message', async () => {
     // Navigate through multiple steps to reach outcome and save draft.
-    // v2.0 flow: intro → build-approach → client-details → company-assets → template-select → pages-features → review → outcome
+    // v3.0 flow: entry → intro → build-approach → client-details → company-assets → template-select → pages-features → review → outcome
     render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /Start a new intake/ }))
     fireEvent.click(screen.getByRole('button', { name: /Start Project Intake/ }))
 
     // On build-approach
@@ -104,7 +106,7 @@ describe('PHASE_5B_REV01 — draft save toast message', () => {
     fireEvent.click(screen.getByRole('button', { name: /full deck available/ }))
     next() // → template-select
 
-    fireEvent.click(screen.getByRole('button', { name: /Apex Business/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Distribution Center/ }))
     next() // → pages-features (v3.1: no platform version selection)
 
     next() // → review (extensions are optional — no selection needed)

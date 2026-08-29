@@ -24,6 +24,7 @@ import {
   toSubmissionPayload,
   generateIdempotencyKey,
   getIntakeDraft,
+  resumeByReference,
   rehydrateDraftState,
 } from './api/intake'
 import type { AssetBinding } from './api/assets'
@@ -1247,6 +1248,11 @@ export default function App() {
   const [resumeAttempt, setResumeAttempt] = useState(0)
   const [resumeEditingStep, setResumeEditingStep] = useState<StepId>('review')
   const lastEditedStep = useRef<StepId>('client-details')
+  // Entry-step state
+  const [referenceInput, setReferenceInput] = useState('')
+  const [showResume, setShowResume] = useState(false)
+  const [entryError, setEntryError] = useState('')
+  const [entryLoading, setEntryLoading] = useState(false)
   const assetBindingPromise = useRef<Promise<AssetBinding> | null>(null)
 
   const getLifecycleKey = (operation: 'draft' | 'submit' | 'discard') => {
@@ -1262,8 +1268,8 @@ export default function App() {
   // Both build paths resolve to the same length, so the total is known
   // before the tier is chosen. Deriving it from the not-yet-branched flow
   // reported "Step 1 of 1" and a full progress bar on the first step.
-  const progressTotal = (form.tier ? flow.length : getFlow('custom').length) - 2
-  const progressPct = (currentStep === 'intro' || currentStep === 'build-card') ? 0 : Math.min((stepIndex / progressTotal) * 100, 100)
+  const progressTotal = (form.tier ? flow.length : getFlow('custom').length) - 3
+  const progressPct = (currentStep === 'entry' || currentStep === 'intro' || currentStep === 'build-card') ? 0 : Math.min((stepIndex / progressTotal) * 100, 100)
 
   const set = (field: keyof FormData, value: unknown) =>
     setForm(prev => ({ ...prev, [field]: value }))
@@ -1273,6 +1279,47 @@ export default function App() {
       lastEditedStep.current = currentStep
     }
   }, [currentStep])
+
+  // Shared resume application — used by both URL-driven and entry-step recovery.
+  // Returns null on success (state already updated), or an error message string
+  // on guard failure (caller decides how to surface it).
+  const applyResumedIntake = (record: import('./types/intake').IntakeDraftRecord): string | null => {
+    if (!record.intakeId || !record.clientId || !record.referenceNumber) {
+      return 'The intake was returned without stable identifiers. Your current form was not changed.'
+    }
+    if (record.outcome === 'submitted' && !record.hasBuildCard) {
+      return 'The submitted intake has no Build Card. Your current form was not changed; contact an administrator.'
+    }
+    if (record.outcome === 'discarded') {
+      return 'This intake was discarded and cannot be resumed.'
+    }
+
+    const restored = rehydrateDraftState(record)
+    const nextForm = { ...EMPTY_FORM, ...restored.form }
+    const restoredFlow = getFlow(nextForm.tier, nextForm.projectType)
+    const requestedStep = restored.lastEditedStep && restoredFlow.includes(restored.lastEditedStep)
+      ? restored.lastEditedStep
+      : 'review'
+
+    setForm(nextForm)
+    setPageContents(restored.pageContents)
+    setSavedIntakeId(record.intakeId)
+    setSavedClientId(record.clientId)
+    setClientVoucher(record.clientId)
+    setSavedReferenceNumber(record.referenceNumber)
+    setBuildRef(record.referenceNumber)
+    setResumeEditingStep(requestedStep)
+    lastEditedStep.current = requestedStep
+    setOutcomeFinalized(record.outcome)
+    setSubmitted(record.outcome === 'submitted')
+    if (record.outcome === 'draft') {
+      setStepIndex(Math.max(0, restoredFlow.indexOf('draft-saved')))
+    } else if (record.outcome === 'submitted') {
+      setStepIndex(Math.max(0, restoredFlow.indexOf('build-card')))
+    }
+    setResumeState('ready')
+    return null
+  }
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -1292,43 +1339,11 @@ export default function App() {
         setResumeError(response.error || 'The intake could not be reopened. Your current form was not changed.')
         return
       }
-      if (!record.intakeId || !record.clientId || !record.referenceNumber) {
+      const err = applyResumedIntake(record)
+      if (err) {
         setResumeState('error')
-        setResumeError('The intake was returned without stable identifiers. Your current form was not changed.')
-        return
+        setResumeError(err)
       }
-      if (record.outcome === 'submitted' && !record.hasBuildCard) {
-        setResumeState('error')
-        setResumeError('The submitted intake has no Build Card. Your current form was not changed; contact an administrator.')
-        return
-      }
-
-      const restored = rehydrateDraftState(record)
-      const nextForm = { ...EMPTY_FORM, ...restored.form }
-      const restoredFlow = getFlow(nextForm.tier, nextForm.projectType)
-      const requestedStep = restored.lastEditedStep && restoredFlow.includes(restored.lastEditedStep)
-        ? restored.lastEditedStep
-        : 'review'
-
-      setForm(nextForm)
-      setPageContents(restored.pageContents)
-      setSavedIntakeId(record.intakeId)
-      setSavedClientId(record.clientId)
-      setClientVoucher(record.clientId)
-      setSavedReferenceNumber(record.referenceNumber)
-      setBuildRef(record.referenceNumber)
-      setResumeEditingStep(requestedStep)
-      lastEditedStep.current = requestedStep
-      setOutcomeFinalized(record.outcome)
-      setSubmitted(record.outcome === 'submitted')
-      if (record.outcome === 'draft') {
-        setStepIndex(Math.max(0, restoredFlow.indexOf('draft-saved')))
-      } else if (record.outcome === 'submitted') {
-        setStepIndex(Math.max(0, restoredFlow.indexOf('build-card')))
-      } else {
-        setStepIndex(Math.max(0, restoredFlow.indexOf('outcome')))
-      }
-      setResumeState('ready')
     })
 
     return () => { cancelled = true }
@@ -1459,10 +1474,50 @@ export default function App() {
   // Snapshot of current gaps used by review, outcome, and draft flows.
   const missingReqSnapshot: MissingRequirement[] = collectMissingRequirements(form)
 
+  const REFERENCE_RE = /^MTH-\d{4}-\d{4}-[0-9A-F]{4}$/
+
+  const handleRecoverDraft = async () => {
+    const ref = referenceInput.trim().toUpperCase().replace(/\s+/g, '')
+    if (!REFERENCE_RE.test(ref)) {
+      setEntryError('That doesn\'t look like a valid reference number format.')
+      return
+    }
+    setEntryError('')
+    setEntryLoading(true)
+    try {
+      const response = await resumeByReference(ref)
+      if (!response.success || !response.intake) {
+        const status = response.httpStatus
+        let msg: string
+        if (status === 0) {
+          // Network failure — surface the detailed error from resumeByReference
+          msg = response.error || 'API server not reachable. Start it with: cd server && npm run dev'
+        } else if (status === 400) {
+          msg = 'That doesn\'t look like a valid reference number format.'
+        } else if (status === 404) {
+          msg = 'No intake found for that reference number. Check for typos.'
+        } else if (status === 429) {
+          msg = 'Too many lookup attempts. Please wait a few minutes and try again.'
+        } else {
+          msg = 'Something went wrong. Please try again.'
+        }
+        setEntryError(msg)
+        return
+      }
+      const err = applyResumedIntake(response.intake)
+      if (err) {
+        setEntryError(err)
+      }
+    } finally {
+      setEntryLoading(false)
+    }
+  }
+
   const handleNext = async () => {
-    // Validate the current step. Outcome step is driven by its own action
-    // buttons, so we never advance from it via the primary "Continue" button.
+    // Validate the current step. Outcome and entry steps are driven by their
+    // own action cards, so we never advance from them via the Continue button.
     if (currentStep === 'outcome') return
+    if (currentStep === 'entry') return
 
     const errors = validateStep(currentStep, form)
     if (errors.length > 0) return
@@ -1748,7 +1803,7 @@ export default function App() {
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <img src="/BANNER.png" alt="M-THRYVE" style={{ height: '32px', width: 'auto' }} />
         </div>
-        {currentStep !== 'intro' && currentStep !== 'build-card' && (
+        {currentStep !== 'entry' && currentStep !== 'intro' && currentStep !== 'build-card' && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <div style={{ ...monoLabel, margin: 0, fontSize: '11px' }}>Step {stepIndex} of {progressTotal}</div>
             <button
@@ -1776,7 +1831,7 @@ export default function App() {
       {/* ── Progress bar ── */}
       </header>
 
-      {currentStep !== 'intro' && currentStep !== 'build-card' && (
+      {currentStep !== 'entry' && currentStep !== 'intro' && currentStep !== 'build-card' && (
         <nav aria-label="Wizard progress" style={{ height: '2px', background: '#1A1C22' }}>
           <div className="wizard-progress-fill" style={{ height: '100%', width: '100%', background: '#46A873', transform: `scaleX(${progressPct / 100})`, transformOrigin: 'left center', transition: 'transform 0.5s cubic-bezier(0.4,0,0.2,1)' }} />
         </nav>
@@ -1798,6 +1853,92 @@ export default function App() {
             <button type="button" onClick={() => setResumeAttempt(value => value + 1)} style={{ marginTop: '10px', padding: '7px 12px', borderRadius: '7px', border: '1px solid rgba(239,68,68,0.35)', background: 'transparent', color: '#EF4444', cursor: 'pointer' }}>
               Retry reopen
             </button>
+          </div>
+        )}
+
+        {/* ══ ENTRY ══ */}
+        {currentStep === 'entry' && resumeState !== 'loading' && (
+          <div>
+            <div style={{ marginBottom: '48px' }}>
+              <div style={{ ...monoLabel, color: '#46A873', fontSize: '11px', marginBottom: '20px' }}>Private intake authorized by M-THRYVE</div>
+              <h1 className="aurora-bloom" style={{ fontSize: '46px', fontWeight: 700, lineHeight: 1.08, letterSpacing: '-0.035em', color: '#E5E7EB', margin: '0 0 20px' }}>
+                {"Welcome back."}
+              </h1>
+              <p style={{ fontSize: '17px', color: '#AAB6C4', lineHeight: 1.7, maxWidth: '480px', margin: 0 }}>
+                Start a new intake or pick up where you left off using your reference number.
+              </p>
+            </div>
+
+            {/* Start a new intake */}
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => setStepIndex(flow.indexOf('intro'))}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setStepIndex(flow.indexOf('intro')) }}
+              style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', padding: '20px', background: '#0D0F12', border: '1px solid #1A1C22', borderRadius: '10px', cursor: 'pointer', marginBottom: '10px', transition: 'border-color 0.15s' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(70,168,115,0.4)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = '#1A1C22' }}
+            >
+              <span style={{ color: '#46A873', marginTop: '2px', flexShrink: 0 }}>
+                <Icon name="spark" size={16} />
+              </span>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px', color: '#E5E7EB' }}>Start a new intake</div>
+                <div style={{ fontSize: '13px', color: '#AAB6C4' }}>Begin the discovery process for a new project.</div>
+              </div>
+            </div>
+
+            {/* Resume a saved draft */}
+            <div
+              style={{ padding: '20px', background: '#0D0F12', border: '1px solid #1A1C22', borderRadius: '10px' }}
+            >
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', marginBottom: showResume ? '16px' : 0 }}>
+                <span style={{ color: '#46A873', marginTop: '2px', flexShrink: 0 }}>
+                  <Icon name="document" size={16} />
+                </span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px', color: '#E5E7EB' }}>Resume a saved draft</div>
+                  <div style={{ fontSize: '13px', color: '#AAB6C4', marginBottom: showResume ? 0 : '12px' }}>Enter your reference number to pick up where you left off.</div>
+                  {!showResume && (
+                    <button
+                      type="button"
+                      onClick={() => { setShowResume(true); setEntryError('') }}
+                      style={{ padding: '8px 16px', borderRadius: '7px', border: '1px solid rgba(70,168,115,0.35)', background: 'transparent', color: '#46A873', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif" }}
+                    >
+                      Enter reference number
+                    </button>
+                  )}
+                </div>
+              </div>
+              {showResume && (
+                <div>
+                  <div style={{ marginBottom: '8px', fontSize: '11px', color: '#AAB6C4', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.06em' }}>REFERENCE NUMBER</div>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <input
+                      type="text"
+                      value={referenceInput}
+                      onChange={e => { setReferenceInput(e.target.value); setEntryError('') }}
+                      placeholder="MTH-YYMM-NNNN-XXXX"
+                      aria-label="Reference number"
+                      disabled={entryLoading}
+                      onKeyDown={e => { if (e.key === 'Enter') void handleRecoverDraft() }}
+                      style={{ ...inputStyle, fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.06em', flex: '1 1 220px', minWidth: 0 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void handleRecoverDraft()}
+                      disabled={entryLoading || !referenceInput.trim()}
+                      style={{ ...primaryButtonStyle(!entryLoading && !!referenceInput.trim()), display: 'inline-flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}
+                    >
+                      {entryLoading ? 'Recovering…' : 'Recover Draft'}
+                    </button>
+                  </div>
+                  {entryError && (
+                    <div role="alert" style={{ marginTop: '10px', fontSize: '13px', color: '#EF4444', lineHeight: 1.55 }}>{entryError}</div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -2917,34 +3058,41 @@ export default function App() {
               <p style={{ fontSize: '15px', color: '#AAB6C4', lineHeight: 1.65 }}>Your discovery information has been preserved. No Build Card was generated and this intake is not yet in the owner-review queue.</p>
             </div>
 
-            {/* Client ID */}
-            {(savedIntakeId || savedReferenceNumber) && (
+            {/* Build Reference Number — hero */}
+            {savedReferenceNumber && (
               <div style={{ ...cardStyle, border: '1px solid rgba(245,180,0,0.3)', marginBottom: '12px' }}>
-                <div style={{ ...monoLabel, color: '#F5B400', marginBottom: '12px' }}>Draft Identifiers</div>
-                {savedReferenceNumber && (
-                  <div style={{ marginBottom: '10px' }}>
-                    <div style={{ fontSize: '11px', color: '#AAB6C4', letterSpacing: '0.06em', fontFamily: "'JetBrains Mono', monospace", marginBottom: '4px' }}>REFERENCE NUMBER</div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '20px', fontWeight: 700, color: '#F5B400', letterSpacing: '0.08em' }}>{savedReferenceNumber}</div>
-                      <button onClick={() => copyToClipboard(savedReferenceNumber, 'ref')} style={{ padding: '6px 12px', borderRadius: '7px', border: '1px solid rgba(245,180,0,0.3)', background: copiedRef ? 'rgba(245,180,0,0.15)' : 'transparent', cursor: 'pointer', color: copiedRef ? '#F5B400' : '#333944', fontSize: '12px', fontWeight: 600, fontFamily: "'Inter', system-ui, sans-serif" }}>
-                        {copiedRef ? <><Icon name="check" size={12} strokeWidth={2.2} /> Copied</> : 'Copy'}
-                      </button>
+                <div style={{ ...monoLabel, color: '#F5B400', marginBottom: '6px' }}>Build Reference Number</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '26px', fontWeight: 700, color: '#F5B400', letterSpacing: '0.08em' }}>{savedReferenceNumber}</div>
+                  <button onClick={() => copyToClipboard(savedReferenceNumber, 'ref')} style={{ padding: '8px 16px', borderRadius: '7px', border: '1px solid rgba(245,180,0,0.3)', background: copiedRef ? 'rgba(245,180,0,0.15)' : 'transparent', cursor: 'pointer', color: copiedRef ? '#F5B400' : '#333944', fontSize: '12px', fontWeight: 600, fontFamily: "'Inter', system-ui, sans-serif", transition: 'all 0.15s' }}>
+                    {copiedRef ? <><Icon name="check" size={12} strokeWidth={2.2} /> Copied</> : 'Copy'}
+                  </button>
+                </div>
+                <div style={{ fontSize: '13px', color: '#AAB6C4', lineHeight: 1.55 }}>Keep this number. It's how you or M-THRYVE reopen this draft to finish and submit your build.</div>
+
+                {/* Internal identifiers disclosure */}
+                {(savedClientId || savedIntakeId) && (
+                  <details style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(245,180,0,0.15)' }}>
+                    <summary style={{ ...monoLabel, color: '#AAB6C4', cursor: 'pointer', fontSize: '11px', userSelect: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      Internal identifiers
+                      <Icon name="chevron-right" size={12} style={{ transition: 'transform 0.15s', flexShrink: 0 }} />
+                    </summary>
+                    <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px', color: '#AAB6C4' }}>
+                      {savedClientId && (
+                        <div>
+                          <div style={{ fontSize: '10px', letterSpacing: '0.06em', fontFamily: "'JetBrains Mono', monospace", color: '#7C8794', marginBottom: '2px' }}>CLIENT ID</div>
+                          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', wordBreak: 'break-all' }}>{savedClientId}</div>
+                        </div>
+                      )}
+                      {savedIntakeId && (
+                        <div>
+                          <div style={{ fontSize: '10px', letterSpacing: '0.06em', fontFamily: "'JetBrains Mono', monospace", color: '#7C8794', marginBottom: '2px' }}>INTAKE ID</div>
+                          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', wordBreak: 'break-all' }}>{savedIntakeId}</div>
+                        </div>
+                      )}
                     </div>
-                  </div>
+                  </details>
                 )}
-                {savedClientId && (
-                  <div style={{ marginBottom: '10px' }}>
-                    <div style={{ fontSize: '11px', color: '#AAB6C4', letterSpacing: '0.06em', fontFamily: "'JetBrains Mono', monospace", marginBottom: '4px' }}>CLIENT ID</div>
-                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '13px', color: '#AAB6C4', wordBreak: 'break-all' }}>{savedClientId}</div>
-                  </div>
-                )}
-                {savedIntakeId && (
-                  <div>
-                    <div style={{ fontSize: '11px', color: '#AAB6C4', letterSpacing: '0.06em', fontFamily: "'JetBrains Mono', monospace", marginBottom: '4px' }}>INTAKE ID</div>
-                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '13px', color: '#AAB6C4', wordBreak: 'break-all' }}>{savedIntakeId}</div>
-                  </div>
-                )}
-                <div style={{ fontSize: '12px', color: '#AAB6C4', marginTop: '12px', lineHeight: 1.5 }}>Use this reference when contacting M-THRYVE about this draft. No Build Card has been generated yet.</div>
               </div>
             )}
 
@@ -3166,7 +3314,7 @@ export default function App() {
         )}
 
         {/* ── Navigation ── */}
-        {!submitting && currentStep !== 'outcome' && (
+        {!submitting && currentStep !== 'outcome' && currentStep !== 'entry' && (
           <div style={{ display: 'flex', justifyContent: currentStep === 'intro' ? 'flex-end' : 'space-between', alignItems: 'center', marginTop: '48px' }}>
             {currentStep !== 'intro' && currentStep !== 'build-card' && (
               <button aria-label="← Back" onClick={handleBack} data-testid="wizard-back" style={{ ...ghostButtonStyle, display: 'inline-flex', alignItems: 'center', gap: '8px' }}><Icon name="arrow-left" size={14} />Back</button>

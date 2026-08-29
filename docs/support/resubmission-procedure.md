@@ -49,3 +49,46 @@ After a resubmit cycle, the audit trail contains, in order:
 4. New Build Card event
 
 If any step is missing, investigate before continuing.
+
+---
+
+## Recovering a draft by reference number
+
+### When this applies
+
+A client started an intake, saved it as a draft, then closed the browser or left the session. They have their **Build Reference Number** (format `MTH-YYMM-NNNN-XXXX`) and want to finish and submit.
+
+### 1. Where the client gets the number
+
+After any draft save, the **Draft Saved** screen shows the reference number prominently at the top. It is the large gold number labeled **Build Reference Number**. The screen also includes a **Copy** button.
+
+> Tell the client: "Keep this number. It's how you or M-THRYVE reopen this draft to finish and submit your build."
+
+The client should copy or write down this number. It is the only identifier they need.
+
+### 2. What the operator does
+
+1. Open the intake form (the operator-facing wizard at the Vite dev URL or deployed frontend).
+2. On the **first screen** (the entry step), choose **Resume a saved draft**.
+3. Enter the reference number the client provided.
+   - Format: `MTH-YYMM-NNNN-XXXX` (example: `MTH-2608-0001-AB12`)
+   - **Case and surrounding whitespace do not matter** — the system normalizes the input.
+4. Click **Recover Draft**.
+
+If the reference is valid and the intake is a draft or submitted, the form rehydrates with all captured data and lands on the **Draft Saved** step (for drafts) or the **Build Card** step (for submitted intakes).
+
+### 3. Failure meanings (operator terms)
+
+| Message shown | What it means | What to do |
+|---------------|---------------|------------|
+| "No intake found for that reference number. Check for typos." | The reference doesn't exist in the system. Usually a typo. | Ask the client to re-read the number. Verify the format `MTH-YYMM-NNNN-XXXX`. |
+| "Too many lookup attempts. Please wait a few minutes and try again." | Rate limit hit (10 failed lookups in 5 minutes). | Wait a few minutes. This protects against brute-forcing the hex suffix. |
+| "This intake was discarded and cannot be resumed." | The intake was marked **Discarded** after a draft save. Discarded intakes cannot be reopened. | Inform the client a new intake must be started. |
+
+### 4. Console deep link (unchanged)
+
+The `/resume/<uuid>` path remains the console deep link for operators working from **IntakeDetail** in the Factory Console. This is separate from the client-facing reference recovery and is unchanged.
+
+### 5. Identifier note
+
+The **Build Reference Number** (`MTH-YYMM-NNNN-XXXX`) is now the **only client-facing handle**. The **Intake ID** (UUID) and **Client ID** (UUID) are internal identifiers used by the system and operators. They are available in the **Internal identifiers** disclosure on the Draft Saved screen for support purposes, but clients should not be asked to quote them.

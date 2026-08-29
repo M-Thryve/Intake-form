@@ -7,7 +7,7 @@ import type { Tier, StepId, FormData, BuildPath } from '../types/intake'
  * draft-saved follows outcome in all flows.
  */
 export function getFlow(tier: Tier, _projectType?: string): StepId[] {
-  const base: StepId[] = ['intro', 'build-approach', 'client-details']
+  const base: StepId[] = ['entry', 'intro', 'build-approach', 'client-details']
   if (!tier) return base
 
   const path = normalizeToBuildPath(tier)

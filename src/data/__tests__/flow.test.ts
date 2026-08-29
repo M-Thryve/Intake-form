@@ -8,6 +8,7 @@ describe('getFlow v3.0 sequencing', () => {
       const flow = getFlow('custom', projectType)
 
       expect(flow).toEqual([
+        'entry',
         'intro',
         'build-approach',
         'client-details',

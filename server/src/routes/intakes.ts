@@ -56,51 +56,44 @@ function mapUploadedAsset(asset: Record<string, unknown>) {
   };
 }
 
-// Authenticated/internal read path for safe draft resume. The route is keyed by
-// an existing UUID only; there is intentionally no unauthenticated list or
-// enumeration endpoint.
-intakeRouter.get("/:intakeId", async (req: Request, res: Response) => {
-  const parsedId = INTAKE_ID_SCHEMA.safeParse(req.params.intakeId);
-  if (!parsedId.success) {
-    res.status(400).json({ success: false, error: "Invalid intake ID" });
-    return;
-  }
+// The reference-number contract enforced by the DB and generator.
+const REFERENCE_PATTERN = /^MTH-\d{4}-\d{4}-[0-9A-F]{4}$/;
 
+type LoadResumeResult =
+  | { kind: "ok"; intake: Record<string, unknown> }
+  | { kind: "not_found" }
+  | { kind: "error" };
+
+async function loadIntakeForResume(intakeId: string): Promise<LoadResumeResult> {
   const { data: intake, error: intakeError } = await supabase
     .from("intakes")
     .select("id, client_id, build_reference_number, status, tier, client_details, project_details, scope, submission_payload, created_at, updated_at")
-    .eq("id", parsedId.data)
+    .eq("id", intakeId)
     .maybeSingle();
-  if (intakeError) {
-    res.status(500).json({ success: false, error: "Failed to reopen intake" });
-    return;
-  }
-  if (!intake) {
-    res.status(404).json({ success: false, error: "Intake not found" });
-    return;
-  }
+  if (intakeError) return { kind: "error" };
+  if (!intake) return { kind: "not_found" };
 
   const row = intake as Record<string, unknown>;
-  const intakeId = row.id as string;
+  const resolvedId = row.id as string;
   const [assetResult, questionnaireResult, scopeResult, buildCardResult] = await Promise.all([
     supabase
       .from("uploaded_assets")
       .select("id, original_filename, mime_type, file_size_bytes, size_bytes, asset_status, scan_status, rejection_reason, requirement_key, uploaded_at, created_at")
-      .eq("intake_id", intakeId)
+      .eq("intake_id", resolvedId)
       .order("uploaded_at", { ascending: true }),
     supabase
       .from("intake_website_questionnaire")
       .select("answers")
-      .eq("intake_id", intakeId)
+      .eq("intake_id", resolvedId)
       .maybeSingle(),
     supabase
       .from("intake_scope_items")
       .select("item_kind, item_code, item_name")
-      .eq("intake_id", intakeId),
+      .eq("intake_id", resolvedId),
     supabase
       .from("build_cards")
       .select("id")
-      .eq("intake_id", intakeId)
+      .eq("intake_id", resolvedId)
       .maybeSingle(),
   ]);
 
@@ -139,10 +132,10 @@ intakeRouter.get("/:intakeId", async (req: Request, res: Response) => {
     .map(normalizeMissingRequirement);
   const operatorNotes = Array.isArray(payload.operatorNotes) ? payload.operatorNotes : [];
 
-  res.json({
-    success: true,
+  return {
+    kind: "ok",
     intake: {
-      intakeId,
+      intakeId: resolvedId,
       clientId: row.client_id ?? "",
       referenceNumber: row.build_reference_number ?? "",
       status,
@@ -156,7 +149,122 @@ intakeRouter.get("/:intakeId", async (req: Request, res: Response) => {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     },
+  };
+}
+
+// Small in-memory per-user throttle for the by-reference lookup. The threat
+// model is a compromised operator session brute-forcing the 4-hex suffix, not
+// anonymous public traffic — a per-process Map is enough. Successful lookups
+// do not count against the limit.
+const RESUME_LOOKUP_LIMIT = 10;
+const RESUME_LOOKUP_WINDOW_MS = 5 * 60 * 1000;
+const resumeLookupFailures = new Map<string, number[]>();
+
+function throttleKey(req: Request): string {
+  return req.user?.id ?? (req.isInternalService ? "__internal__" : "__anonymous__");
+}
+
+function isThrottled(key: string): boolean {
+  const now = Date.now();
+  const cutoff = now - RESUME_LOOKUP_WINDOW_MS;
+  const fresh = (resumeLookupFailures.get(key) ?? []).filter(ts => ts > cutoff);
+  resumeLookupFailures.set(key, fresh);
+  return fresh.length >= RESUME_LOOKUP_LIMIT;
+}
+
+function recordFailedLookup(key: string): void {
+  const now = Date.now();
+  const cutoff = now - RESUME_LOOKUP_WINDOW_MS;
+  const fresh = (resumeLookupFailures.get(key) ?? []).filter(ts => ts > cutoff);
+  fresh.push(now);
+  resumeLookupFailures.set(key, fresh);
+}
+
+// Test-only reset hook.
+export function __resetResumeLookupThrottle(): void {
+  resumeLookupFailures.clear();
+}
+
+// Authenticated/internal read path for safe draft resume. The route is keyed by
+// an existing UUID only; there is intentionally no unauthenticated list or
+// enumeration endpoint.
+intakeRouter.get("/:intakeId", async (req: Request, res: Response) => {
+  const parsedId = INTAKE_ID_SCHEMA.safeParse(req.params.intakeId);
+  if (!parsedId.success) {
+    res.status(400).json({ success: false, error: "Invalid intake ID" });
+    return;
+  }
+
+  const result = await loadIntakeForResume(parsedId.data);
+  if (result.kind === "error") {
+    res.status(500).json({ success: false, error: "Failed to reopen intake" });
+    return;
+  }
+  if (result.kind === "not_found") {
+    res.status(404).json({ success: false, error: "Intake not found" });
+    return;
+  }
+  res.json({ success: true, intake: result.intake });
+});
+
+// Client-facing reference number → intake resume. Operator-facing (protected by
+// requireAuth at the app layer); the reference is a lookup key, not a bearer.
+intakeRouter.get("/by-reference/:reference", async (req: Request, res: Response) => {
+  const normalized = String(req.params.reference ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
+  if (!REFERENCE_PATTERN.test(normalized)) {
+    res.status(400).json({ success: false, error: "Invalid reference number format" });
+    return;
+  }
+
+  const key = throttleKey(req);
+  if (isThrottled(key)) {
+    res.status(429).json({
+      success: false,
+      error: "Too many lookup attempts. Please wait before trying again.",
+    });
+    return;
+  }
+
+  const { data: intakeRow, error: lookupError } = await supabase
+    .from("intakes")
+    .select("id")
+    .eq("build_reference_number", normalized)
+    .maybeSingle();
+  if (lookupError) {
+    res.status(500).json({ success: false, error: "Failed to reopen intake" });
+    return;
+  }
+  if (!intakeRow) {
+    recordFailedLookup(key);
+    res.status(404).json({ success: false, error: "No intake found for that reference number" });
+    return;
+  }
+
+  const intakeId = (intakeRow as Record<string, unknown>).id as string;
+  const result = await loadIntakeForResume(intakeId);
+  if (result.kind === "error") {
+    res.status(500).json({ success: false, error: "Failed to reopen intake" });
+    return;
+  }
+  if (result.kind === "not_found") {
+    // Row disappeared between the two reads. Treat as a failed lookup.
+    recordFailedLookup(key);
+    res.status(404).json({ success: false, error: "No intake found for that reference number" });
+    return;
+  }
+
+  await supabase.from("audit_events").insert({
+    intake_id: intakeId,
+    actor_type: "operator",
+    actor_user_id: req.user?.id ?? null,
+    event_type: "resume_lookup",
+    event_payload: { reference: normalized },
   });
+
+  res.json({ success: true, intake: result.intake });
 });
 
 intakeRouter.post("/", async (req: Request, res: Response) => {
@@ -395,6 +503,10 @@ async function handleSubmitOrDiscard(
     }
     if (err instanceof Error && err.message === "ASSET_SCOPE_MISMATCH") {
       res.status(403).json({ success: false, error: "One or more uploaded assets do not belong to this intake" });
+      return;
+    }
+    if (err instanceof Error && err.message === "REFERENCE_GENERATION_FAILED") {
+      res.status(503).json({ success: false, error: "Could not issue a reference number. Please retry." });
       return;
     }
     res.status(500).json({ success: false, error: "An internal error occurred. Please try again." });
